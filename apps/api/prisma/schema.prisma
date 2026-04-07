@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum HomeRole {
+  OWNER
+  MEMBER
+}
+
+enum JobStatus {
+  DRAFT
+  PLANNING
+  REACHING_OUT
+  COMPARING_QUOTES
+  SCHEDULED
+  IN_PROGRESS
+  AWAITING_PAYMENT
+  COMPLETED
+}
+
+enum JobContractorStatus {
+  NOT_CONTACTED
+  CONTACTED
+  RESPONDED
+  VISIT_REQUESTED
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  QUOTE_RECEIVED
+  DECLINED
+  ACCEPTED
+  WORK_IN_PROGRESS
+  WORK_COMPLETED
+  PAID
+}
+
+enum CommunicationChannel {
+  EMAIL
+}
+
+enum CommunicationDirection {
+  SENT
+  RECEIVED
+}
+
+enum QuoteStatus {
+  DRAFT
+  CONFIRMED
+}
+
+enum AIGenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum IntegrationType {
+  EMAIL
+  AI
+}
+
+enum IntegrationProvider {
+  GOOGLE
+  MICROSOFT
+  OPENAI
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  firstName        String
+  lastName         String
+  role             UserRole  @default(USER)
+  refreshTokenHash String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  homes           UserHome[]
+  contractors     UserContractor[]
+  jobs            Job[]
+  integrations    Integration[]
+  aiGenerations   AIGeneration[]
+  jobImages       JobImage[]
+}
+
+model Home {
+  id        String   @id @default(cuid())
+  name      String
+  address1  String
+  address2  String?
+  city      String
+  state     String
+  zipCode   String
+  country   String   @default("US")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users UserHome[]
+  jobs  Job[]
+}
+
+model UserHome {
+  userId    String
+  homeId    String
+  role      HomeRole @default(OWNER)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  home Home @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, homeId])
+}
+
+model Contractor {
+  id          String   @id @default(cuid())
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  category    String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users          UserContractor[]
+  jobs           JobContractor[]
+  communications Communication[]
+  quotes         Quote[]
+}
+
+model UserContractor {
+  userId       String
+  contractorId String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@id([userId, contractorId])
+}
+
+model Job {
+  id            String    @id @default(cuid())
+  homeId        String
+  title         String
+  category      String
+  description   String?
+  notes         String?
+  status        JobStatus @default(DRAFT)
+  createdByUserId String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  home          Home            @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  createdBy     User            @relation(fields: [createdByUserId], references: [id])
+  contractors   JobContractor[]
+  communications Communication[]
+  quotes        Quote[]
+  images        JobImage[]
+  aiGenerations AIGeneration[]
+}
+
+model JobContractor {
+  id              String              @id @default(cuid())
+  jobId           String
+  contractorId    String
+  status          JobContractorStatus @default(NOT_CONTACTED)
+  lastContactedAt DateTime?
+  lastResponseAt  DateTime?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  job        Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, contractorId])
+}
+
+model Communication {
+  id                String                 @id @default(cuid())
+  jobId             String?
+  contractorId      String?
+  channel           CommunicationChannel   @default(EMAIL)
+  direction         CommunicationDirection
+  subject           String?
+  bodyText          String?
+  bodyHtml          String?
+  externalThreadId  String?
+  externalMessageId String?
+  sentAt            DateTime?
+  receivedAt        DateTime?
+  parsedSummary     String?
+  needsReview       Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  job        Job?        @relation(fields: [jobId], references: [id])
+  contractor Contractor? @relation(fields: [contractorId], references: [id])
+  quote      Quote?
+}
+
+model Quote {
+  id                   String      @id @default(cuid())
+  jobId                String
+  contractorId         String
+  amount               Float
+  description          String?
+  status               QuoteStatus @default(DRAFT)
+  sourceCommunicationId String?    @unique
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  job               Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  contractor        Contractor     @relation(fields: [contractorId], references: [id])
+  sourceCommunication Communication? @relation(fields: [sourceCommunicationId], references: [id])
+}
+
+model JobImage {
+  id             String   @id @default(cuid())
+  jobId          String
+  storageKey     String
+  kind           String   @default("SOURCE")
+  label          String?
+  aiGenerationId String?
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  job          Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  aiGeneration AIGeneration? @relation(fields: [aiGenerationId], references: [id])
+}
+
+model AIGeneration {
+  id               String             @id @default(cuid())
+  jobId            String
+  originalImageUrl String?
+  prompt           String
+  generatedImageUrl String?
+  provider         String
+  status           AIGenerationStatus @default(PENDING)
+  metadata         Json?
+  createdByUserId  String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdByUserId], references: [id])
+  images    JobImage[]
+}
+
+model Integration {
+  id             String              @id @default(cuid())
+  userId         String
+  type           IntegrationType
+  provider       IntegrationProvider
+  accessTokenEnc String
+  refreshTokenEnc String?
+  tokenExpiresAt DateTime?
+  email          String?
+  scopes         String[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}

@@ -15,15 +15,14 @@ COPY packages/shared/src ./packages/shared/src
 COPY packages/shared/tsconfig.json ./packages/shared/
 
 # Copy API package.json only (source mounted via volume in dev)
+COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 
-RUN npm install --workspace=apps/api --workspace=packages/shared
+RUN npm install
 
 COPY apps/api/ ./apps/api/
 
 WORKDIR /app/apps/api
-
-RUN npx prisma generate
 
 EXPOSE 3001
 

@@ -1,8 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { AppError } from '../utils/errors';
+
+// postgres (Porsager) driver error — has a numeric PG error code
+interface PostgresError extends Error {
+  code: string;
+}
+
+function isPostgresError(err: unknown): err is PostgresError {
+  return err instanceof Error && 'code' in err && typeof (err as any).code === 'string';
+}
 
 export function errorHandler(
   err: unknown,
@@ -21,12 +29,12 @@ export function errorHandler(
     return;
   }
 
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === 'P2002') {
+  if (isPostgresError(err)) {
+    if (err.code === '23505') { // unique_violation
       res.status(409).json({ error: { code: 'CONFLICT', message: 'Resource already exists' } });
       return;
     }
-    if (err.code === 'P2025') {
+    if (err.code === '23503') { // foreign_key_violation
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Resource not found' } });
       return;
     }

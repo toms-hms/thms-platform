@@ -7,10 +7,13 @@ module.exports = {
   moduleNameMapper: {
     '^@thms/shared$': '<rootDir>/../../packages/shared/src',
     '^@thms/shared/(.*)$': '<rootDir>/../../packages/shared/src/$1',
+    '^@paralleldrive/cuid2$': '/app/node_modules/@paralleldrive/cuid2',
+    '^openai$': '<rootDir>/src/__tests__/__mocks__/openai.js',
+    '^openai/(.*)$': '<rootDir>/src/__tests__/__mocks__/openai.js',
+    '^googleapis$': '<rootDir>/src/__tests__/__mocks__/googleapis.js',
   },
   transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json', diagnostics: false }],
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json', diagnostics: false, isolatedModules: true }],
   },
-  globalSetup: '<rootDir>/src/__tests__/globalSetup.ts',
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/index.ts'],
+  transformIgnorePatterns: ['node_modules/(?!(@paralleldrive)/)'],
 };

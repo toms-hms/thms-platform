@@ -1,14 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "moduleResolution": "bundler",
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": ".",
     "paths": {
       "@thms/shared": ["../../packages/shared/src"],
       "@thms/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*", "prisma/seed.ts"],
+  "include": ["src/**/*"],
   "references": [{ "path": "../../packages/shared" }]
 }

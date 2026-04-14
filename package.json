@@ -17,7 +17,10 @@
   },
   "devDependencies": {
     "turbo": "^2.0.0",
-    "prettier": "^3.3.0"
+    "prettier": "^3.3.0",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-kit": "^0.31.10",
+    "postgres": "^3.4.9"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -37,16 +37,16 @@ logs-web:
 # ── Database ───────────────────────────────────────────────────────────────────
 
 migrate:
-	docker compose exec api npx prisma migrate dev
+	docker compose exec api npx drizzle-kit generate && docker compose exec api npx drizzle-kit migrate
 
 migrate-deploy:
-	docker compose exec api npx prisma migrate deploy
+	docker compose exec api npx drizzle-kit migrate
 
 seed:
 	docker compose exec api npx tsx prisma/seed.ts
 
 studio:
-	docker compose exec api npx prisma studio
+	docker compose exec api npx drizzle-kit studio
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ test: test-web test-api
 
 test-api:
 	@echo "Running backend integration tests inside container..."
-	docker compose exec api npx jest --runInBand --forceExit
+	docker compose exec api sh -c 'NODE_OPTIONS="--max-old-space-size=3072" npx jest --runInBand --forceExit'
 
 test-web:
 	@echo "Running frontend component tests..."

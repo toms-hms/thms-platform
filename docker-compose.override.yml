@@ -35,7 +35,6 @@ services:
       CORS_ORIGIN: http://localhost:3000
     volumes:
       - ./apps/api/src:/app/apps/api/src
-      - ./apps/api/jest.config.js:/app/apps/api/jest.config.js
       - ./packages/shared/src:/app/packages/shared/src
     depends_on:
       postgres:

@@ -1,14 +1,11 @@
 import { createId } from '@paralleldrive/cuid2';
 import { NotFoundError } from '../utils/errors';
 import { CommunicationManager } from './models/CommunicationManager';
-import { JobManager } from '../job/models/JobManager';
 
 export async function listCommunications(
   jobId: string,
-  userId: string,
   filters?: { contractorId?: string; needsReview?: boolean; direction?: string }
 ) {
-  await JobManager.findByIdForUser(jobId, userId);
   return CommunicationManager.listForJob(jobId, filters);
 }
 

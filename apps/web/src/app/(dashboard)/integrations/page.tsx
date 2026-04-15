@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import { integrations } from '@/lib/api';
+import { listIntegrations } from './queries';
+import { startGoogleAuth, startMicrosoftAuth, saveAI, disconnectIntegration } from './mutations';
 
 export default function IntegrationsPage() {
   const [list, setList] = useState<any[]>([]);
@@ -15,7 +16,7 @@ export default function IntegrationsPage() {
 
   async function load() {
     try {
-      const res = await integrations.list();
+      const res = await listIntegrations();
       setList(res.data);
     } catch {}
     setLoading(false);
@@ -23,7 +24,7 @@ export default function IntegrationsPage() {
 
   async function handleConnectGoogle() {
     try {
-      const res = await integrations.startGoogleAuth();
+      const res = await startGoogleAuth();
       window.location.href = res.data.authorizationUrl;
     } catch (err: any) {
       alert(err.message || 'Failed to start Google auth');
@@ -32,7 +33,7 @@ export default function IntegrationsPage() {
 
   async function handleConnectMicrosoft() {
     try {
-      const res = await integrations.startMicrosoftAuth();
+      const res = await startMicrosoftAuth();
       window.location.href = res.data.authorizationUrl;
     } catch (err: any) {
       alert(err.message || 'Failed to start Microsoft auth');
@@ -42,7 +43,7 @@ export default function IntegrationsPage() {
   async function handleDisconnect(id: string) {
     if (!confirm('Disconnect this integration?')) return;
     try {
-      await integrations.disconnect(id);
+      await disconnectIntegration(id);
       setList((prev) => prev.filter((i) => i.id !== id));
     } catch {}
   }
@@ -52,7 +53,7 @@ export default function IntegrationsPage() {
     setSavingAI(true);
     setAiMsg('');
     try {
-      await integrations.saveAI({ provider: 'openai', apiKey: aiKey });
+      await saveAI({ provider: 'openai', apiKey: aiKey });
       setAiMsg('API key saved successfully');
       setAiKey('');
       load();

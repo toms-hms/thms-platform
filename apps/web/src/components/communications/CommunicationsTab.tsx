@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { communications } from '@/lib/api';
+import { listCommunications } from './queries';
+import { updateCommunication } from './mutations';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface Props {
@@ -24,7 +25,7 @@ export default function CommunicationsTab({ jobId }: Props) {
         filter === 'needsReview'
           ? { needsReview: true }
           : undefined;
-      const res = await communications.list(jobId, params);
+      const res = await listCommunications(jobId, params);
       setComms(res.data);
     } catch {}
     setLoading(false);
@@ -32,7 +33,7 @@ export default function CommunicationsTab({ jobId }: Props) {
 
   async function markReviewed(commId: string) {
     try {
-      await communications.update(commId, { needsReview: false });
+      await updateCommunication(commId, { needsReview: false });
       setComms((prev) =>
         prev.map((c) => (c.id === commId ? { ...c, needsReview: false } : c))
       );

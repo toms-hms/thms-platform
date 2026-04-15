@@ -1,3 +1,5 @@
+import { TradeCategory } from './trade-category';
+
 export enum JobStatus {
   DRAFT = 'DRAFT',
   PLANNING = 'PLANNING',
@@ -13,7 +15,7 @@ export interface JobDto {
   id: string;
   homeId: string;
   title: string;
-  category: string;
+  category: TradeCategory;
   description?: string;
   notes?: string;
   status: JobStatus;
@@ -24,7 +26,7 @@ export interface JobDto {
 
 export interface CreateJobInput {
   title: string;
-  category: string;
+  category: TradeCategory;
   description?: string;
   notes?: string;
   status?: JobStatus;
@@ -32,7 +34,7 @@ export interface CreateJobInput {
 
 export interface UpdateJobInput {
   title?: string;
-  category?: string;
+  category?: TradeCategory;
   description?: string;
   notes?: string;
   status?: JobStatus;

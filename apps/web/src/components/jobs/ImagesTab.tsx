@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import Image from 'next/image';
-import { images as imagesApi, aiGenerations } from '@/lib/api';
+import { listImages } from './queries';
+import { getUploadUrl, confirmUpload, deleteImage, createAIGeneration } from './mutations';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 
@@ -25,7 +26,7 @@ export default function ImagesTab({ jobId }: Props) {
   async function load() {
     setLoading(true);
     try {
-      const res = await imagesApi.list(jobId);
+      const res = await listImages(jobId);
       setImagesList(res.data);
     } catch {}
     setLoading(false);
@@ -36,7 +37,7 @@ export default function ImagesTab({ jobId }: Props) {
     if (!file) return;
     setUploading(true);
     try {
-      const urlRes = await imagesApi.getUploadUrl(jobId, {
+      const urlRes = await getUploadUrl(jobId, {
         fileName: file.name,
         contentType: file.type,
         kind: 'SOURCE',
@@ -49,7 +50,7 @@ export default function ImagesTab({ jobId }: Props) {
         headers: { 'Content-Type': file.type },
       });
 
-      const confirmRes = await imagesApi.confirmUpload(jobId, {
+      const confirmRes = await confirmUpload(jobId, {
         key,
         kind: 'SOURCE',
         label: file.name,
@@ -66,7 +67,7 @@ export default function ImagesTab({ jobId }: Props) {
     e.preventDefault();
     setGenLoading(true);
     try {
-      const res = await aiGenerations.create(jobId, {
+      const res = await createAIGeneration(jobId, {
         sourceImageId: genForm.sourceImageId,
         prompt: genForm.prompt,
         provider: 'openai',
@@ -83,7 +84,7 @@ export default function ImagesTab({ jobId }: Props) {
   async function handleDelete(imageId: string) {
     if (!confirm('Delete this image?')) return;
     try {
-      await imagesApi.delete(jobId, imageId);
+      await deleteImage(jobId, imageId);
       setImagesList((prev) => prev.filter((i) => i.id !== imageId));
     } catch {}
   }

@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { auth } from '@/lib/api';
 import { clearTokens, getStoredUser } from '@/lib/auth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const navLinks = [
   { href: '/homes', label: 'Homes' },
+  { href: '/jobs', label: 'Jobs' },
   { href: '/contractors', label: 'Contractors' },
   { href: '/integrations', label: 'Integrations' },
 ];
@@ -14,8 +15,12 @@ const navLinks = [
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const user = getStoredUser();
+  const [user, setUser] = useState<any>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+  }, []);
 
   async function handleLogout() {
     setLoggingOut(true);

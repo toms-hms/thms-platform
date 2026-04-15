@@ -1,7 +1,7 @@
 'use client';
 import { useState, FormEvent } from 'react';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { jobs } from '@/lib/api';
+import { updateJob } from './mutations';
 
 const JOB_STATUSES = [
   'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
@@ -32,7 +32,7 @@ export default function JobOverview({ job, onUpdated }: Props) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await jobs.update(job.id, form);
+      const res = await updateJob(job.id, form);
       onUpdated(res.data);
       setEditing(false);
     } catch {}

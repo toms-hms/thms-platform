@@ -1,6 +1,6 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import { quotes as quotesApi } from '@/lib/api';
+import { createQuote, updateQuote, deleteQuote } from './mutations';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 
@@ -27,7 +27,7 @@ export default function QuotesTab({ job }: Props) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await quotesApi.create(job.id, {
+      const res = await createQuote(job.id, {
         contractorId: form.contractorId,
         amount: parseFloat(form.amount),
         description: form.description,
@@ -42,7 +42,7 @@ export default function QuotesTab({ job }: Props) {
 
   async function handleConfirm(quote: any) {
     try {
-      const res = await quotesApi.update(quote.id, { status: 'CONFIRMED' });
+      const res = await updateQuote(quote.id, { status: 'CONFIRMED' });
       setQuotesList((prev) => prev.map((q) => (q.id === quote.id ? res.data : q)));
     } catch {}
   }
@@ -50,7 +50,7 @@ export default function QuotesTab({ job }: Props) {
   async function handleDelete(quoteId: string) {
     if (!confirm('Delete this quote?')) return;
     try {
-      await quotesApi.delete(quoteId);
+      await deleteQuote(quoteId);
       setQuotesList((prev) => prev.filter((q) => q.id !== quoteId));
     } catch {}
   }

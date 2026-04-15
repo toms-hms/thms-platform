@@ -43,7 +43,7 @@ migrate-deploy:
 	docker compose exec api npx drizzle-kit migrate
 
 seed:
-	docker compose exec api npx tsx prisma/seed.ts
+	docker compose exec api npx tsx src/db/seed.ts
 
 studio:
 	docker compose exec api npx drizzle-kit studio

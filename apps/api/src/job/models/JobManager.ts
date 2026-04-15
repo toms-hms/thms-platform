@@ -3,16 +3,21 @@ import { db } from '../../db';
 import { jobs, type Job, type NewJob } from './Job';
 import { userHomes } from '../../home/models/UserHome';
 import { NotFoundError } from '../../utils/errors';
+import { UserRole } from '@thms/shared';
 
 export const JobManager = {
-  async listForHome(homeId: string, userId: string, filters?: { status?: string; category?: string }): Promise<Job[]> {
+  async listForUser(userId: string, role: UserRole, homeId: string, filters?: { status?: string; category?: string }): Promise<Job[]> {
+    if (role === 'ADMIN') return this.queryForHome(homeId, filters);
     const [membership] = await db
       .select()
       .from(userHomes)
       .where(and(eq(userHomes.userId, userId), eq(userHomes.homeId, homeId)))
       .limit(1);
     if (!membership) throw new NotFoundError('Home');
+    return this.queryForHome(homeId, filters);
+  },
 
+  async queryForHome(homeId: string, filters?: { status?: string; category?: string }): Promise<Job[]> {
     return db
       .select()
       .from(jobs)
@@ -20,7 +25,7 @@ export const JobManager = {
         and(
           eq(jobs.homeId, homeId),
           filters?.status   ? eq(jobs.status, filters.status as Job['status'])       : undefined,
-          filters?.category ? eq(jobs.category, filters.category)                    : undefined,
+          filters?.category ? eq(jobs.category, filters.category as Job['category']) : undefined,
         )
       )
       .orderBy(desc(jobs.createdAt));
@@ -31,16 +36,11 @@ export const JobManager = {
     return job;
   },
 
-  async findByIdForUser(id: string, userId: string): Promise<Job> {
-    const job = await this.findById(id);
-    if (!job) throw new NotFoundError('Job');
-    const [membership] = await db
-      .select()
-      .from(userHomes)
-      .where(and(eq(userHomes.userId, userId), eq(userHomes.homeId, job.homeId)))
-      .limit(1);
-    if (!membership) throw new NotFoundError('Job');
-    return job;
+  async hasPermission(userId: string, jobId: string): Promise<boolean> {
+    const job = await this.findById(jobId);
+    if (!job) return false;
+    const { HomeManager } = await import('../../home/models/HomeManager');
+    return HomeManager.hasPermission(userId, job.homeId);
   },
 
   async create(data: NewJob): Promise<Job> {

@@ -1,17 +1,12 @@
 import { createId } from '@paralleldrive/cuid2';
-import { NotFoundError } from '../utils/errors';
 import { QuoteManager } from './models/QuoteManager';
-import { UserHomeManager } from '../home/models/UserHomeManager';
-import { JobManager } from '../job/models/JobManager';
 import type { CreateQuoteInput, UpdateQuoteInput } from '@thms/shared';
 
-export async function listQuotes(jobId: string, userId: string) {
-  await JobManager.findByIdForUser(jobId, userId);
+export async function listQuotes(jobId: string) {
   return QuoteManager.listForJob(jobId);
 }
 
-export async function createQuote(jobId: string, userId: string, data: CreateQuoteInput) {
-  await JobManager.findByIdForUser(jobId, userId);
+export async function createQuote(jobId: string, data: CreateQuoteInput) {
   return QuoteManager.create({
     id: createId(),
     jobId,

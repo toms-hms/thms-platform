@@ -2,7 +2,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { homes, jobs } from '@/lib/api';
+import { getHome, listJobs } from './queries';
+import { createJob } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
@@ -36,8 +37,8 @@ export default function HomeDetailPage() {
   async function loadData() {
     try {
       const [homeRes, jobsRes] = await Promise.all([
-        homes.get(homeId),
-        jobs.list(homeId),
+        getHome(homeId),
+        listJobs(homeId),
       ]);
       setHome(homeRes.data);
       setJobsList(jobsRes.data);
@@ -54,7 +55,7 @@ export default function HomeDetailPage() {
     setSaving(true);
     setError('');
     try {
-      const res = await jobs.create(homeId, form);
+      const res = await createJob(homeId, form);
       setJobsList((prev) => [res.data, ...prev]);
       setShowCreate(false);
       setForm({ title: '', category: '', description: '', notes: '', status: 'DRAFT' });

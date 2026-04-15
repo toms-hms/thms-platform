@@ -3,7 +3,7 @@ import app from '../app';
 import { db } from '../db';
 import { users } from '../auth/models/User';
 import { contractors } from '../contractor/models/Contractor';
-import { userContractors } from '../contractor/models/UserContractor';
+import { TradeCategory } from '@thms/shared';
 import { eq } from 'drizzle-orm';
 
 const TEST_EMAIL = 'test-contractors@example.com';
@@ -11,12 +11,10 @@ const TEST_EMAIL = 'test-contractors@example.com';
 async function cleanup() {
   const user = await db.select().from(users).where(eq(users.email, TEST_EMAIL)).limit(1);
   if (user[0]) {
-    const ucs = await db.select().from(userContractors).where(eq(userContractors.userId, user[0].id));
-    for (const uc of ucs) {
-      await db.delete(contractors).where(eq(contractors.id, uc.contractorId));
-    }
     await db.delete(users).where(eq(users.email, TEST_EMAIL));
   }
+  // Clean up any contractors created during tests
+  await db.delete(contractors).where(eq(contractors.email, 'john@smithdecks.com'));
 }
 
 describe('Contractors API', () => {
@@ -38,19 +36,24 @@ describe('Contractors API', () => {
       const res = await request(app)
         .post('/api/v1/contractors')
         .set('Authorization', `Bearer ${token}`)
-        .send({ name: 'John Smith', companyName: 'Smith Decks', email: 'john@smithdecks.com', phone: '5125551212', category: 'deck', notes: 'Good recommendation' });
+        .send({ name: 'John Smith', companyName: 'Smith Decks', email: 'john@smithdecks.com', phone: '5125551212', category: TradeCategory.CARPENTRY, notes: 'Good recommendation' });
       expect(res.status).toBe(201);
       expect(res.body.data.name).toBe('John Smith');
       contractorId = res.body.data.id;
     });
 
     it('should reject missing name', async () => {
-      const res = await request(app).post('/api/v1/contractors').set('Authorization', `Bearer ${token}`).send({ category: 'deck' });
+      const res = await request(app).post('/api/v1/contractors').set('Authorization', `Bearer ${token}`).send({ category: TradeCategory.CARPENTRY });
       expect(res.status).toBe(400);
     });
 
     it('should reject invalid email', async () => {
-      const res = await request(app).post('/api/v1/contractors').set('Authorization', `Bearer ${token}`).send({ name: 'Test', category: 'deck', email: 'notanemail' });
+      const res = await request(app).post('/api/v1/contractors').set('Authorization', `Bearer ${token}`).send({ name: 'Test', category: TradeCategory.CARPENTRY, email: 'notanemail' });
+      expect(res.status).toBe(400);
+    });
+
+    it('should reject invalid category', async () => {
+      const res = await request(app).post('/api/v1/contractors').set('Authorization', `Bearer ${token}`).send({ name: 'Test', category: 'deck' });
       expect(res.status).toBe(400);
     });
   });
@@ -70,9 +73,9 @@ describe('Contractors API', () => {
     });
 
     it('should filter by category', async () => {
-      const res = await request(app).get('/api/v1/contractors?category=deck').set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get(`/api/v1/contractors?category=${TradeCategory.CARPENTRY}`).set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
-      res.body.data.forEach((c: any) => expect(c.category).toContain('deck'));
+      res.body.data.forEach((c: any) => expect(c.category).toBe(TradeCategory.CARPENTRY));
     });
   });
 
@@ -92,7 +95,7 @@ describe('Contractors API', () => {
       const createRes = await request(app)
         .post('/api/v1/contractors')
         .set('Authorization', `Bearer ${token}`)
-        .send({ name: 'To Delete', category: 'test' });
+        .send({ name: 'To Delete', category: TradeCategory.FLOORING });
       const delRes = await request(app)
         .delete(`/api/v1/contractors/${createRes.body.data.id}`)
         .set('Authorization', `Bearer ${token}`);

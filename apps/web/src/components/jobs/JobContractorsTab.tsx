@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import { contractors as contractorsApi, jobContractors, email as emailApi, integrations as integrationsApi } from '@/lib/api';
+import { listContractors, listIntegrations } from './queries';
+import { assignContractor, updateContractorStatus, removeContractor, draftEmail, sendEmail } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
@@ -30,8 +31,8 @@ export default function JobContractorsTab({ job }: Props) {
   const [emailNotes, setEmailNotes] = useState('');
 
   useEffect(() => {
-    contractorsApi.list().then((r) => setAllContractors(r.data)).catch(() => {});
-    integrationsApi.list().then((r) => setIntegrationsList(r.data)).catch(() => {});
+    listContractors().then((r) => setAllContractors(r.data)).catch(() => {});
+    listIntegrations().then((r) => setIntegrationsList(r.data)).catch(() => {});
   }, []);
 
   const attachedIds = new Set(jcs.map((jc) => jc.contractorId));
@@ -42,7 +43,7 @@ export default function JobContractorsTab({ job }: Props) {
     if (!selectedContractorId) return;
     setSaving(true);
     try {
-      const res = await jobContractors.assign(job.id, { contractorId: selectedContractorId });
+      const res = await assignContractor(job.id, { contractorId: selectedContractorId });
       setJcs((prev) => [...prev, res.data]);
       setShowAdd(false);
       setSelectedContractorId('');
@@ -52,7 +53,7 @@ export default function JobContractorsTab({ job }: Props) {
 
   async function handleStatusChange(jc: any, status: string) {
     try {
-      const res = await jobContractors.updateStatus(job.id, jc.id, { status });
+      const res = await updateContractorStatus(job.id, jc.id, { status });
       setJcs((prev) => prev.map((j) => (j.id === jc.id ? res.data : j)));
     } catch {}
   }
@@ -60,7 +61,7 @@ export default function JobContractorsTab({ job }: Props) {
   async function handleRemove(jcId: string) {
     if (!confirm('Remove contractor from this job?')) return;
     try {
-      await jobContractors.remove(job.id, jcId);
+      await removeContractor(job.id, jcId);
       setJcs((prev) => prev.filter((j) => j.id !== jcId));
     } catch {}
   }
@@ -73,7 +74,7 @@ export default function JobContractorsTab({ job }: Props) {
     }
     setDraftLoading(true);
     try {
-      const res = await emailApi.draft(job.id, {
+      const res = await draftEmail(job.id, {
         contractorIds: selected.map((jc) => jc.contractorId),
         tone: 'professional',
         includeImages: false,
@@ -95,7 +96,7 @@ export default function JobContractorsTab({ job }: Props) {
     const jc = jcs.find((j) => j.contractorId === draft.contractorId);
     setSendingEmail(draft.contractorId);
     try {
-      await emailApi.send(job.id, {
+      await sendEmail(job.id, {
         contractorId: draft.contractorId,
         integrationId: selectedIntegration,
         to: jc?.contractor?.email || '',

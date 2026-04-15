@@ -1,8 +1,23 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import { contractors } from '@/lib/api';
+import { TradeCategory } from '@thms/shared';
+import { listContractors } from './queries';
+import { createContractor, updateContractor, deleteContractor } from './mutations';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
+
+const CATEGORY_LABELS: Record<TradeCategory, string> = {
+  [TradeCategory.PLUMBING]:            'Plumbing',
+  [TradeCategory.ELECTRICAL]:          'Electrical',
+  [TradeCategory.HVAC]:                'HVAC',
+  [TradeCategory.ROOFING]:             'Roofing',
+  [TradeCategory.PAINTING]:            'Painting',
+  [TradeCategory.LANDSCAPING]:         'Landscaping',
+  [TradeCategory.GENERAL_CONTRACTING]: 'General Contracting',
+  [TradeCategory.CARPENTRY]:           'Carpentry',
+  [TradeCategory.FLOORING]:            'Flooring',
+  [TradeCategory.PEST_CONTROL]:        'Pest Control',
+};
 
 export default function ContractorsPage() {
   const [list, setList] = useState<any[]>([]);
@@ -29,7 +44,7 @@ export default function ContractorsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await contractors.list({ search: search || undefined, category: category || undefined });
+      const res = await listContractors({ search: search || undefined, category: category || undefined });
       setList(res.data);
     } catch {}
     setLoading(false);
@@ -66,10 +81,10 @@ export default function ContractorsPage() {
     setError('');
     try {
       if (editing) {
-        const res = await contractors.update(editing.id, form);
+        const res = await updateContractor(editing.id, form);
         setList((prev) => prev.map((c) => (c.id === editing.id ? res.data : c)));
       } else {
-        const res = await contractors.create(form);
+        const res = await createContractor(form);
         setList((prev) => [res.data, ...prev]);
       }
       setShowCreate(false);
@@ -83,7 +98,7 @@ export default function ContractorsPage() {
   async function handleDelete(contractorId: string, name: string) {
     if (!confirm(`Delete ${name}?`)) return;
     try {
-      await contractors.delete(contractorId);
+      await deleteContractor(contractorId);
       setList((prev) => prev.filter((c) => c.id !== contractorId));
     } catch {}
   }
@@ -103,13 +118,16 @@ export default function ContractorsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <input
-          type="text"
+        <select
           className="input max-w-xs"
-          placeholder="Filter by category..."
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-        />
+        >
+          <option value="">All categories</option>
+          {Object.values(TradeCategory).map((v) => (
+            <option key={v} value={v}>{CATEGORY_LABELS[v]}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -130,7 +148,7 @@ export default function ContractorsPage() {
                   {c.companyName && <span className="text-sm text-gray-500">– {c.companyName}</span>}
                 </div>
                 <div className="flex gap-4 mt-1 text-xs text-gray-400">
-                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{c.category}</span>
+                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{CATEGORY_LABELS[c.category as TradeCategory] ?? c.category}</span>
                   {c.email && <span>{c.email}</span>}
                   {c.phone && <span>{c.phone}</span>}
                 </div>
@@ -173,7 +191,12 @@ export default function ContractorsPage() {
           </div>
           <div>
             <label className="label">Category</label>
-            <input className="input" value={form.category} onChange={(e) => update('category', e.target.value)} placeholder="deck, landscaping, plumbing..." required />
+            <select className="input" value={form.category} onChange={(e) => update('category', e.target.value)} required>
+              <option value="">Select a category</option>
+              {Object.values(TradeCategory).map((v) => (
+                <option key={v} value={v}>{CATEGORY_LABELS[v]}</option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -1,3 +1,4 @@
+export * from './types/trade-category';
 export * from './types/user';
 export * from './types/home';
 export * from './types/contractor';

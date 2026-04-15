@@ -1,27 +1,25 @@
 import { createId } from '@paralleldrive/cuid2';
 import { NotFoundError } from '../utils/errors';
 import { ContractorManager } from './models/ContractorManager';
-import { UserContractorManager } from './models/UserContractorManager';
 import type { CreateContractorInput, UpdateContractorInput } from '@thms/shared';
 
-export async function listContractors(userId: string, filters?: { search?: string; category?: string }) {
-  const results = await UserContractorManager.listContractorsForUser(userId);
-  let contractors = results.map((r) => r.contractor);
+export async function listContractors(filters?: { search?: string; category?: string }) {
+  let results = await ContractorManager.findAll();
 
   if (filters?.search) {
     const s = filters.search.toLowerCase();
-    contractors = contractors.filter(
+    results = results.filter(
       (c) => c.name.toLowerCase().includes(s) || c.companyName?.toLowerCase().includes(s) || c.email?.toLowerCase().includes(s)
     );
   }
   if (filters?.category) {
-    contractors = contractors.filter((c) => c.category.toLowerCase().includes(filters.category!.toLowerCase()));
+    results = results.filter((c) => c.category === filters.category);
   }
-  return contractors;
+  return results;
 }
 
-export async function createContractor(userId: string, data: CreateContractorInput) {
-  const contractor = await ContractorManager.create({
+export async function createContractor(data: CreateContractorInput) {
+  return ContractorManager.create({
     id: createId(),
     name: data.name,
     companyName: data.companyName ?? null,
@@ -31,23 +29,20 @@ export async function createContractor(userId: string, data: CreateContractorInp
     notes: data.notes ?? null,
     updatedAt: new Date(),
   });
-  await UserContractorManager.create({ userId, contractorId: contractor.id });
-  return contractor;
 }
 
-export async function getContractor(contractorId: string, userId: string) {
-  await UserContractorManager.assertMembership(userId, contractorId);
+export async function getContractor(contractorId: string) {
   const contractor = await ContractorManager.findById(contractorId);
   if (!contractor) throw new NotFoundError('Contractor');
   return contractor;
 }
 
-export async function updateContractor(contractorId: string, userId: string, data: UpdateContractorInput) {
-  await getContractor(contractorId, userId);
+export async function updateContractor(contractorId: string, data: UpdateContractorInput) {
+  await getContractor(contractorId);
   return ContractorManager.update(contractorId, data);
 }
 
-export async function deleteContractor(contractorId: string, userId: string) {
-  await getContractor(contractorId, userId);
+export async function deleteContractor(contractorId: string) {
+  await getContractor(contractorId);
   await ContractorManager.delete(contractorId);
 }

@@ -6,10 +6,6 @@ import { UserHomeManager } from '../home/models/UserHomeManager';
 import type { CreateJobInput, UpdateJobInput } from '@thms/shared';
 import { JobContractorStatus } from '@thms/shared';
 
-export async function listJobs(homeId: string, userId: string, filters?: { status?: string; category?: string }) {
-  return JobManager.listForHome(homeId, userId, filters);
-}
-
 export async function createJob(homeId: string, userId: string, data: CreateJobInput) {
   await UserHomeManager.assertMembership(userId, homeId);
   return JobManager.create({
@@ -25,8 +21,9 @@ export async function createJob(homeId: string, userId: string, data: CreateJobI
   });
 }
 
-export async function getJob(jobId: string, userId: string) {
-  const job = await JobManager.findByIdForUser(jobId, userId);
+export async function getJob(jobId: string) {
+  const job = await JobManager.findById(jobId);
+  if (!job) throw new NotFoundError('Job');
 
   const [contractors, images, quotes, communications, aiGenerations] = await Promise.all([
     JobContractorManager.listForJob(jobId),
@@ -39,31 +36,30 @@ export async function getJob(jobId: string, userId: string) {
   return { ...job, contractors, images, quotes, communications, aiGenerations };
 }
 
-export async function updateJob(jobId: string, userId: string, data: UpdateJobInput) {
-  await JobManager.findByIdForUser(jobId, userId);
+export async function updateJob(jobId: string, data: UpdateJobInput) {
   return JobManager.update(jobId, data);
 }
 
-export async function deleteJob(jobId: string, userId: string) {
-  await JobManager.findByIdForUser(jobId, userId);
+export async function deleteJob(jobId: string) {
   await JobManager.delete(jobId);
 }
 
-export async function assignContractor(jobId: string, userId: string, contractorId: string, notes?: string) {
-  await JobManager.findByIdForUser(jobId, userId);
+export async function listJobContractors(jobId: string) {
+  return JobContractorManager.listForJob(jobId);
+}
+
+export async function assignContractor(jobId: string, contractorId: string, notes?: string) {
   return JobContractorManager.upsert(jobId, contractorId, notes);
 }
 
-export async function updateJobContractorStatus(jobContractorId: string, userId: string, status: JobContractorStatus, notes?: string) {
+export async function updateJobContractorStatus(jobContractorId: string, status: JobContractorStatus, notes?: string) {
   const jc = await JobContractorManager.findById(jobContractorId);
   if (!jc) throw new NotFoundError('JobContractor');
-  await JobManager.findByIdForUser(jc.jobId, userId);
   return JobContractorManager.updateStatus(jobContractorId, status as any, notes);
 }
 
-export async function removeContractorFromJob(jobContractorId: string, userId: string) {
+export async function removeContractorFromJob(jobContractorId: string) {
   const jc = await JobContractorManager.findById(jobContractorId);
   if (!jc) throw new NotFoundError('JobContractor');
-  await JobManager.findByIdForUser(jc.jobId, userId);
   await JobContractorManager.delete(jobContractorId);
 }

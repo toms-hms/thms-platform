@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
-import { homes } from '@/lib/api';
+import { listHomes } from './queries';
+import { createHome } from './mutations';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 
@@ -27,7 +28,7 @@ export default function HomesPage() {
 
   async function loadHomes() {
     try {
-      const res = await homes.list();
+      const res = await listHomes();
       setHomesList(res.data);
     } catch {}
     setLoading(false);
@@ -42,7 +43,7 @@ export default function HomesPage() {
     setSaving(true);
     setError('');
     try {
-      const res = await homes.create(form);
+      const res = await createHome(form);
       setHomesList((prev) => [res.data, ...prev]);
       setShowCreate(false);
       setForm({ name: '', address1: '', address2: '', city: '', state: '', zipCode: '', notes: '' });

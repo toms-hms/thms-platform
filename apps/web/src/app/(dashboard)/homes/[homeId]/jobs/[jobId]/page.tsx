@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { jobs } from '@/lib/api';
+import { getJob } from './queries';
 import JobOverview from '@/components/jobs/JobOverview';
 import JobContractorsTab from '@/components/jobs/JobContractorsTab';
 import CommunicationsTab from '@/components/communications/CommunicationsTab';
@@ -31,7 +31,7 @@ export default function JobDetailPage() {
 
   async function loadJob() {
     try {
-      const res = await jobs.get(jobId);
+      const res = await getJob(jobId);
       setJob(res.data);
     } catch {}
     setLoading(false);

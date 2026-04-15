@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { tradeCategoryEnum } from '../../db/enums';
 
 export const contractors = pgTable('Contractor', {
   id:          text('id').primaryKey(),
@@ -6,7 +7,7 @@ export const contractors = pgTable('Contractor', {
   companyName: text('companyName'),
   email:       text('email'),
   phone:       text('phone'),
-  category:    text('category').notNull(),
+  category:    tradeCategoryEnum('category').notNull(),
   notes:       text('notes'),
   createdAt:   timestamp('createdAt', { precision: 3 }).notNull().defaultNow(),
   updatedAt:   timestamp('updatedAt', { precision: 3 }).notNull(),

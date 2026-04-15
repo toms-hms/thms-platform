@@ -3,6 +3,7 @@ import { db } from '../../db';
 import { jobContractors, type JobContractor, type NewJobContractor } from './JobContractor';
 import { contractors } from '../../contractor/models/Contractor';
 import { NotFoundError } from '../../utils/errors';
+import { UserRole } from '@thms/shared';
 
 export const JobContractorManager = {
   async listForJob(jobId: string) {
@@ -14,9 +15,25 @@ export const JobContractorManager = {
       .orderBy(jobContractors.createdAt);
   },
 
+  async listForUser(userId: string, role: UserRole, jobId: string) {
+    if (role !== 'ADMIN') {
+      const { JobManager } = await import('./JobManager');
+      const allowed = await JobManager.hasPermission(userId, jobId);
+      if (!allowed) throw new NotFoundError('Job');
+    }
+    return this.listForJob(jobId);
+  },
+
   async findById(id: string): Promise<JobContractor | undefined> {
     const [jc] = await db.select().from(jobContractors).where(eq(jobContractors.id, id)).limit(1);
     return jc;
+  },
+
+  async hasPermission(userId: string, jobContractorId: string): Promise<boolean> {
+    const jc = await this.findById(jobContractorId);
+    if (!jc) return false;
+    const { JobManager } = await import('./JobManager');
+    return JobManager.hasPermission(userId, jc.jobId);
   },
 
   async upsert(jobId: string, contractorId: string, notes?: string): Promise<JobContractor> {

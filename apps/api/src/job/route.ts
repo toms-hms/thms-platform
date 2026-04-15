@@ -38,13 +38,17 @@ jobCollectionRouter.get('/',
   }
 );
 
-jobCollectionRouter.post('/', validate(CreateJobSchema), async (req, res, next) => {
-  try {
-    const { userId } = getUser(req);
-    const job = await jobService.createJob((req.params as any).homeId, userId, req.body);
-    res.status(201).json({ data: job });
-  } catch (err) { next(err); }
-});
+jobCollectionRouter.post('/',
+  permit(HomeManager, (req) => (req.params as any).homeId),
+  validate(CreateJobSchema),
+  async (req, res, next) => {
+    try {
+      const { userId } = getUser(req);
+      const job = await jobService.createJob((req.params as any).homeId, userId, req.body);
+      res.status(201).json({ data: job });
+    } catch (err) { next(err); }
+  }
+);
 
 // Mounted at /jobs
 export const jobRouter = Router();

@@ -2,12 +2,10 @@ import { createId } from '@paralleldrive/cuid2';
 import { NotFoundError } from '../utils/errors';
 import { JobManager } from './models/JobManager';
 import { JobContractorManager } from './models/JobContractorManager';
-import { UserHomeManager } from '../home/models/UserHomeManager';
 import type { CreateJobInput, UpdateJobInput } from '@thms/shared';
 import { JobContractorStatus } from '@thms/shared';
 
 export async function createJob(homeId: string, userId: string, data: CreateJobInput) {
-  await UserHomeManager.assertMembership(userId, homeId);
   return JobManager.create({
     id: createId(),
     homeId,

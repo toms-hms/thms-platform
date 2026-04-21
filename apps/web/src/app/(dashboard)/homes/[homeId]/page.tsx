@@ -1,11 +1,9 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getHome, listJobs } from './queries';
-import { createJob } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';
-import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 
 const JOB_STATUSES = [
@@ -13,22 +11,18 @@ const JOB_STATUSES = [
   'SCHEDULED', 'IN_PROGRESS', 'AWAITING_PAYMENT', 'COMPLETED',
 ];
 
+const INTENT_LABELS: Record<string, string> = {
+  ISSUE: 'Fix',
+  IMPROVEMENT: 'Improve',
+  RECURRING_WORK: 'Maintenance',
+};
+
 export default function HomeDetailPage() {
   const { homeId } = useParams<{ homeId: string }>();
   const [home, setHome] = useState<any>(null);
   const [jobsList, setJobsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [form, setForm] = useState({
-    title: '',
-    category: '',
-    description: '',
-    notes: '',
-    status: 'DRAFT',
-  });
 
   useEffect(() => {
     if (homeId) loadData();
@@ -46,41 +40,21 @@ export default function HomeDetailPage() {
     setLoading(false);
   }
 
-  function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
-
-  async function handleCreateJob(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      const res = await createJob(homeId, form);
-      setJobsList((prev) => [res.data, ...prev]);
-      setShowCreate(false);
-      setForm({ title: '', category: '', description: '', notes: '', status: 'DRAFT' });
-    } catch (err: any) {
-      setError(err.message || 'Failed to create job');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const filteredJobs = statusFilter
     ? jobsList.filter((j) => j.status === statusFilter)
     : jobsList;
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  if (!home) return <div className="text-center py-12 text-gray-500">Home not found</div>;
+  if (loading) return <div className="text-center py-12 text-gray-400">Loading...</div>;
+  if (!home) return <div className="text-center py-12 text-gray-400">Home not found</div>;
 
   return (
     <div>
       <div className="mb-6">
-        <Link href="/homes" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/homes" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
           ← My Homes
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-1">{home.name}</h1>
-        <p className="text-gray-500 text-sm">{home.fullAddress}</p>
+        <h1 className="text-2xl font-bold text-ink mt-1">{home.name}</h1>
+        <p className="text-gray-400 text-sm">{home.fullAddress}</p>
       </div>
 
       <div className="flex items-center justify-between mb-4">
@@ -93,25 +67,23 @@ export default function HomeDetailPage() {
           >
             <option value="">All statuses</option>
             {JOB_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.replace(/_/g, ' ')}
-              </option>
+              <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </select>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">
-          + New Job
-        </button>
+        <Link href={`/homes/${homeId}/jobs/new`} className="btn-primary">
+          + New Request
+        </Link>
       </div>
 
       {filteredJobs.length === 0 ? (
         <EmptyState
           title="No jobs yet"
-          description="Create a job to track a home project."
+          description="Start a new request to get quotes from contractors."
           action={
-            <button onClick={() => setShowCreate(true)} className="btn-primary">
-              New Job
-            </button>
+            <Link href={`/homes/${homeId}/jobs/new`} className="btn-primary">
+              New Request
+            </Link>
           }
         />
       ) : (
@@ -120,97 +92,30 @@ export default function HomeDetailPage() {
             <Link
               key={job.id}
               href={`/homes/${homeId}/jobs/${job.id}`}
-              className="card p-4 flex items-start justify-between hover:shadow-md transition-shadow"
+              className="card p-4 flex items-start justify-between hover:shadow-md transition-shadow block"
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900">{job.title}</h3>
+                  <h3 className="font-semibold text-ink">{job.title}</h3>
                   <StatusBadge status={job.status} />
+                  {job.intent && job.intent !== 'ISSUE' && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {INTENT_LABELS[job.intent] ?? job.intent}
+                    </span>
+                  )}
                 </div>
-                <p className="text-sm text-gray-500 mt-0.5">{job.category}</p>
+                <p className="text-sm text-gray-400 mt-0.5">{job.category?.replace(/_/g, ' ')}</p>
                 {job.description && (
-                  <p className="text-sm text-gray-400 mt-1 line-clamp-1">{job.description}</p>
+                  <p className="text-sm text-gray-300 mt-1 line-clamp-1">{job.description}</p>
                 )}
               </div>
-              <span className="text-gray-400 text-sm ml-4 shrink-0">
+              <span className="text-gray-300 text-sm ml-4 shrink-0">
                 {new Date(job.createdAt).toLocaleDateString()}
               </span>
             </Link>
           ))}
         </div>
       )}
-
-      <Modal title="New Job" open={showCreate} onClose={() => setShowCreate(false)}>
-        <form onSubmit={handleCreateJob} className="space-y-4">
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {error}
-            </div>
-          )}
-          <div>
-            <label className="label">Job Title</label>
-            <input
-              className="input"
-              value={form.title}
-              onChange={(e) => update('title', e.target.value)}
-              placeholder="Backyard Deck"
-              required
-            />
-          </div>
-          <div>
-            <label className="label">Category</label>
-            <input
-              className="input"
-              value={form.category}
-              onChange={(e) => update('category', e.target.value)}
-              placeholder="deck, landscaping, plumbing..."
-              required
-            />
-          </div>
-          <div>
-            <label className="label">Status</label>
-            <select
-              className="input"
-              value={form.status}
-              onChange={(e) => update('status', e.target.value)}
-            >
-              {JOB_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <textarea
-              className="input"
-              rows={3}
-              value={form.description}
-              onChange={(e) => update('description', e.target.value)}
-              placeholder="Describe what you want done..."
-            />
-          </div>
-          <div>
-            <label className="label">Notes</label>
-            <textarea
-              className="input"
-              rows={2}
-              value={form.notes}
-              onChange={(e) => update('notes', e.target.value)}
-              placeholder="Internal notes..."
-            />
-          </div>
-          <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? 'Creating...' : 'Create Job'}
-            </button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

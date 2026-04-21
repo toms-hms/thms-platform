@@ -3,7 +3,10 @@ import { pgEnum } from 'drizzle-orm/pg-core';
 export const tradeCategoryEnum = pgEnum('TradeCategory', [
   'PLUMBING', 'ELECTRICAL', 'HVAC', 'ROOFING', 'PAINTING',
   'LANDSCAPING', 'GENERAL_CONTRACTING', 'CARPENTRY', 'FLOORING', 'PEST_CONTROL',
+  'DOORS_AND_WINDOWS', 'POOL_AND_SPA',
 ]);
+
+export const jobIntentEnum = pgEnum('JobIntent', ['ISSUE', 'IMPROVEMENT', 'RECURRING_WORK']);
 
 export const userRoleEnum = pgEnum('UserRole', ['ADMIN', 'USER']);
 export const homeRoleEnum = pgEnum('HomeRole', ['OWNER', 'MEMBER']);

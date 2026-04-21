@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { createId } from '@paralleldrive/cuid2';
-import { db } from '../../db';
-import { users } from '../models/User';
+import { Factory } from 'fishery';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
 import { UserRole } from '@thms/shared';
-import type { User } from '../models/User';
+import type { User } from '@/auth/models/User';
 
-// Pre-hash at 4 rounds — fast enough for tests
 const TEST_PASSWORD = 'password123';
 let cachedHash: string | null = null;
 async function getHash() {
@@ -13,15 +13,25 @@ async function getHash() {
   return cachedHash;
 }
 
-export async function createUser(overrides?: Partial<{ email: string; firstName: string; lastName: string; role: UserRole }>): Promise<User> {
-  const [user] = await db.insert(users).values({
+export const userFactory = Factory.define<User>(({ onCreate, sequence }) => {
+  onCreate(async (user) => {
+    const [inserted] = await db.insert(users).values({
+      ...user,
+      passwordHash: await getHash(),
+      updatedAt: new Date(),
+    }).returning();
+    return inserted;
+  });
+
+  return {
     id: createId(),
-    email: overrides?.email ?? `test-factory-${createId()}@example.com`,
-    passwordHash: await getHash(),
-    firstName: overrides?.firstName ?? 'Test',
-    lastName: overrides?.lastName ?? 'User',
-    role: overrides?.role ?? UserRole.USER,
+    email: `test-factory-${sequence}@example.com`,
+    passwordHash: '',
+    firstName: 'Test',
+    lastName: `User${sequence}`,
+    role: UserRole.USER,
+    refreshTokenHash: null,
+    createdAt: new Date(),
     updatedAt: new Date(),
-  }).returning();
-  return user;
-}
+  };
+});

@@ -1,21 +1,29 @@
 import { createId } from '@paralleldrive/cuid2';
-import { HomeManager } from '../models/HomeManager';
-import { UserHomeManager } from '../models/UserHomeManager';
-import type { Home } from '../models/Home';
+import { Factory } from 'fishery';
+import { HomeManager } from '@/home/models/HomeManager';
+import { UserHomeManager } from '@/home/models/UserHomeManager';
+import type { Home } from '@/home/models/Home';
 
-export async function createHome(userId: string, overrides?: Partial<{ name: string; address1: string; city: string; state: string; zipCode: string }>): Promise<Home> {
-  const home = await HomeManager.create({
+export const homeFactory = Factory.define<Home, { userId: string }>(({ onCreate, transientParams, sequence }) => {
+  onCreate(async (home) => {
+    const created = await HomeManager.create(home);
+    if (transientParams.userId) {
+      await UserHomeManager.create({ userId: transientParams.userId, homeId: created.id, role: 'OWNER' });
+    }
+    return created;
+  });
+
+  return {
     id: createId(),
-    name: overrides?.name ?? 'Test Home',
-    address1: overrides?.address1 ?? '123 Test St',
+    name: `Test Home ${sequence}`,
+    address1: `${sequence} Test Street`,
     address2: null,
-    city: overrides?.city ?? 'Austin',
-    state: overrides?.state ?? 'TX',
-    zipCode: overrides?.zipCode ?? '78701',
+    city: 'Austin',
+    state: 'TX',
+    zipCode: '78701',
     country: 'US',
     notes: null,
+    createdAt: new Date(),
     updatedAt: new Date(),
-  });
-  await UserHomeManager.create({ userId, homeId: home.id, role: 'OWNER' });
-  return home;
-}
+  };
+});

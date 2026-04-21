@@ -1,4 +1,5 @@
 import { TradeCategory } from './trade-category';
+import { JobIntent } from './job-intent';
 
 export enum JobStatus {
   DRAFT = 'DRAFT',
@@ -15,6 +16,7 @@ export interface JobDto {
   id: string;
   homeId: string;
   title: string;
+  intent: JobIntent;
   category: TradeCategory;
   description?: string;
   notes?: string;
@@ -26,6 +28,7 @@ export interface JobDto {
 
 export interface CreateJobInput {
   title: string;
+  intent: JobIntent;
   category: TradeCategory;
   description?: string;
   notes?: string;

@@ -5,9 +5,9 @@ import { users } from '../../auth/models/User';
 import { homes } from '../../home/models/Home';
 import { userHomes } from '../../home/models/UserHome';
 import { like, eq, inArray } from 'drizzle-orm';
-import { createUser } from '../../auth/factories/User.factory';
-import { createHome } from '../../home/factories/Home.factory';
-import { createJob } from '../factories/Job.factory';
+import { userFactory } from '@/auth/factories/User.factory';
+import { homeFactory } from '@/home/factories/Home.factory';
+import { jobFactory } from '@/job/factories/Job.factory';
 import { TradeCategory } from '@thms/shared';
 
 async function cleanup() {
@@ -32,11 +32,11 @@ describe('Jobs API', () => {
 
   beforeAll(async () => {
     await cleanup();
-    const user = await createUser({ email: 'test-job-route@example.com' });
-    await createUser({ email: 'test-job-route-other@example.com' });
+    const user = await userFactory.create({ email: 'test-job-route@example.com' });
+    await userFactory.create({ email: 'test-job-route-other@example.com' });
     token = await loginAs('test-job-route@example.com');
     otherToken = await loginAs('test-job-route-other@example.com');
-    const home = await createHome(user.id);
+    const home = await homeFactory.create({}, { transient: { userId: user.id } });
     homeId = home.id;
   });
 
@@ -134,7 +134,7 @@ describe('Jobs API', () => {
   describe('DELETE /api/v1/jobs/:jobId', () => {
     it('deletes a job', async () => {
       const user = await db.select().from(users).where(like(users.email, 'test-job-route@example.com')).limit(1);
-      const extraJob = await createJob(homeId, user[0].id);
+      const extraJob = await jobFactory.create({}, { transient: { homeId, userId: user[0].id } });
       const res = await request(app).delete(`/api/v1/jobs/${extraJob.id}`).set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
     });

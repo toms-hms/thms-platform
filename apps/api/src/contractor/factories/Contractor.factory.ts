@@ -1,17 +1,21 @@
 import { createId } from '@paralleldrive/cuid2';
-import { ContractorManager } from '../models/ContractorManager';
+import { Factory } from 'fishery';
+import { ContractorManager } from '@/contractor/models/ContractorManager';
 import { TradeCategory } from '@thms/shared';
-import type { Contractor } from '../models/Contractor';
+import type { Contractor } from '@/contractor/models/Contractor';
 
-export async function createContractor(overrides?: Partial<{ name: string; category: TradeCategory; email: string }>): Promise<Contractor> {
-  return ContractorManager.create({
+export const contractorFactory = Factory.define<Contractor>(({ onCreate, sequence }) => {
+  onCreate((contractor) => ContractorManager.create(contractor));
+
+  return {
     id: createId(),
-    name: overrides?.name ?? 'Test Contractor',
-    companyName: null,
-    email: overrides?.email ?? null,
-    phone: null,
-    category: overrides?.category ?? TradeCategory.PLUMBING,
+    name: `Test Contractor ${sequence}`,
+    companyName: `Test Co ${sequence}`,
+    email: `contractor-${sequence}@example.com`,
+    phone: `512555${String(sequence).padStart(4, '0')}`,
+    category: TradeCategory.PLUMBING,
     notes: null,
+    createdAt: new Date(),
     updatedAt: new Date(),
-  });
-}
+  };
+});

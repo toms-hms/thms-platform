@@ -4,8 +4,8 @@ import { db } from '../../db';
 import { users } from '../../auth/models/User';
 import { contractors } from '../models/Contractor';
 import { like, eq } from 'drizzle-orm';
-import { createUser } from '../../auth/factories/User.factory';
-import { createContractor } from '../factories/Contractor.factory';
+import { userFactory } from '@/auth/factories/User.factory';
+import { contractorFactory } from '@/contractor/factories/Contractor.factory';
 import { TradeCategory, UserRole } from '@thms/shared';
 
 async function cleanup() {
@@ -25,8 +25,8 @@ describe('Contractors API', () => {
 
   beforeAll(async () => {
     await cleanup();
-    await createUser({ email: 'test-contractor-route@example.com', role: UserRole.USER });
-    await createUser({ email: 'test-contractor-route-admin@example.com', role: UserRole.ADMIN });
+    await userFactory.create({ email: 'test-contractor-route@example.com', role: UserRole.USER });
+    await userFactory.create({ email: 'test-contractor-route-admin@example.com', role: UserRole.ADMIN });
     userToken = await loginAs('test-contractor-route@example.com');
     adminToken = await loginAs('test-contractor-route-admin@example.com');
   });
@@ -41,7 +41,7 @@ describe('Contractors API', () => {
     });
 
     it('filters by category', async () => {
-      await createContractor({ name: 'Test Route Contractor', category: TradeCategory.ELECTRICAL });
+      await contractorFactory.create({ name: 'Test Route Contractor', category: TradeCategory.ELECTRICAL });
       const res = await request(app).get(`/api/v1/contractors?category=${TradeCategory.ELECTRICAL}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.status).toBe(200);
@@ -98,7 +98,7 @@ describe('Contractors API', () => {
 
   describe('DELETE /api/v1/contractors/:contractorId', () => {
     it('admin can delete a contractor', async () => {
-      const extra = await createContractor({ name: 'Test Route Contractor Delete' });
+      const extra = await contractorFactory.create({ name: 'Test Route Contractor Delete' });
       const res = await request(app).delete(`/api/v1/contractors/${extra.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);

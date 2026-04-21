@@ -3,8 +3,8 @@ import app from '../../app';
 import { db } from '../../db';
 import { users } from '../../auth/models/User';
 import { like } from 'drizzle-orm';
-import { createUser } from '../../auth/factories/User.factory';
-import { createHome } from '../factories/Home.factory';
+import { userFactory } from '@/auth/factories/User.factory';
+import { homeFactory } from '@/home/factories/Home.factory';
 
 async function cleanup() {
   await db.delete(users).where(like(users.email, 'test-home-route%'));
@@ -22,8 +22,8 @@ describe('Homes API', () => {
 
   beforeAll(async () => {
     await cleanup();
-    await createUser({ email: 'test-home-route@example.com' });
-    await createUser({ email: 'test-home-route-other@example.com' });
+    await userFactory.create({ email: 'test-home-route@example.com' });
+    await userFactory.create({ email: 'test-home-route-other@example.com' });
     token = await loginAs('test-home-route@example.com');
     otherToken = await loginAs('test-home-route-other@example.com');
   });

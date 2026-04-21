@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { jobStatusEnum, tradeCategoryEnum } from '../../db/enums';
+import { jobStatusEnum, jobIntentEnum, tradeCategoryEnum } from '../../db/enums';
 import { homes } from '../../home/models/Home';
 import { users } from '../../auth/models/User';
 
@@ -7,6 +7,7 @@ export const jobs = pgTable('Job', {
   id:              text('id').primaryKey(),
   homeId:          text('homeId').notNull().references(() => homes.id, { onDelete: 'cascade' }),
   title:           text('title').notNull(),
+  intent:          jobIntentEnum('intent').notNull().default('ISSUE'),
   category:        tradeCategoryEnum('category').notNull(),
   description:     text('description'),
   notes:           text('notes'),

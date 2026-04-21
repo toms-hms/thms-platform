@@ -17,6 +17,8 @@ const CATEGORY_LABELS: Record<TradeCategory, string> = {
   [TradeCategory.CARPENTRY]:           'Carpentry',
   [TradeCategory.FLOORING]:            'Flooring',
   [TradeCategory.PEST_CONTROL]:        'Pest Control',
+  [TradeCategory.DOORS_AND_WINDOWS]:   'Doors & Windows',
+  [TradeCategory.POOL_AND_SPA]:        'Pool & Spa',
 };
 
 export default function ContractorsPage() {

@@ -1,6 +1,12 @@
-import { JobContractorManager } from '../models/JobContractorManager';
-import type { JobContractor } from '../models/JobContractor';
+import { Factory } from 'fishery';
+import { JobContractorManager } from '@/job/models/JobContractorManager';
+import type { JobContractor } from '@/job/models/JobContractor';
 
-export async function createJobContractor(jobId: string, contractorId: string): Promise<JobContractor> {
-  return JobContractorManager.upsert(jobId, contractorId);
-}
+export const jobContractorFactory = Factory.define<JobContractor, { jobId: string; contractorId: string }>(({ onCreate, transientParams }) => {
+  onCreate((jc) => JobContractorManager.upsert(jc.jobId, jc.contractorId));
+
+  return {
+    jobId: transientParams.jobId ?? '',
+    contractorId: transientParams.contractorId ?? '',
+  };
+});

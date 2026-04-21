@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { JobStatus, JobContractorStatus, TradeCategory } from '@thms/shared';
+import { JobStatus, JobContractorStatus, JobIntent, TradeCategory } from '@thms/shared';
 
 export const CreateJobSchema = z.object({
   title: z.string().min(1),
+  intent: z.nativeEnum(JobIntent).default(JobIntent.ISSUE),
   category: z.nativeEnum(TradeCategory),
   description: z.string().optional(),
   notes: z.string().optional(),

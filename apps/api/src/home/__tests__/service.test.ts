@@ -1,9 +1,8 @@
 import { db } from '../../db';
 import { users } from '../../auth/models/User';
-import { homes } from '../models/Home';
 import { like } from 'drizzle-orm';
-import { createUser } from '../../auth/factories/User.factory';
-import { createHome } from '../factories/Home.factory';
+import { userFactory } from '@/auth/factories/User.factory';
+import { homeFactory } from '@/home/factories/Home.factory';
 import * as homeService from '../service';
 import { PermissionService } from '../../permissions/PermissionService';
 
@@ -17,8 +16,8 @@ describe('home/service', () => {
 
   beforeAll(async () => {
     await cleanup();
-    const user = await createUser({ email: 'test-home-service@example.com' });
-    const other = await createUser({ email: 'test-home-service-other@example.com' });
+    const user = await userFactory.create({ email: 'test-home-service@example.com' });
+    const other = await userFactory.create({ email: 'test-home-service-other@example.com' });
     userId = user.id;
     otherUserId = other.id;
   });
@@ -42,7 +41,7 @@ describe('home/service', () => {
 
   describe('deleteHome', () => {
     it('invalidates the permission cache on delete', async () => {
-      const home = await createHome(userId);
+      const home = await homeFactory.create({}, { transient: { userId } });
       // Warm cache first
       PermissionService.set(userId, home.id);
       await homeService.deleteHome(home.id, userId);
@@ -54,14 +53,14 @@ describe('home/service', () => {
     });
 
     it('throws if user is not the owner', async () => {
-      const home = await createHome(userId);
+      const home = await homeFactory.create({}, { transient: { userId } });
       await expect(homeService.deleteHome(home.id, otherUserId)).rejects.toThrow();
     });
   });
 
   describe('addUserToHome', () => {
     it('warms the permission cache for the new member', async () => {
-      const home = await createHome(userId);
+      const home = await homeFactory.create({}, { transient: { userId } });
       await homeService.addUserToHome(home.id, 'test-home-service-other@example.com', 'MEMBER');
       const spy = jest.spyOn(require('../models/UserHomeManager').UserHomeManager, 'findMembership');
       await PermissionService.check(require('../models/HomeManager').HomeManager, otherUserId, home.id);

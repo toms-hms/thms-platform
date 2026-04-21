@@ -7,7 +7,7 @@ import { homes } from '../home/models/Home';
 import { userHomes } from '../home/models/UserHome';
 import { contractors } from '../contractor/models/Contractor';
 import { jobs } from '../job/models/Job';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory, JobIntent } from '@thms/shared';
 
 async function seed() {
   console.log('Seeding database...');
@@ -77,22 +77,22 @@ async function seed() {
   }
 
   // ── Jobs (one per category, all on home1) ────────────────────────────────
-  const jobData: { category: TradeCategory; title: string; description: string }[] = [
-    { category: TradeCategory.PLUMBING,            title: 'Fix kitchen sink leak',          description: 'Slow drain and dripping faucet under the kitchen sink.' },
-    { category: TradeCategory.ELECTRICAL,          title: 'Replace outdoor outlets',        description: 'Two outdoor GFCI outlets need replacement; one is not functioning.' },
-    { category: TradeCategory.HVAC,                title: 'Annual AC tune-up',              description: 'Pre-summer inspection and tune-up of central air conditioning unit.' },
-    { category: TradeCategory.ROOFING,             title: 'Repair storm-damaged shingles',  description: 'Several shingles were blown off during the last storm; need inspection and repair.' },
-    { category: TradeCategory.PAINTING,            title: 'Interior living room repaint',   description: 'Paint living room and hallway — approx 400 sq ft, walls only.' },
-    { category: TradeCategory.LANDSCAPING,         title: 'Spring yard cleanup',            description: 'Trim hedges, clear flower beds, and aerate the back lawn.' },
-    { category: TradeCategory.GENERAL_CONTRACTING, title: 'Kitchen cabinet refresh',        description: 'Replace cabinet doors and hardware in the kitchen.' },
-    { category: TradeCategory.CARPENTRY,           title: 'Build backyard deck',            description: 'New 12x16 ft cedar deck off the back door.' },
-    { category: TradeCategory.FLOORING,            title: 'Replace master bedroom carpet',  description: 'Remove old carpet and install hardwood flooring in master bedroom (~200 sq ft).' },
-    { category: TradeCategory.PEST_CONTROL,        title: 'Ant and termite inspection',     description: 'Noticed ant trails along the foundation; need inspection and treatment.' },
+  const jobData: { intent: JobIntent; category: TradeCategory; title: string; description: string }[] = [
+    { intent: JobIntent.ISSUE,          category: TradeCategory.PLUMBING,            title: 'Fix kitchen sink leak',          description: 'Slow drain and dripping faucet under the kitchen sink.' },
+    { intent: JobIntent.ISSUE,          category: TradeCategory.ELECTRICAL,          title: 'Replace outdoor outlets',        description: 'Two outdoor GFCI outlets need replacement; one is not functioning.' },
+    { intent: JobIntent.RECURRING_WORK, category: TradeCategory.HVAC,                title: 'Annual AC tune-up',              description: 'Pre-summer inspection and tune-up of central air conditioning unit.' },
+    { intent: JobIntent.ISSUE,          category: TradeCategory.ROOFING,             title: 'Repair storm-damaged shingles',  description: 'Several shingles were blown off during the last storm; need inspection and repair.' },
+    { intent: JobIntent.IMPROVEMENT,    category: TradeCategory.PAINTING,            title: 'Interior living room repaint',   description: 'Paint living room and hallway — approx 400 sq ft, walls only.' },
+    { intent: JobIntent.RECURRING_WORK, category: TradeCategory.LANDSCAPING,         title: 'Spring yard cleanup',            description: 'Trim hedges, clear flower beds, and aerate the back lawn.' },
+    { intent: JobIntent.IMPROVEMENT,    category: TradeCategory.GENERAL_CONTRACTING, title: 'Kitchen cabinet refresh',        description: 'Replace cabinet doors and hardware in the kitchen.' },
+    { intent: JobIntent.IMPROVEMENT,    category: TradeCategory.CARPENTRY,           title: 'Build backyard deck',            description: 'New 12x16 ft cedar deck off the back door.' },
+    { intent: JobIntent.IMPROVEMENT,    category: TradeCategory.FLOORING,            title: 'Replace master bedroom carpet',  description: 'Remove old carpet and install hardwood flooring in master bedroom (~200 sq ft).' },
+    { intent: JobIntent.ISSUE,          category: TradeCategory.PEST_CONTROL,        title: 'Ant and termite inspection',     description: 'Noticed ant trails along the foundation; need inspection and treatment.' },
   ];
 
   for (const j of jobData) {
     await db.insert(jobs).values({
-      id: createId(), homeId: home1Id, title: j.title, category: j.category,
+      id: createId(), homeId: home1Id, title: j.title, intent: j.intent, category: j.category,
       description: j.description, status: 'DRAFT', createdByUserId: user1Id, updatedAt: now,
     }).onConflictDoNothing();
   }

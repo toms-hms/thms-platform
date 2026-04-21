@@ -17,5 +17,5 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json', diagnostics: false, isolatedModules: true }],
   },
-  transformIgnorePatterns: ['node_modules/(?!(@paralleldrive)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(@paralleldrive|@faker-js|fishery)/)'],
 };

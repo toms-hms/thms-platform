@@ -1,16 +1,20 @@
 import { createId } from '@paralleldrive/cuid2';
-import { QuoteManager } from '../models/QuoteManager';
-import type { Quote } from '../models/Quote';
+import { Factory } from 'fishery';
+import { QuoteManager } from '@/quote/models/QuoteManager';
+import type { Quote } from '@/quote/models/Quote';
 
-export async function createQuote(jobId: string, contractorId: string, overrides?: Partial<{ amount: number }>): Promise<Quote> {
-  return QuoteManager.create({
+export const quoteFactory = Factory.define<Quote, { jobId: string; contractorId: string }>(({ onCreate, transientParams, sequence }) => {
+  onCreate((quote) => QuoteManager.create(quote));
+
+  return {
     id: createId(),
-    jobId,
-    contractorId,
-    amount: overrides?.amount ?? 5000,
+    jobId: transientParams.jobId ?? '',
+    contractorId: transientParams.contractorId ?? '',
+    amount: 1000 * sequence,
     description: null,
     status: 'DRAFT',
     sourceCommunicationId: null,
+    createdAt: new Date(),
     updatedAt: new Date(),
-  });
-}
+  };
+});

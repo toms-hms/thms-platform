@@ -5,12 +5,12 @@ import { users } from '../../auth/models/User';
 import { homes } from '../../home/models/Home';
 import { userHomes } from '../../home/models/UserHome';
 import { like, eq, inArray } from 'drizzle-orm';
-import { createUser } from '../../auth/factories/User.factory';
-import { createHome } from '../../home/factories/Home.factory';
-import { createJob } from '../../job/factories/Job.factory';
-import { createContractor } from '../../contractor/factories/Contractor.factory';
-import { createJobContractor } from '../../job/factories/JobContractor.factory';
-import { createQuote } from '../factories/Quote.factory';
+import { userFactory } from '@/auth/factories/User.factory';
+import { homeFactory } from '@/home/factories/Home.factory';
+import { jobFactory } from '@/job/factories/Job.factory';
+import { contractorFactory } from '@/contractor/factories/Contractor.factory';
+import { jobContractorFactory } from '@/job/factories/JobContractor.factory';
+import { quoteFactory } from '@/quote/factories/Quote.factory';
 
 async function cleanup() {
   const testUsers = await db.select().from(users).where(like(users.email, 'test-quote-route%'));
@@ -35,14 +35,14 @@ describe('Quotes API', () => {
 
   beforeAll(async () => {
     await cleanup();
-    const user = await createUser({ email: 'test-quote-route@example.com' });
-    await createUser({ email: 'test-quote-route-other@example.com' });
+    const user = await userFactory.create({ email: 'test-quote-route@example.com' });
+    await userFactory.create({ email: 'test-quote-route-other@example.com' });
     token = await loginAs('test-quote-route@example.com');
     otherToken = await loginAs('test-quote-route-other@example.com');
-    const home = await createHome(user.id);
-    const job = await createJob(home.id, user.id);
-    const contractor = await createContractor();
-    await createJobContractor(job.id, contractor.id);
+    const home = await homeFactory.create({}, { transient: { userId: user.id } });
+    const job = await jobFactory.create({}, { transient: { homeId: home.id, userId: user.id } });
+    const contractor = await contractorFactory.create();
+    await jobContractorFactory.create({}, { transient: { jobId: job.id, contractorId: contractor.id } });
     jobId = job.id;
     contractorId = contractor.id;
   });
@@ -90,7 +90,7 @@ describe('Quotes API', () => {
 
   describe('PATCH /api/v1/quotes/:quoteId', () => {
     it('confirms a draft quote', async () => {
-      const quote = await createQuote(jobId, contractorId);
+      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
       const res = await request(app).patch(`/api/v1/quotes/${quote.id}`)
         .set('Authorization', `Bearer ${token}`)
         .send({ status: 'CONFIRMED' });
@@ -101,7 +101,7 @@ describe('Quotes API', () => {
 
   describe('DELETE /api/v1/quotes/:quoteId', () => {
     it('deletes a quote', async () => {
-      const quote = await createQuote(jobId, contractorId);
+      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
       const res = await request(app).delete(`/api/v1/quotes/${quote.id}`)
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);

@@ -1,5 +1,5 @@
 .PHONY: run run-d stop build build-run restart logs \
-        migrate seed studio \
+        migrate seed reset-db studio \
         check test test-api test-web \
         shell-api shell-web \
         clean
@@ -44,6 +44,16 @@ migrate-deploy:
 
 seed:
 	docker compose exec api npx tsx src/db/seed.ts
+
+reset-db:
+	docker compose stop postgres
+	docker compose rm -f postgres
+	docker volume rm thms-platform_pgdata
+	docker compose up -d postgres
+	@echo "Waiting for postgres..."
+	@until docker compose exec postgres pg_isready -U $${POSTGRES_USER:-thms} -d $${POSTGRES_DB:-thms_db} > /dev/null 2>&1; do sleep 1; done
+	$(MAKE) migrate
+	$(MAKE) seed
 
 studio:
 	docker compose exec api npx drizzle-kit studio

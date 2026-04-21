@@ -19,6 +19,13 @@ export async function request<T>(
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== 'undefined' && localStorage.getItem('accessToken')) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new ApiError('Session expired', 401, 'UNAUTHORIZED');
+    }
     const body = await res.json().catch(() => ({}));
     const message = body?.error?.message || `HTTP ${res.status}`;
     throw new ApiError(message, res.status, body?.error?.code);

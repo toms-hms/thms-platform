@@ -9,7 +9,6 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@thms/shared$': '<rootDir>/../../packages/shared/src',
     '^@thms/shared/(.*)$': '<rootDir>/../../packages/shared/src/$1',
-    '^@paralleldrive/cuid2$': '/app/node_modules/@paralleldrive/cuid2',
     '^openai$': '<rootDir>/src/test/__mocks__/openai.js',
     '^openai/(.*)$': '<rootDir>/src/test/__mocks__/openai.js',
     '^googleapis$': '<rootDir>/src/test/__mocks__/googleapis.js',

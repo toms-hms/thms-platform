@@ -1,7 +1,8 @@
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { jobStatusEnum, jobIntentEnum, tradeCategoryEnum } from '../../db/enums';
 import { homes } from '../../home/models/Home';
 import { users } from '../../auth/models/User';
+import type { AiSession } from '@thms/shared';
 
 export const jobs = pgTable('Job', {
   id:              text('id').primaryKey(),
@@ -12,6 +13,7 @@ export const jobs = pgTable('Job', {
   description:     text('description'),
   notes:           text('notes'),
   status:          jobStatusEnum('status').notNull().default('DRAFT'),
+  aiSession:       jsonb('ai_session').$type<AiSession>(),
   createdByUserId: text('createdByUserId').notNull().references(() => users.id),
   createdAt:       timestamp('createdAt', { precision: 3 }).notNull().defaultNow(),
   updatedAt:       timestamp('updatedAt', { precision: 3 }).notNull(),

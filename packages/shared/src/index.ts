@@ -9,4 +9,5 @@ export * from './types/communication';
 export * from './types/quote';
 export * from './types/ai';
 export * from './types/integration';
+export * from './types/vendor';
 export * from './types/api';

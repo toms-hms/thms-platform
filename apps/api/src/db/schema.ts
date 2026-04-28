@@ -13,3 +13,6 @@ export * from '../quote/models/Quote';
 export * from '../ai/models/AIGeneration';
 export * from '../ai/models/JobImage';
 export * from '../integration/models/Integration';
+export * from '../vendor/models/Vendor';
+export * from '../vendor/models/VendorCategory';
+export * from '../vendor/models/VendorZipCode';

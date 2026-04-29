@@ -6,7 +6,6 @@ export * from '../auth/models/User';
 export * from '../home/models/Home';
 export * from '../home/models/UserHome';
 export * from '../contractor/models/Contractor';
-export * from '../contractor/models/ContractorCategory';
 export * from '../contractor/models/ContractorZipCode';
 export * from '../job/models/Job';
 export * from '../job/models/JobContractor';

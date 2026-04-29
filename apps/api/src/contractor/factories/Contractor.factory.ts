@@ -12,11 +12,11 @@ export const contractorFactory = Factory.define<ContractorWithRelations>(({ onCr
         companyName: contractor.companyName,
         email:       contractor.email,
         phone:       contractor.phone,
+        categories:  contractor.categories,
         notes:       contractor.notes,
         createdAt:   contractor.createdAt,
         updatedAt:   contractor.updatedAt,
       },
-      contractor.categories,
       contractor.zipCodes,
     )
   );

@@ -11,10 +11,10 @@ export async function createContractor(data: CreateContractorInput) {
       companyName: data.companyName ?? null,
       email:       data.email ?? null,
       phone:       data.phone ?? null,
+      categories:  data.categories,
       notes:       data.notes ?? null,
       updatedAt:   new Date(),
     },
-    data.categories,
     data.zipCodes ?? [],
   );
 }
@@ -27,13 +27,8 @@ export async function getContractor(contractorId: string) {
 
 export async function updateContractor(contractorId: string, data: UpdateContractorInput) {
   await getContractor(contractorId);
-  const { categories, zipCodes, ...rest } = data;
-  return ContractorManager.update(
-    contractorId,
-    { ...rest, updatedAt: new Date() },
-    categories,
-    zipCodes,
-  );
+  const { zipCodes, ...rest } = data;
+  return ContractorManager.update(contractorId, rest, zipCodes);
 }
 
 export async function deleteContractor(contractorId: string) {

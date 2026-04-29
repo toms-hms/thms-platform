@@ -6,7 +6,8 @@ export interface ContractorDto {
   companyName?: string;
   email?: string;
   phone?: string;
-  category: TradeCategory;
+  categories: TradeCategory[];
+  zipCodes: string[];
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -17,7 +18,8 @@ export interface CreateContractorInput {
   companyName?: string;
   email?: string;
   phone?: string;
-  category: TradeCategory;
+  categories: TradeCategory[];
+  zipCodes?: string[];
   notes?: string;
 }
 
@@ -26,6 +28,7 @@ export interface UpdateContractorInput {
   companyName?: string;
   email?: string;
   phone?: string;
-  category?: TradeCategory;
+  categories?: TradeCategory[];
+  zipCodes?: string[];
   notes?: string;
 }

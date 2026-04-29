@@ -14,7 +14,6 @@ import { jobCollectionRouter, jobRouter } from './job/route';
 import quoteRouter from './quote/route';
 import communicationRouter from './communication/route';
 import integrationRouter from './integration/route';
-import vendorRouter from './vendor/route';
 
 const app = express();
 
@@ -53,7 +52,6 @@ app.use('/api/v1/jobs', jobRouter);
 app.use('/api/v1/quotes', quoteRouter);
 app.use('/api/v1/communications', communicationRouter);
 app.use('/api/v1/integrations', integrationRouter);
-app.use('/api/v1/vendors', vendorRouter);
 
 app.use(errorHandler);
 

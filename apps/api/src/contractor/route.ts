@@ -6,6 +6,7 @@ import { ContractorManager } from './models/ContractorManager';
 import { permit } from '../permissions/permit';
 import { PermissionService } from '../permissions/PermissionService';
 import * as contractorService from './service';
+import { TradeCategory } from '@thms/shared';
 
 const router = Router();
 router.use(authenticateJWT);
@@ -20,7 +21,7 @@ router.get('/', async (req, res, next) => {
         const s = search.toLowerCase();
         if (!c.name.toLowerCase().includes(s) && !c.companyName?.toLowerCase().includes(s) && !c.email?.toLowerCase().includes(s)) return false;
       }
-      if (category && c.category !== category) return false;
+      if (category && !c.categories.includes(category as TradeCategory)) return false;
       return true;
     });
     res.json({ data: filtered });

@@ -22,7 +22,7 @@ export interface ChatMessage {
 }
 
 export interface IssueSummary {
-  kind: 'ISSUE';
+  intent: 'ISSUE';
   rootCause: string;
   severity: string;
   scope: string;
@@ -31,14 +31,14 @@ export interface IssueSummary {
 }
 
 export interface ImprovementSummary {
-  kind: 'IMPROVEMENT';
+  intent: 'IMPROVEMENT';
   scope: string;
   priceRange: [number, number];
   constraints: string[];
 }
 
 export interface RecurringSummary {
-  kind: 'RECURRING_WORK';
+  intent: 'RECURRING_WORK';
   frequency: string;
   scope: string;
   priceRange: [number, number];

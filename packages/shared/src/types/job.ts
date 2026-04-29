@@ -1,5 +1,6 @@
 import { TradeCategory } from './trade-category';
 import { JobIntent } from './job-intent';
+import type { AiSession } from './ai';
 
 export enum JobStatus {
   DRAFT = 'DRAFT',
@@ -21,6 +22,7 @@ export interface JobDto {
   description?: string;
   notes?: string;
   status: JobStatus;
+  aiSession?: AiSession | null;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -41,4 +43,5 @@ export interface UpdateJobInput {
   description?: string;
   notes?: string;
   status?: JobStatus;
+  aiSession?: AiSession | null;
 }

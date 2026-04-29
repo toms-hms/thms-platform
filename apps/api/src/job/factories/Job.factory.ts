@@ -17,6 +17,7 @@ export const jobFactory = Factory.define<Job, { homeId: string; userId: string }
     description: null,
     notes: null,
     status: 'DRAFT',
+    aiSession: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

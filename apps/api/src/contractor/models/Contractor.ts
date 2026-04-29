@@ -7,7 +7,7 @@ export const contractors = pgTable('Contractor', {
   companyName: text('companyName'),
   email:       text('email'),
   phone:       text('phone'),
-  category:    tradeCategoryEnum('category').notNull(),
+  categories:  tradeCategoryEnum('categories').array().notNull(),
   notes:       text('notes'),
   createdAt:   timestamp('createdAt', { precision: 3 }).notNull().defaultNow(),
   updatedAt:   timestamp('updatedAt', { precision: 3 }).notNull(),

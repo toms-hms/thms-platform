@@ -1,1 +1,1 @@
-Read the file `.claude/context-web.md` and confirm you've loaded the frontend context before proceeding.
+Read the file `.ai/context/web.md` and confirm you have loaded the frontend context before proceeding.

@@ -18,8 +18,6 @@ Load context on demand — do not load both unless the task spans both apps:
 - Backend work: read `.ai/context/api.md`
 - Frontend work: read `.ai/context/web.md`
 
-Use `/be`, `/fe`, or `/fs` to load context via slash command.
-
 ## Skills
 Detailed how-to guides for common task types:
 - New API module: `.ai/skills/new-api-module.md`

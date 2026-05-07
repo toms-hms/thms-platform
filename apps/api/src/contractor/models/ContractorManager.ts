@@ -1,9 +1,12 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, desc } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import { db } from '../../db';
+import { db } from '@/db';
 import { contractors, type Contractor, type NewContractor } from './Contractor';
 import { contractorZipCodes } from './ContractorZipCode';
-import { NotFoundError } from '../../utils/errors';
+import { jobContractors } from '@/job/models/JobContractor';
+import { jobs } from '@/job/models/Job';
+import { homes } from '@/home/models/Home';
+import { NotFoundError } from '@/utils/errors';
 import { UserRole } from '@thms/shared';
 
 export type ContractorWithRelations = Contractor & {
@@ -82,5 +85,22 @@ export const ContractorManager = {
 
   async delete(id: string): Promise<void> {
     await db.delete(contractors).where(eq(contractors.id, id));
+  },
+
+  async listJobHistory(contractorId: string) {
+    return db
+      .select({
+        jobId: jobs.id,
+        jobTitle: jobs.title,
+        jobStatus: jobs.status,
+        homeId: homes.id,
+        homeName: homes.name,
+        contractorStatus: jobContractors.status,
+      })
+      .from(jobContractors)
+      .innerJoin(jobs, eq(jobContractors.jobId, jobs.id))
+      .innerJoin(homes, eq(jobs.homeId, homes.id))
+      .where(eq(jobContractors.contractorId, contractorId))
+      .orderBy(desc(jobContractors.createdAt));
   },
 };

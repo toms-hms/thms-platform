@@ -10,3 +10,7 @@ export function listContractors(params?: { search?: string; category?: string })
 export function getContractor(contractorId: string) {
   return request<{ data: any }>(`/api/v1/contractors/${contractorId}`);
 }
+
+export function getContractorJobs(contractorId: string) {
+  return request<{ data: any[] }>(`/api/v1/contractors/${contractorId}/jobs`);
+}

@@ -5,6 +5,9 @@ import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
+import Table, { Column } from '@/components/ui/Table';
+import Selector, { SelectorOption } from '@/components/ui/Selector';
+import Dropdown from '@/components/ui/Dropdown';
 
 const CATEGORY_LABELS: Record<TradeCategory, string> = {
   [TradeCategory.PLUMBING]:            'Plumbing',
@@ -21,27 +24,66 @@ const CATEGORY_LABELS: Record<TradeCategory, string> = {
   [TradeCategory.POOL_AND_SPA]:        'Pool & Spa',
 };
 
+const CATEGORY_OPTIONS: SelectorOption[] = [
+  { value: '', label: 'All categories' },
+  ...Object.values(TradeCategory).map((v) => ({ value: v, label: CATEGORY_LABELS[v] })),
+];
+
+type Contractor = any;
+
+const COLUMNS: Column<Contractor>[] = [
+  {
+    key: 'name',
+    header: 'Name',
+    render: (c) => (
+      <div>
+        <span className="font-medium text-gray-900">{c.name}</span>
+        {c.companyName && <span className="ml-2 text-gray-400 text-xs">– {c.companyName}</span>}
+      </div>
+    ),
+  },
+  {
+    key: 'category',
+    header: 'Category',
+    render: (c) => (
+      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+        {CATEGORY_LABELS[c.category as TradeCategory] ?? c.category}
+      </span>
+    ),
+  },
+  { key: 'email', header: 'Email', render: (c) => c.email || '—' },
+  { key: 'phone', header: 'Phone', render: (c) => c.phone || '—' },
+  {
+    key: 'actions',
+    header: '',
+    render: (c) => (
+      <Dropdown
+        trigger={<button className="btn-secondary text-xs py-1 px-2">Actions ▾</button>}
+        items={[
+          { label: 'Edit', onClick: () => openEdit(c) },
+          { label: 'Delete', danger: true, onClick: () => handleDelete(c.id, c.name) },
+        ]}
+      />
+    ),
+  },
+];
+
+// openEdit / handleDelete need to be accessible from COLUMNS — using module-level refs
+let openEdit: (c: Contractor) => void = () => {};
+let handleDelete: (id: string, name: string) => void = () => {};
+
 export default function ContractorsPage() {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Contractor | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    companyName: '',
-    email: '',
-    phone: '',
-    category: '',
-    notes: '',
-  });
+  const [form, setForm] = useState({ name: '', companyName: '', email: '', phone: '', category: '', notes: '' });
 
-  useEffect(() => {
-    load();
-  }, [search, category]);
+  useEffect(() => { load(); }, [search, category]);
 
   async function load() {
     setLoading(true);
@@ -63,19 +105,12 @@ export default function ContractorsPage() {
     setShowCreate(true);
   }
 
-  function openEdit(c: any) {
-    setForm({
-      name: c.name,
-      companyName: c.companyName || '',
-      email: c.email || '',
-      phone: c.phone || '',
-      category: c.category,
-      notes: c.notes || '',
-    });
+  openEdit = (c: Contractor) => {
+    setForm({ name: c.name, companyName: c.companyName || '', email: c.email || '', phone: c.phone || '', category: c.category, notes: c.notes || '' });
     setEditing(c);
     setError('');
     setShowCreate(true);
-  }
+  };
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -97,13 +132,13 @@ export default function ContractorsPage() {
     }
   }
 
-  async function handleDelete(contractorId: string, name: string) {
+  handleDelete = async (contractorId: string, name: string) => {
     if (!confirm(`Delete ${name}?`)) return;
     try {
       await deleteContractor(contractorId);
       setList((prev) => prev.filter((c) => c.id !== contractorId));
     } catch {}
-  }
+  };
 
   return (
     <div>
@@ -120,16 +155,14 @@ export default function ContractorsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select
-          className="input max-w-xs"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="">All categories</option>
-          {Object.values(TradeCategory).map((v) => (
-            <option key={v} value={v}>{CATEGORY_LABELS[v]}</option>
-          ))}
-        </select>
+        <div className="w-52">
+          <Selector
+            options={CATEGORY_OPTIONS}
+            value={category}
+            onChange={setCategory}
+            placeholder="All categories"
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -141,33 +174,7 @@ export default function ContractorsPage() {
           action={<button onClick={openCreate} className="btn-primary">Add Contractor</button>}
         />
       ) : (
-        <div className="space-y-3">
-          {list.map((c) => (
-            <div key={c.id} className="card p-4 flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900">{c.name}</h3>
-                  {c.companyName && <span className="text-sm text-gray-500">– {c.companyName}</span>}
-                </div>
-                <div className="flex gap-4 mt-1 text-xs text-gray-400">
-                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{CATEGORY_LABELS[c.category as TradeCategory] ?? c.category}</span>
-                  {c.email && <span>{c.email}</span>}
-                  {c.phone && <span>{c.phone}</span>}
-                </div>
-                {c.notes && <p className="text-xs text-gray-400 mt-1.5">{c.notes}</p>}
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button onClick={() => openEdit(c)} className="btn-secondary text-xs py-1 px-2">Edit</button>
-                <button
-                  onClick={() => handleDelete(c.id, c.name)}
-                  className="text-gray-300 hover:text-red-500 text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Table columns={COLUMNS} rows={list} getKey={(c) => c.id} pageSize={15} />
       )}
 
       <Modal
@@ -177,9 +184,7 @@ export default function ContractorsPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {error}
-            </div>
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
           )}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -193,12 +198,12 @@ export default function ContractorsPage() {
           </div>
           <div>
             <label className="label">Category</label>
-            <select className="input" value={form.category} onChange={(e) => update('category', e.target.value)} required>
-              <option value="">Select a category</option>
-              {Object.values(TradeCategory).map((v) => (
-                <option key={v} value={v}>{CATEGORY_LABELS[v]}</option>
-              ))}
-            </select>
+            <Selector
+              options={Object.values(TradeCategory).map((v) => ({ value: v, label: CATEGORY_LABELS[v] }))}
+              value={form.category}
+              onChange={(v) => update('category', v)}
+              placeholder="Select a category"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

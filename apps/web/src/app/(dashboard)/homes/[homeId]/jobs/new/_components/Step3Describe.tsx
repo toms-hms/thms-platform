@@ -22,7 +22,7 @@ export default function Step3Describe({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const categoryLabel = CATEGORY_CONFIG[intent].find(t => t.tradeCategory === category)?.label ?? category;
+  const categoryLabel = CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === category)?.label ?? category;
 
   function addFiles(files: FileList | null) {
     if (!files) return;

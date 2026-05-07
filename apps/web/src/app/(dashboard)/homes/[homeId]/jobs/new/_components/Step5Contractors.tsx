@@ -29,7 +29,7 @@ export default function Step5Contractors({
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const categoryLabel = CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === category)?.label ?? category;
+  const categoryLabel = CATEGORY_CONFIG[intent].find(t => t.tradeCategory === category)?.label ?? category;
 
   useEffect(() => {
     fetch(`/api/v1/contractors?category=${category}`, {

@@ -7,7 +7,7 @@ const ChatMessageSchema = z.object({
 });
 
 const IssueSummarySchema = z.object({
-  kind: z.literal('ISSUE'),
+  intent: z.literal('ISSUE'),
   rootCause: z.string(),
   severity: z.string(),
   scope: z.string(),
@@ -16,17 +16,20 @@ const IssueSummarySchema = z.object({
 });
 
 const ImprovementSummarySchema = z.object({
-  kind: z.literal('IMPROVEMENT'),
+  intent: z.literal('IMPROVEMENT'),
   scope: z.string(),
   priceRange: z.tuple([z.number(), z.number()]),
   constraints: z.array(z.string()),
 });
 
 const RecurringSummarySchema = z.object({
-  kind: z.literal('RECURRING_WORK'),
+  intent: z.literal('RECURRING_WORK'),
+  tasks: z.array(z.string()).optional(),
   frequency: z.string(),
   scope: z.string(),
+  estimatedCost: z.tuple([z.number(), z.number()]).optional(),
   priceRange: z.tuple([z.number(), z.number()]),
+  constraints: z.array(z.string()).optional(),
 });
 
 const AiSessionSchema = z.object({
@@ -45,6 +48,10 @@ export const CreateJobSchema = z.object({
 
 export const UpdateJobSchema = CreateJobSchema.partial().extend({
   aiSession: AiSessionSchema.nullable().optional(),
+});
+
+export const DiagnoseSchema = z.object({
+  message: z.string().min(1),
 });
 
 export const AssignContractorSchema = z.object({

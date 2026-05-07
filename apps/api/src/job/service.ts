@@ -11,6 +11,7 @@ export async function createJob(homeId: string, userId: string, data: CreateJobI
     homeId,
     createdByUserId: userId,
     title: data.title,
+    intent: data.intent,
     category: data.category,
     description: data.description ?? null,
     notes: data.notes ?? null,

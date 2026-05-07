@@ -30,6 +30,9 @@ async filterEmail(email: string): Promise<Contractor | undefined>
 ## Manager methods
 See `.ai/skills/manager.md` for naming conventions and principles before writing any manager method.
 
+## Migrations
+Never write migration SQL by hand for schema changes. Run `npm run db:generate` in `apps/api/` to generate from the Drizzle model. See `.ai/skills/migrations.md` for when custom SQL is acceptable.
+
 ## Tests
 Each module has `factories/` (one per model) and `__tests__/` (Manager, service, route).
 Shared test infra in `src/test/`. See `.ai/skills/testing.md` for the full pattern.

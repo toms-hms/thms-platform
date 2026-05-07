@@ -1,1 +1,1 @@
-Read the file `.claude/context-api.md` and confirm you've loaded the backend context before proceeding.
+Read the file `.ai/context/api.md` and confirm you have loaded the backend context before proceeding.

@@ -1,1 +1,1 @@
-Read both `.claude/context-api.md` and `.claude/context-web.md` and confirm you've loaded both backend and frontend context before proceeding.
+Read both `.ai/context/api.md` and `.ai/context/web.md` and confirm you have loaded both contexts before proceeding.

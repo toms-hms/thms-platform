@@ -13,8 +13,8 @@ import Step4Diagnose from './_components/Step4Diagnose';
 import Step5Contractors from './_components/Step5Contractors';
 
 const STEP4_LABEL: Record<JobIntent, string> = {
-  [JobIntent.ISSUE]:          'Diagnose',
-  [JobIntent.IMPROVEMENT]:    'Plan',
+  [JobIntent.ISSUE]: 'Diagnose',
+  [JobIntent.IMPROVEMENT]: 'Plan',
   [JobIntent.RECURRING_WORK]: 'Estimate',
 };
 
@@ -32,13 +32,19 @@ interface WizardData {
 async function uploadPhoto(jobId: string, file: File) {
   const urlRes = await request<{ data: { uploadUrl: string; key: string } }>(
     `/api/v1/jobs/${jobId}/images/upload-url`,
-    { method: 'POST', body: JSON.stringify({ fileName: file.name, contentType: file.type, kind: 'SOURCE' }) }
+    {
+      method: 'POST',
+      body: JSON.stringify({ fileName: file.name, contentType: file.type, kind: 'SOURCE' }),
+    }
   );
   await fetch(urlRes.data.uploadUrl, {
-    method: 'PUT', body: file, headers: { 'Content-Type': file.type },
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
   });
   await request(`/api/v1/jobs/${jobId}/images/confirm`, {
-    method: 'POST', body: JSON.stringify({ key: urlRes.data.key, kind: 'SOURCE', label: file.name }),
+    method: 'POST',
+    body: JSON.stringify({ key: urlRes.data.key, kind: 'SOURCE', label: file.name }),
   });
 }
 
@@ -56,7 +62,7 @@ export default function NewJobWizardPage() {
   const [error, setError] = useState('');
 
   function update(fields: Partial<WizardData>) {
-    setData(prev => ({ ...prev, ...fields }));
+    setData((prev) => ({ ...prev, ...fields }));
   }
 
   // Step 1 → 2: select intent
@@ -84,19 +90,17 @@ export default function NewJobWizardPage() {
     try {
       // Create job as DRAFT
       const effectiveCategory = data.category ?? data.categories[0];
-      const res = await request<{ data: any }>(
-        `/api/v1/homes/${homeId}/jobs`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            title: data.title,
-            intent: data.intent,
-            category: effectiveCategory,
-            description: data.description || undefined,
-            status: 'DRAFT',
-          }),
-        }
-      );
+      const res = await request<{ data: any }>(`/api/v1/homes/${homeId}/jobs`, {
+        method: 'POST',
+        body: JSON.stringify({
+          title: data.title,
+          intent: data.intent,
+          category: effectiveCategory,
+          categories: data.categories.length ? data.categories : undefined,
+          description: data.description || undefined,
+          status: 'DRAFT',
+        }),
+      });
       const jobId = res.data.id;
       update({ jobId });
 
@@ -126,7 +130,7 @@ export default function NewJobWizardPage() {
     try {
       // Assign each selected contractor
       await Promise.all(
-        data.selectedContractorIds.map(contractorId =>
+        data.selectedContractorIds.map((contractorId) =>
           request(`/api/v1/jobs/${data.jobId}/contractors`, {
             method: 'POST',
             body: JSON.stringify({ contractorId }),
@@ -151,7 +155,7 @@ export default function NewJobWizardPage() {
   function toggleContractor(id: string) {
     const ids = data.selectedContractorIds;
     update({
-      selectedContractorIds: ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id],
+      selectedContractorIds: ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id],
     });
   }
 
@@ -162,19 +166,18 @@ export default function NewJobWizardPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
-        <Link href={`/homes/${homeId}`} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+        <Link
+          href={`/homes/${homeId}`}
+          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+        >
           ← Cancel
         </Link>
         <span className="text-sm text-gray-400">New Request</span>
       </div>
 
-      {step > 1 && (
-        <WizardProgress currentStep={step} totalSteps={5} labels={stepLabels} />
-      )}
+      {step > 1 && <WizardProgress currentStep={step} totalSteps={5} labels={stepLabels} />}
 
-      {step === 1 && (
-        <Step1Intent onSelect={handleSelectIntent} />
-      )}
+      {step === 1 && <Step1Intent onSelect={handleSelectIntent} />}
 
       {step === 2 && data.intent && (
         <Step2Category
@@ -209,10 +212,10 @@ export default function NewJobWizardPage() {
         />
       )}
 
-      {step === 5 && data.intent && effectiveCategory && (
+      {step === 5 && data.intent && effectiveCategory && data.jobId && (
         <Step5Contractors
-          intent={data.intent}
-          category={effectiveCategory}
+          categories={data.categories.length ? data.categories : [effectiveCategory]}
+          jobId={data.jobId}
           selectedIds={data.selectedContractorIds}
           onToggle={toggleContractor}
           onSubmit={handleSubmit}

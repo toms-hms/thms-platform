@@ -12,11 +12,16 @@ import Step3Describe from './_components/Step3Describe';
 import Step4Diagnose from './_components/Step4Diagnose';
 import Step5Contractors from './_components/Step5Contractors';
 
-const STEP_LABELS = ['Intent', 'Category', 'Describe', 'Diagnose', 'Contractors'];
+const STEP4_LABEL: Record<JobIntent, string> = {
+  [JobIntent.ISSUE]:          'Diagnose',
+  [JobIntent.IMPROVEMENT]:    'Plan',
+  [JobIntent.RECURRING_WORK]: 'Estimate',
+};
 
 interface WizardData {
   intent: JobIntent | null;
   category: TradeCategory | null;
+  categories: TradeCategory[];
   title: string;
   description: string;
   photos: File[];
@@ -43,7 +48,7 @@ export default function NewJobWizardPage() {
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [data, setData] = useState<WizardData>({
-    intent: null, category: null,
+    intent: null, category: null, categories: [],
     title: '', description: '', photos: [],
     jobId: null, selectedContractorIds: [],
   });
@@ -56,13 +61,19 @@ export default function NewJobWizardPage() {
 
   // Step 1 → 2: select intent
   function handleSelectIntent(intent: JobIntent) {
-    update({ intent, category: null });
+    update({ intent, category: null, categories: [] });
     setStep(2);
   }
 
-  // Step 2 → 3: select category
+  // Step 2 → 3: select category (ISSUE, RECURRING_WORK)
   function handleSelectCategory(category: TradeCategory) {
     update({ category });
+    setStep(3);
+  }
+
+  // Step 2 → 3: select categories (IMPROVEMENT, multi-select)
+  function handleSelectCategories(categories: TradeCategory[]) {
+    update({ categories });
     setStep(3);
   }
 
@@ -72,6 +83,7 @@ export default function NewJobWizardPage() {
     setError('');
     try {
       // Create job as DRAFT
+      const effectiveCategory = data.category ?? data.categories[0];
       const res = await request<{ data: any }>(
         `/api/v1/homes/${homeId}/jobs`,
         {
@@ -79,7 +91,7 @@ export default function NewJobWizardPage() {
           body: JSON.stringify({
             title: data.title,
             intent: data.intent,
-            category: data.category,
+            category: effectiveCategory,
             description: data.description || undefined,
             status: 'DRAFT',
           }),
@@ -143,6 +155,10 @@ export default function NewJobWizardPage() {
     });
   }
 
+  const step4Label = data.intent ? STEP4_LABEL[data.intent] : 'Diagnose';
+  const stepLabels = ['Intent', 'Category', 'Describe', step4Label, 'Contractors'];
+  const effectiveCategory = data.category ?? data.categories[0] ?? null;
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -152,7 +168,9 @@ export default function NewJobWizardPage() {
         <span className="text-sm text-gray-400">New Request</span>
       </div>
 
-      <WizardProgress currentStep={step} totalSteps={5} labels={STEP_LABELS} />
+      {step > 1 && (
+        <WizardProgress currentStep={step} totalSteps={5} labels={stepLabels} />
+      )}
 
       {step === 1 && (
         <Step1Intent onSelect={handleSelectIntent} />
@@ -162,14 +180,15 @@ export default function NewJobWizardPage() {
         <Step2Category
           intent={data.intent}
           onSelect={handleSelectCategory}
+          onSelectMultiple={handleSelectCategories}
           onBack={() => setStep(1)}
         />
       )}
 
-      {step === 3 && data.intent && data.category && (
+      {step === 3 && data.intent && effectiveCategory && (
         <Step3Describe
           intent={data.intent}
-          category={data.category}
+          category={effectiveCategory}
           title={data.title}
           description={data.description}
           photos={data.photos}
@@ -181,17 +200,19 @@ export default function NewJobWizardPage() {
         />
       )}
 
-      {step === 4 && (
+      {step === 4 && data.intent && (
         <Step4Diagnose
+          intent={data.intent}
+          categories={data.intent === JobIntent.IMPROVEMENT ? data.categories : undefined}
           onNext={handleStep4Next}
           onBack={() => setStep(3)}
         />
       )}
 
-      {step === 5 && data.intent && data.category && (
+      {step === 5 && data.intent && effectiveCategory && (
         <Step5Contractors
           intent={data.intent}
-          category={data.category}
+          category={effectiveCategory}
           selectedIds={data.selectedContractorIds}
           onToggle={toggleContractor}
           onSubmit={handleSubmit}

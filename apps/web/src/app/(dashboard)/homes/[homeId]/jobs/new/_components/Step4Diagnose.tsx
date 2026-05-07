@@ -1,13 +1,29 @@
+import { JobIntent, TradeCategory } from '@thms/shared';
+
+const TITLES: Record<JobIntent, string> = {
+  [JobIntent.ISSUE]:          'AI Diagnosis',
+  [JobIntent.IMPROVEMENT]:    'AI Planning',
+  [JobIntent.RECURRING_WORK]: 'AI Estimate',
+};
+
+const DESCRIPTIONS: Record<JobIntent, string> = {
+  [JobIntent.ISSUE]:          'Our AI will analyze your issue and prepare a contractor-ready brief.',
+  [JobIntent.IMPROVEMENT]:    'Our AI will help plan your improvement and prepare a contractor-ready brief.',
+  [JobIntent.RECURRING_WORK]: 'Our AI will estimate your maintenance needs and prepare a contractor-ready brief.',
+};
+
 interface Props {
+  intent: JobIntent;
+  categories?: TradeCategory[];
   onNext: () => void;
   onBack: () => void;
 }
 
-export default function Step4Diagnose({ onNext, onBack }: Props) {
+export default function Step4Diagnose({ intent, categories, onNext, onBack }: Props) {
   return (
     <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold text-ink mb-2">AI Diagnosis</h2>
-      <p className="text-gray-500 mb-8">Our AI will analyze your issue and prepare a contractor-ready brief.</p>
+      <h2 className="text-2xl font-bold text-ink mb-2">{TITLES[intent]}</h2>
+      <p className="text-gray-500 mb-8">{DESCRIPTIONS[intent]}</p>
 
       <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-10 text-center">
         <div className="text-5xl mb-4">🤖</div>

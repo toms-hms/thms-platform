@@ -155,19 +155,44 @@ Return a JSON object with these fields:
 
 const SYSTEM_PROMPTS: Record<JobIntent, string> = {
   [JobIntent.ISSUE]: `You are helping a homeowner describe a home problem so contractors can quote accurately without a site visit.
-Your job is to ask focused questions and suggest realistic answer options for each one.
-Cover: what is broken or wrong, when it started, how urgent it is, and any access or context a contractor needs.
-Always call ask_question with your next question and 3-4 relevant options. After 2-4 exchanges call generate_summary.`,
+Ask focused questions with suggested options. Cover: what is broken, when it started, urgency, and contractor context.
+Always call ask_question for your next question. After 2-4 exchanges call generate_summary.
+If the answers reveal the selected trade categories are wrong or incomplete, also call suggest_categories — but only if genuinely needed.`,
 
   [JobIntent.IMPROVEMENT]: `You are helping a homeowner scope a home improvement project so contractors can submit comparable bids.
-Your job is to ask focused questions and suggest realistic answer options for each one.
-Cover: the desired outcome, rough budget range, timeline, and any constraints (HOA, materials, access).
-Always call ask_question with your next question and 3-4 relevant options. After 2-4 exchanges call generate_summary.`,
+Ask focused questions with suggested options. Cover: desired outcome, budget range, timeline, constraints.
+Always call ask_question for your next question. After 2-4 exchanges call generate_summary.
+If the answers reveal the selected trade categories are wrong or incomplete, also call suggest_categories — but only if genuinely needed.`,
 
   [JobIntent.RECURRING_WORK]: `You are helping a homeowner define a recurring home maintenance service so contractors can bid a repeating contract.
-Your job is to ask focused questions and suggest realistic answer options for each one.
-Cover: which tasks should be included, how often, and any access or timing constraints.
-Always call ask_question with your next question and 3-4 relevant options. After 2-4 exchanges call generate_summary.`,
+Ask focused questions with suggested options. Cover: tasks, frequency, access and timing constraints.
+Always call ask_question for your next question. After 2-4 exchanges call generate_summary.
+If the answers reveal the selected trade categories are wrong or incomplete, also call suggest_categories — but only if genuinely needed.`,
+};
+
+const SUGGEST_CATEGORIES_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'suggest_categories',
+    description: 'Call this only if the answers reveal the initially selected trade categories are wrong or incomplete. Suggest the correct categories with a reason for each.',
+    parameters: {
+      type: 'object',
+      properties: {
+        suggestions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              category: { type: 'string', description: 'TradeCategory enum value e.g. PLUMBING, HVAC.' },
+              reason:   { type: 'string', description: 'One sentence explaining why this category is needed.' },
+            },
+            required: ['category', 'reason'],
+          },
+        },
+      },
+      required: ['suggestions'],
+    },
+  },
 };
 
 const ASK_QUESTION_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
@@ -240,11 +265,15 @@ const SUMMARY_TOOLS: Record<JobIntent, OpenAI.Chat.Completions.ChatCompletionToo
   },
 };
 
-/**
- * Conducts one turn of the AI diagnostic Q&A for a job.
- * Returns either the next question+options or a completed summary.
- * Persists the full session to aiSession on the job.
- */
+interface DiagnoseResult {
+  question: string | null;
+  options: string[];
+  summary: ReturnType<typeof JobManager.findById> extends Promise<infer T> ? T extends null ? never : NonNullable<T>['aiSession'] extends infer S ? S extends null | undefined ? never : NonNullable<S>['summary'] : never : never;
+  suggestedCategories: Array<{ category: string; reason: string }> | null;
+  messages: Array<{ role: string; content: string }>;
+}
+
+/** Conducts one turn of the AI diagnostic Q&A. Returns the next question, and optionally a summary and/or category suggestions. */
 export async function diagnoseJob(jobId: string, userMessage: string) {
   const job = await JobManager.findById(jobId);
   if (!job) throw new Error('Job not found');
@@ -270,27 +299,31 @@ export async function diagnoseJob(jobId: string, userMessage: string) {
       { role: 'system', content: `${systemPrompt}\n\n${contextPrefix}` },
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ],
-    tools: [ASK_QUESTION_TOOL, summaryTool],
+    tools: [ASK_QUESTION_TOOL, SUGGEST_CATEGORIES_TOOL, summaryTool],
     tool_choice: 'required',
   });
 
   const choice = response.choices[0];
-  const toolCall = choice.message.tool_calls?.[0];
-  const toolName = toolCall?.function.name;
-  const args = toolCall ? JSON.parse(toolCall.function.arguments) : {};
+  // The model may call multiple tools in one turn (e.g. suggest_categories + ask_question)
+  const toolCalls = choice.message.tool_calls ?? [];
 
   let question: string | null = null;
   let options: string[] = [];
   let summary = existingSession.summary;
+  let suggestedCategories: Array<{ category: string; reason: string }> | null = null;
 
-  if (toolName === 'ask_question') {
-    question = args.question;
-    options = args.options ?? [];
-  } else if (toolName === 'generate_summary') {
-    summary = { intent: job.intent, ...args } as typeof summary;
+  for (const toolCall of toolCalls) {
+    const args = JSON.parse(toolCall.function.arguments);
+    if (toolCall.function.name === 'ask_question') {
+      question = args.question;
+      options = args.options ?? [];
+    } else if (toolCall.function.name === 'generate_summary') {
+      summary = { intent: job.intent, ...args } as typeof summary;
+    } else if (toolCall.function.name === 'suggest_categories') {
+      suggestedCategories = args.suggestions ?? [];
+    }
   }
 
-  // Store the question text as an assistant message so the history makes sense
   const assistantContent = question ?? 'Brief complete.';
   const updatedMessages = [...history, { role: 'assistant' as const, content: assistantContent }];
 
@@ -298,7 +331,7 @@ export async function diagnoseJob(jobId: string, userMessage: string) {
     aiSession: { messages: updatedMessages, summary },
   });
 
-  return { question, options, summary, messages: updatedMessages };
+  return { question, options, summary, suggestedCategories, messages: updatedMessages };
 }
 
 /** Returns the first question for a job's diagnostic session (no user message needed). */
@@ -323,20 +356,30 @@ export async function startDiagnose(jobId: string) {
       { role: 'system', content: `${systemPrompt}\n\n${contextPrefix}` },
       { role: 'user', content: 'Start the diagnostic.' },
     ],
-    tools: [ASK_QUESTION_TOOL, summaryTool],
+    tools: [ASK_QUESTION_TOOL, SUGGEST_CATEGORIES_TOOL, summaryTool],
     tool_choice: 'required',
   });
 
-  const toolCall = response.choices[0].message.tool_calls?.[0];
-  const args = toolCall ? JSON.parse(toolCall.function.arguments) : {};
-  const question: string = args.question ?? null;
-  const options: string[] = args.options ?? [];
+  const toolCalls = response.choices[0].message.tool_calls ?? [];
+  let question: string | null = null;
+  let options: string[] = [];
+  let suggestedCategories: Array<{ category: string; reason: string }> | null = null;
+
+  for (const toolCall of toolCalls) {
+    const args = JSON.parse(toolCall.function.arguments);
+    if (toolCall.function.name === 'ask_question') {
+      question = args.question;
+      options = args.options ?? [];
+    } else if (toolCall.function.name === 'suggest_categories') {
+      suggestedCategories = args.suggestions ?? [];
+    }
+  }
 
   await JobManager.update(job.id, {
-    aiSession: { messages: [{ role: 'assistant', content: question }], summary: null },
+    aiSession: { messages: [{ role: 'assistant', content: question ?? '' }], summary: null },
   });
 
-  return { question, options, summary: null, messages: [{ role: 'assistant', content: question }] };
+  return { question, options, summary: null, suggestedCategories, messages: [{ role: 'assistant', content: question ?? '' }] };
 }
 
 export async function listAIGenerations(jobId: string) {

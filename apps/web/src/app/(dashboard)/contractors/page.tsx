@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory, UserRole } from '@thms/shared';
 import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';
 import Modal from '@/components/ui/Modal';
@@ -8,6 +8,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Table, { Column } from '@/components/ui/Table';
 import Selector, { SelectorOption } from '@/components/ui/Selector';
 import Dropdown from '@/components/ui/Dropdown';
+import { getStoredUser } from '@/lib/auth';
 
 const CATEGORY_LABELS: Record<TradeCategory, string> = {
   [TradeCategory.PLUMBING]:            'Plumbing',
@@ -73,7 +74,8 @@ let openEdit: (c: Contractor) => void = () => {};
 let handleDelete: (id: string, name: string) => void = () => {};
 
 export default function ContractorsPage() {
-  const [list, setList] = useState<Contractor[]>([]);
+  const isAdmin = getStoredUser()?.role === UserRole.ADMIN;
+  const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');

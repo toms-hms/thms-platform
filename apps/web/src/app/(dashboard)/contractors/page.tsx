@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import { TradeCategory, UserRole } from '@thms/shared';
+import { useRouter } from 'next/navigation';
 import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';
 import Modal from '@/components/ui/Modal';
@@ -75,6 +76,7 @@ let handleDelete: (id: string, name: string) => void = () => {};
 
 export default function ContractorsPage() {
   const isAdmin = getStoredUser()?.role === UserRole.ADMIN;
+  const router = useRouter();
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

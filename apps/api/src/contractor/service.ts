@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError } from '@/utils/errors';
 import { ContractorManager } from './models/ContractorManager';
 import type { CreateContractorInput, UpdateContractorInput } from '@thms/shared';
 
@@ -34,4 +34,9 @@ export async function updateContractor(contractorId: string, data: UpdateContrac
 export async function deleteContractor(contractorId: string) {
   await getContractor(contractorId);
   await ContractorManager.delete(contractorId);
+}
+
+export async function getContractorJobHistory(contractorId: string) {
+  await getContractor(contractorId);
+  return ContractorManager.listJobHistory(contractorId);
 }

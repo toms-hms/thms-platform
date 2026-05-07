@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { authenticateJWT, AuthenticatedRequest, requireRole } from '../middleware/auth.middleware';
-import { validate } from '../middleware/validate.middleware';
+import { authenticateJWT, AuthenticatedRequest, requireRole } from '@/middleware/auth.middleware';
+import { validate } from '@/middleware/validate.middleware';
 import { CreateContractorSchema, UpdateContractorSchema } from './schema';
 import { ContractorManager } from './models/ContractorManager';
-import { permit } from '../permissions/permit';
-import { PermissionService } from '../permissions/PermissionService';
+import { permit } from '@/permissions/permit';
+import { PermissionService } from '@/permissions/PermissionService';
 import * as contractorService from './service';
 import { TradeCategory } from '@thms/shared';
 
@@ -41,6 +41,16 @@ router.get('/:contractorId',
     try {
       const contractor = await contractorService.getContractor(req.params.contractorId);
       res.json({ data: contractor });
+    } catch (err) { next(err); }
+  }
+);
+
+router.get('/:contractorId/jobs',
+  permit(ContractorManager, (req) => req.params.contractorId),
+  async (req, res, next) => {
+    try {
+      const history = await contractorService.getContractorJobHistory(req.params.contractorId);
+      res.json({ data: history });
     } catch (err) { next(err); }
   }
 );

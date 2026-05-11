@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { JobStatus, JobContractorStatus, JobIntent, TradeCategory } from '@thms/shared';
 
+const CategorySuggestionSchema = z.object({
+  category: z.nativeEnum(TradeCategory),
+  reason: z.string().min(1),
+});
+
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
   content: z.string(),
@@ -35,15 +40,19 @@ const RecurringSummarySchema = z.object({
 const AiSessionSchema = z.object({
   messages: z.array(ChatMessageSchema),
   summary: z.union([IssueSummarySchema, ImprovementSummarySchema, RecurringSummarySchema]).nullable(),
+  categorySuggestions: z.array(CategorySuggestionSchema).optional(),
+  confirmedCategories: z.array(z.nativeEnum(TradeCategory)).min(1).optional(),
 });
 
 export const CreateJobSchema = z.object({
   title: z.string().min(1),
   intent: z.nativeEnum(JobIntent).default(JobIntent.ISSUE),
   category: z.nativeEnum(TradeCategory),
+  categories: z.array(z.nativeEnum(TradeCategory)).min(1).optional(),
   description: z.string().optional(),
   notes: z.string().optional(),
   status: z.nativeEnum(JobStatus).default(JobStatus.DRAFT),
+  aiSession: AiSessionSchema.nullable().optional(),
 });
 
 export const UpdateJobSchema = CreateJobSchema.partial().extend({
@@ -52,6 +61,13 @@ export const UpdateJobSchema = CreateJobSchema.partial().extend({
 
 export const DiagnoseSchema = z.object({
   message: z.string().min(1),
+});
+
+export const SuggestTradeCategoriesSchema = z.object({
+  intent: z.nativeEnum(JobIntent),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  selectedCategories: z.array(z.nativeEnum(TradeCategory)).optional(),
 });
 
 export const AssignContractorSchema = z.object({

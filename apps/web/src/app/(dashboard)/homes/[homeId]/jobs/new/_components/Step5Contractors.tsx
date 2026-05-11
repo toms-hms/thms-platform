@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TradeCategory } from '@thms/shared';
+import { JobIntent, TradeCategory } from '@thms/shared';
 import { CATEGORY_CONFIG } from './categoryConfig';
-import { JobIntent } from '@thms/shared';
 
 interface Contractor {
   id: string;
@@ -9,12 +8,11 @@ interface Contractor {
   companyName?: string;
   email?: string;
   phone?: string;
-  category: string;
+  categories?: string[];
 }
 
 interface Props {
-  intent: JobIntent;
-  category: TradeCategory;
+  categories: TradeCategory[];
   selectedIds: string[];
   onToggle: (id: string) => void;
   onSubmit: () => void;
@@ -24,22 +22,34 @@ interface Props {
 }
 
 export default function Step5Contractors({
-  intent, category, selectedIds, onToggle, onSubmit, onBack, submitting, error,
+  categories, selectedIds, onToggle, onSubmit, onBack, submitting, error,
 }: Props) {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
+  const categoryKey = categories.join('|');
 
-  const categoryLabel = CATEGORY_CONFIG[intent].find(t => t.tradeCategory === category)?.label ?? category;
+  const categoryLabels = categories.map(cat =>
+    CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === cat)?.label ?? cat
+  );
 
   useEffect(() => {
-    fetch(`/api/v1/contractors?category=${category}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-    })
-      .then(r => r.json())
-      .then(d => setContractors(d.data ?? []))
-      .catch(() => {})
+    const categoriesForRequest = categoryKey
+      ? categoryKey.split('|') as TradeCategory[]
+      : [];
+    setLoading(true);
+    Promise.all(categoriesForRequest.map(category =>
+      fetch(`/api/v1/contractors?category=${category}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      }).then(r => r.json())
+    ))
+      .then(results => {
+        const byId = new Map<string, Contractor>();
+        results.flatMap(d => d.data ?? []).forEach((contractor: Contractor) => byId.set(contractor.id, contractor));
+        setContractors(Array.from(byId.values()));
+      })
+      .catch(() => setContractors([]))
       .finally(() => setLoading(false));
-  }, [category]);
+  }, [categoryKey]);
 
   const MAX = 3;
   const canSelect = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX;
@@ -48,8 +58,8 @@ export default function Step5Contractors({
     <div className="max-w-2xl">
       <h2 className="text-2xl font-bold text-ink mb-2">Pick your contractors</h2>
       <p className="text-gray-500 mb-2">
-        Select up to {MAX} contractors to receive quotes for your{' '}
-        <span className="font-medium text-gray-700">{categoryLabel}</span> project.
+        Select up to {MAX} contractors to receive quotes for:{' '}
+        <span className="font-medium text-gray-700">{categoryLabels.join(', ')}</span>.
       </p>
       <p className="text-xs text-gray-400 mb-8">
         Each contractor receives a separate message — they won't see each other.

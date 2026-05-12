@@ -18,7 +18,11 @@ router.get('/', async (req, res, next) => {
       category?: TradeCategory;
     };
 
-    const result = await ContractorManager.filterContractors({ zipCode, category, search });
+    const result = await ContractorManager.query()
+      .filterZipCode(zipCode)
+      .filterCategory(category)
+      .search(search)
+      .all();
     res.json({ data: result });
   } catch (err) {
     next(err);

@@ -25,44 +25,60 @@ export async function attachZipCodes(rows: Contractor[]): Promise<ContractorWith
   }));
 }
 
-interface FilterContractorsOpts {
-  zipCode?: string;
-  category?: TradeCategory;
-  search?: string;
+/**
+ * Lazy, chainable query over `contractors`. Each `filter*` / `search` method is a no-op when
+ * its argument is undefined, so callers can pass optional query params unconditionally.
+ * Terminate with `.all()` or `.first()`.
+ */
+class ContractorQuery {
+  private conditions: SQL[] = [];
+
+  filterZipCode(zipCode?: string): this {
+    if (!zipCode) return this;
+    const subq = db
+      .select({ contractorId: contractorZipCodes.contractorId })
+      .from(contractorZipCodes)
+      .where(eq(contractorZipCodes.zipCode, zipCode));
+    this.conditions.push(inArray(contractors.id, subq));
+    return this;
+  }
+
+  filterCategory(category?: TradeCategory): this {
+    if (category) this.conditions.push(arrayContains(contractors.categories, [category]));
+    return this;
+  }
+
+  search(query?: string): this {
+    if (!query) return this;
+    const q = `%${query}%`;
+    this.conditions.push(or(
+      ilike(contractors.name, q),
+      ilike(contractors.companyName, q),
+      ilike(contractors.email, q),
+    ) as SQL);
+    return this;
+  }
+
+  private whereClause(): SQL | undefined {
+    return this.conditions.length ? and(...this.conditions) : undefined;
+  }
+
+  async all(): Promise<Contractor[]> {
+    return db.select().from(contractors).where(this.whereClause());
+  }
+
+  async first(): Promise<Contractor | undefined> {
+    const [c] = await db.select().from(contractors).where(this.whereClause()).limit(1);
+    return c;
+  }
 }
 
 class ContractorManagerClass extends BaseManager<typeof contractors> {
   readonly table = contractors;
 
-  /** Returns contractors matching any combination of optional filters in a single query. */
-  async filterContractors(opts: FilterContractorsOpts = {}): Promise<Contractor[]> {
-    const { zipCode, category, search } = opts;
-    const conditions: (SQL | undefined)[] = [];
-
-    if (zipCode) {
-      const subq = db
-        .select({ contractorId: contractorZipCodes.contractorId })
-        .from(contractorZipCodes)
-        .where(eq(contractorZipCodes.zipCode, zipCode));
-      conditions.push(inArray(contractors.id, subq));
-    }
-
-    if (category) {
-      conditions.push(arrayContains(contractors.categories, [category]));
-    }
-
-    if (search) {
-      const q = `%${search}%`;
-      conditions.push(or(
-        ilike(contractors.name, q),
-        ilike(contractors.companyName, q),
-        ilike(contractors.email, q),
-      ));
-    }
-
-    const active = conditions.filter(Boolean);
-    return db.select().from(contractors)
-      .where(active.length ? and(...active) : undefined);
+  /** Entry point for lazy, chainable contractor queries. */
+  query(): ContractorQuery {
+    return new ContractorQuery();
   }
 
   /** Returns the contractor whose email matches (case-insensitive), or undefined if not found. */
@@ -78,7 +94,7 @@ class ContractorManagerClass extends BaseManager<typeof contractors> {
 
   /** Returns all global contractors. Required by the permissioning framework. */
   async listForUser(_userId: string, _role: UserRole): Promise<Contractor[]> {
-    return this.filterContractors();
+    return this.query().all();
   }
 
   /** Creates a contractor with the given zip codes in a single transaction. Returns bare contractor. */

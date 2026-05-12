@@ -1,8 +1,29 @@
 ---
 name: Manager Architecture — patterns and tradeoffs
-description: Settled decisions on manager method design — filter/attach split, cross-module imports, JOIN vs separate queries, optional query pattern, in-memory filtering prohibition
+description: Settled decisions on manager method design — QuerySet vs Manager, filter vs search distinction, filter/attach split, cross-module imports, JOIN vs separate queries, optional query pattern, in-memory filtering prohibition
 type: project
 ---
+
+## QuerySet vs Manager methods
+
+Composable multi-field queries live on a `<Model>Query` class returned by `Manager.query()`. Each method is lazy, returns `this`, and is a no-op when its argument is undefined. Terminate with `.all()` or `.first()`.
+
+Single-record exact-match lookups and mutations stay as eager methods on the manager (`get({...})`, `filterEmail`, `create`, `update`, `delete`).
+
+```typescript
+// QuerySet — chainable, one query
+await ContractorManager.query()
+  .filterZipCode(zipCode)
+  .filterCategory(category)
+  .search(text)
+  .all();
+
+// Manager — eager
+await ContractorManager.get({ id });
+await ContractorManager.filterEmail(email);
+```
+
+See `.ai/skills/manager.md` for the full convention.
 
 ## Core pattern: filter* returns bare, attach* enriches
 
@@ -37,24 +58,32 @@ Query count alone is not the deciding factor. The tradeoffs:
 
 For `filterJob` specifically: joining `Job` and `Home` on indexed PKs with `LIMIT 1` is a O(1) index lookup on both sides — the JOIN cost is essentially free and one round trip beats two.
 
-## filterSearch — OR query, not chained separate queries
+## filter vs search
 
-`filterSearch(query?)` searches across multiple text fields (name, companyName, email) using a single `OR` query. It does NOT call `filterName`, `filterCompanyName`, and `filterEmail` separately — that would be 3 queries vs 1.
+The QuerySet distinguishes two kinds of predicates:
 
-The individual single-field methods (`filterName`, `filterCompanyName`, `filterEmail`) exist for targeted single-field lookups. `filterSearch` is its own OR query that happens to cover the same fields.
+- **`filter<Field>`** — exact predicate against one column or relation (e.g. `filterZipCode`, `filterCategory`). One filter narrows the result set in a precise way.
+- **`search`** — fuzzy text match across multiple columns using a single `OR` of `ILIKE` (e.g. name + companyName + email). Not a filter.
 
-## Optional query pattern — return all if undefined
+`search` is one query, never chained single-field text matches. The individual exact-match single-record lookups (e.g. `filterEmail`) live on the manager, not the QuerySet — they're terminal lookups, not building blocks for `search`.
 
-`filter*` methods that accept an optional string return all records when the argument is undefined. This lets routes call them unconditionally without null checks:
+## Optional query pattern — no-op if undefined
+
+Every QuerySet method accepts an optional argument and is a no-op when undefined. Callers pass request query params unconditionally without null checks:
 
 ```typescript
 // Route — no null check needed
-const results = await ContractorManager.filterSearch(req.query.search);
+const results = await ContractorManager.query()
+  .filterZipCode(req.query.zipCode)
+  .filterCategory(req.query.category)
+  .search(req.query.search)
+  .all();
 
-// Manager
-async filterSearch(query?: string): Promise<Contractor[]> {
-  if (!query) return db.select().from(contractors);
-  // ...
+// QuerySet method
+filterZipCode(zipCode?: string): this {
+  if (!zipCode) return this;
+  // ...push condition
+  return this;
 }
 ```
 

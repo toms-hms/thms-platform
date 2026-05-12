@@ -1,11 +1,11 @@
 import { createId } from '@paralleldrive/cuid2';
 import { Factory } from 'fishery';
-import { ContractorManager, ContractorWithRelations } from '@/contractor/models/ContractorManager';
+import { ContractorManager, ContractorWithRelations, attachZipCodes } from '@/contractor/models/ContractorManager';
 import { TradeCategory } from '@thms/shared';
 
 export const contractorFactory = Factory.define<ContractorWithRelations>(({ onCreate, sequence }) => {
-  onCreate((contractor) =>
-    ContractorManager.create(
+  onCreate(async (contractor) => {
+    const bare = await ContractorManager.create(
       {
         id:          contractor.id,
         name:        contractor.name,
@@ -18,8 +18,10 @@ export const contractorFactory = Factory.define<ContractorWithRelations>(({ onCr
         updatedAt:   contractor.updatedAt,
       },
       contractor.zipCodes,
-    )
-  );
+    );
+    const [withZips] = await attachZipCodes([bare]);
+    return withZips;
+  });
 
   return {
     id:          createId(),

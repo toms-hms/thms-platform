@@ -1,5 +1,4 @@
 import { createId } from '@paralleldrive/cuid2';
-import { NotFoundError } from '@/utils/errors';
 import { ContractorManager } from './models/ContractorManager';
 import type { CreateContractorInput, UpdateContractorInput } from '@thms/shared';
 
@@ -20,9 +19,7 @@ export async function createContractor(data: CreateContractorInput) {
 }
 
 export async function getContractor(contractorId: string) {
-  const contractor = await ContractorManager.findById(contractorId);
-  if (!contractor) throw new NotFoundError('Contractor');
-  return contractor;
+  return ContractorManager.get({ id: contractorId });
 }
 
 export async function updateContractor(contractorId: string, data: UpdateContractorInput) {

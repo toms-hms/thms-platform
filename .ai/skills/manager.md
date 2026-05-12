@@ -30,7 +30,7 @@ await ContractorManager.get({ id: '123', name: 'Smith' }) // AND conditions
 await ContractorManager.query()
   .filterZipCode(zipCode)   // lazy
   .filterCategory(category) // lazy
-  .filterSearch(search)     // lazy
+  .search(query)            // lazy
   .all();                   // executes — ONE query
 ```
 
@@ -40,25 +40,39 @@ await ContractorManager.query()
 - `create / update / delete` — eager mutations
 - `hasPermission / listForUser` — framework stubs, names fixed
 
-## QuerySet filter methods
+## QuerySet filter and search methods
 
-**QuerySet `filter*`** — lazy, no-op if argument is undefined, return `this`:
+The QuerySet exposes two kinds of predicate methods:
+
+**`filter<Field>`** — exact predicate against one column or relation. Lazy, no-op if argument is undefined, returns `this`:
 - `filterZipCode(zip?)` — contractors serving this zip code
 - `filterCategory(cat?)` — contractors whose categories include this value
-- `filterSearch(query?)` — OR across name, company name, email
 
-**Optional query pattern:** `filter*` methods that accept an optional string should return all records when the argument is undefined — this lets the route call them unconditionally without a null check:
+**`search`** — fuzzy text match across multiple columns using a single `OR` of `ILIKE`. Lazy, no-op if argument is undefined, returns `this`. Not prefixed `filter*` because it isn't narrowing by an exact attribute — it's a multi-column fuzzy match:
+- `search(query?)` — OR across name, company name, email
+
+Single-field exact-match terminal lookups (like `filterEmail`) live on the manager, not the QuerySet — they're not building blocks for `search`. `search` is its own OR query; it does NOT call `filterEmail` + a `filterName` etc. separately (that would be N queries vs 1).
+
+**Optional query pattern:** Every QuerySet method is a no-op when its argument is undefined. Routes pass request query params unconditionally without null checks:
+
 ```typescript
 // Route — no null check needed
-const results = await ContractorManager.filterSearch(req.query.search);
+const results = await ContractorManager.query()
+  .filterZipCode(req.query.zipCode)
+  .filterCategory(req.query.category)
+  .search(req.query.search)
+  .all();
 
-// Manager
-async filterSearch(query?: string): Promise<Contractor[]> {
-  if (!query) return db.select().from(contractors);
+// QuerySet method
+search(query?: string): this {
+  if (!query) return this;
   const q = `%${query}%`;
-  return db.select().from(contractors).where(
-    or(ilike(contractors.name, q), ilike(contractors.companyName, q), ilike(contractors.email, q))
-  );
+  this.conditions.push(or(
+    ilike(contractors.name, q),
+    ilike(contractors.companyName, q),
+    ilike(contractors.email, q),
+  ) as SQL);
+  return this;
 }
 ```
 

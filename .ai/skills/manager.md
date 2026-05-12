@@ -8,11 +8,13 @@ Every manager is a class extending `BaseManager<TTable>` (from `src/utils/BaseMa
 
 ```typescript
 class ContractorManagerClass extends BaseManager<typeof contractors> {
-  readonly table = contractors;
+  readonly table: typeof contractors = contractors;
   // module-specific methods
 }
 export const ContractorManager = new ContractorManagerClass();
 ```
+
+**`readonly table` must be annotated explicitly with `typeof <table>`.** Without the annotation, TS infers the literal Drizzle table type — which references internal `PgColumn` / `PgColumnBuilder` / `PgTableWithColumns` types that aren't directly importable, and `declaration: true` emit fails with TS2883. The `typeof <table>` annotation is portable because the table value is imported in the same file.
 
 `BaseManager` provides a generic `get(where)` method — a typed single-record lookup from partial model fields:
 ```typescript
@@ -82,7 +84,7 @@ interface FilterOpts {
 }
 
 class ContractorManagerClass extends BaseManager<typeof contractors> {
-  readonly table = contractors;
+  readonly table: typeof contractors = contractors;
 
   async filter({ zipCode, category, email, search }: FilterOpts = {}): Promise<Contractor[]> {
     return db.select().from(contractors).where(and(

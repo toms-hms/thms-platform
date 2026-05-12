@@ -34,7 +34,7 @@ interface FilterOpts {
 }
 
 class ContractorManagerClass extends BaseManager<typeof contractors> {
-  readonly table = contractors;
+  readonly table: typeof contractors = contractors;
 
   /** Returns contractors matching any combination of optional filters in a single query. */
   async filter({ zipCode, category, email, search }: FilterOpts = {}): Promise<Contractor[]> {

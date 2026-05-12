@@ -1,5 +1,16 @@
 # THMS Rules
 
+## Function signatures
+Destructure options-bag parameters at the function signature, not in the body. The exception: when a destructured name would shadow a function or import in scope (e.g. a `search` field colliding with a `search` helper), introduce a namespace import to disambiguate rather than renaming the destructure.
+
+```typescript
+// good
+async filter({ zipCode, category, search }: FilterOpts = {}) { /* ... */ }
+
+// bad — needless indirection
+async filter(opts: FilterOpts = {}) { const { zipCode, category, search } = opts; /* ... */ }
+```
+
 ## Imports
 - Use `@/` for any import that crosses a directory boundary. Use `./` only for same-directory imports.
 - Cross-app shared types: `@thms/shared` only. Never import from one app into the other.

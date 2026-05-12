@@ -14,6 +14,7 @@ export const contractorFactory = Factory.define<ContractorWithRelations>(({ onCr
         phone:       contractor.phone,
         categories:  contractor.categories,
         notes:       contractor.notes,
+        isGlobal:    contractor.isGlobal,
         createdAt:   contractor.createdAt,
         updatedAt:   contractor.updatedAt,
       },
@@ -32,6 +33,7 @@ export const contractorFactory = Factory.define<ContractorWithRelations>(({ onCr
     categories:  [TradeCategory.PLUMBING],
     zipCodes:    [],
     notes:       null,
+    isGlobal:    true,
     createdAt:   new Date(),
     updatedAt:   new Date(),
   };

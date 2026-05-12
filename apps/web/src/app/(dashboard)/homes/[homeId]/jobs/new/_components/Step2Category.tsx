@@ -3,8 +3,6 @@ import { useState } from 'react';
 import { JobIntent, TradeCategory } from '@thms/shared';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
-const ISSUE_TILES = CATEGORY_CONFIG[JobIntent.ISSUE];
-
 const INTENT_LABELS: Record<JobIntent, string> = {
   [JobIntent.ISSUE]:          'What needs fixing?',
   [JobIntent.IMPROVEMENT]:    'What would you like to improve?',
@@ -21,6 +19,7 @@ interface Props {
 export default function Step2Category({ intent, onSelect, onSelectMultiple, onBack }: Props) {
   const isMulti = intent === JobIntent.IMPROVEMENT;
   const [selected, setSelected] = useState<TradeCategory[]>([]);
+  const tiles = CATEGORY_CONFIG[intent];
 
   function toggleCategory(cat: TradeCategory) {
     setSelected(prev =>
@@ -38,7 +37,7 @@ export default function Step2Category({ intent, onSelect, onSelectMultiple, onBa
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {ISSUE_TILES.map((tile) => {
+        {tiles.map((tile) => {
           const isSelected = isMulti && selected.includes(tile.tradeCategory);
           return (
             <button

@@ -1,5 +1,5 @@
-import { createId } from '@paralleldrive/cuid2';
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 import { db } from '@/db';
 import { homes } from '@/home/models/Home';
 import { jobs } from '@/job/models/Job';
@@ -29,21 +29,25 @@ export async function attachZipCodes(rows: Contractor[]): Promise<ContractorWith
 interface FilterOpts {
   ids?: string[];
   zipCode?: string;
+  zipCodes?: string[];
   category?: TradeCategory;
   email?: string;
   search?: string;
+  isGlobal?: boolean;
 }
 
 class ContractorManagerClass extends BaseManager<typeof contractors> {
   readonly table: typeof contractors = contractors;
 
   /** Returns contractors matching any combination of optional filters in a single query. */
-  async filter({ ids, zipCode, category, email, search }: FilterOpts = {}): Promise<Contractor[]> {
+  async filter({ ids, zipCode, zipCodes, category, email, search, isGlobal }: FilterOpts = {}): Promise<Contractor[]> {
     return db.select().from(contractors).where(and(
       where.filterIds(ids),
       where.filterZipCode(zipCode),
+      where.filterZipCodes(zipCodes),
       where.filterCategory(category),
       where.filterEmail(email),
+      where.filterIsGlobal(isGlobal),
       where.search(search),
     ));
   }
@@ -55,7 +59,7 @@ class ContractorManagerClass extends BaseManager<typeof contractors> {
 
   /** Returns all global contractors. Required by the permissioning framework. */
   async listForUser(_userId: string, _role: UserRole): Promise<Contractor[]> {
-    return this.filter();
+    return this.filter({ isGlobal: true });
   }
 
   /** Creates a contractor with the given zip codes in a single transaction. Returns bare contractor. */
@@ -88,6 +92,17 @@ class ContractorManagerClass extends BaseManager<typeof contractors> {
       }
       return c;
     });
+  }
+
+  /** Sets isGlobal to true, making the contractor visible in the global list. Admin only. */
+  async promote(id: string): Promise<Contractor> {
+    const [c] = await db
+      .update(contractors)
+      .set({ isGlobal: true, updatedAt: new Date() })
+      .where(eq(contractors.id, id))
+      .returning();
+    if (!c) throw new NotFoundError('Contractor');
+    return c;
   }
 
   /** Deletes the contractor with the given ID. */

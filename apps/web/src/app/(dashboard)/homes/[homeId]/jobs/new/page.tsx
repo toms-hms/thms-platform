@@ -10,6 +10,7 @@ import Step1Intent from './_components/Step1Intent';
 import Step2Category from './_components/Step2Category';
 import Step3Describe from './_components/Step3Describe';
 import Step4Diagnose from './_components/Step4Diagnose';
+import type { AiSessionSummary } from '@thms/shared';
 import Step5Contractors from './_components/Step5Contractors';
 
 const STEP4_LABEL: Record<JobIntent, string> = {
@@ -22,10 +23,12 @@ interface WizardData {
   intent: JobIntent | null;
   category: TradeCategory | null;
   categories: TradeCategory[];
+  categorySuggestions: Array<{ category: TradeCategory; reason: string }>;
   title: string;
   description: string;
   photos: File[];
   jobId: string | null;
+  aiSummary: AiSessionSummary | null;
   selectedContractorIds: string[];
 }
 
@@ -55,8 +58,9 @@ export default function NewJobWizardPage() {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [data, setData] = useState<WizardData>({
     intent: null, category: null, categories: [],
+    categorySuggestions: [],
     title: '', description: '', photos: [],
-    jobId: null, selectedContractorIds: [],
+    jobId: null, aiSummary: null, selectedContractorIds: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -67,7 +71,7 @@ export default function NewJobWizardPage() {
 
   // Step 1 → 2: select intent
   function handleSelectIntent(intent: JobIntent) {
-    update({ intent, category: null, categories: [] });
+    update({ intent, category: null, categories: [], categorySuggestions: [] });
     setStep(2);
   }
 
@@ -83,12 +87,11 @@ export default function NewJobWizardPage() {
     setStep(3);
   }
 
-  // Step 3 → 4: create job + upload photos
+  // Step 3 → 4: create job + upload photos, then start diagnostic
   async function handleStep3Next() {
     setSubmitting(true);
     setError('');
     try {
-      // Create job as DRAFT
       const effectiveCategory = data.category ?? data.categories[0];
       const res = await request<{ data: any }>(`/api/v1/homes/${homeId}/jobs`, {
         method: 'POST',
@@ -103,12 +106,7 @@ export default function NewJobWizardPage() {
       });
       const jobId = res.data.id;
       update({ jobId });
-
-      // Upload photos against the new job ID
-      for (const file of data.photos) {
-        await uploadPhoto(jobId, file);
-      }
-
+      for (const file of data.photos) { await uploadPhoto(jobId, file); }
       setStep(4);
     } catch (err: any) {
       setError(err.message || 'Failed to save. Please try again.');
@@ -117,8 +115,34 @@ export default function NewJobWizardPage() {
     }
   }
 
-  // Step 4 → 5: skip AI
-  function handleStep4Next() {
+  // Step 4 → 5: if AI suggested categories, patch the job with the confirmed ones
+  async function handleStep4Next(
+    summary: AiSessionSummary | null,
+    confirmedCategories: Array<{ category: TradeCategory; reason: string }> | null,
+  ) {
+    update({ aiSummary: summary });
+
+    if (confirmedCategories && confirmedCategories.length > 0 && data.jobId) {
+      const categoryValues = confirmedCategories.map(c => c.category);
+      setSubmitting(true);
+      setError('');
+      try {
+        await request(`/api/v1/jobs/${data.jobId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            category: categoryValues[0],
+            categories: categoryValues,
+          }),
+        });
+        update({ category: categoryValues[0], categories: categoryValues, categorySuggestions: confirmedCategories });
+      } catch (err: any) {
+        setError(err.message || 'Failed to update categories.');
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
     setStep(5);
   }
 
@@ -203,10 +227,10 @@ export default function NewJobWizardPage() {
         />
       )}
 
-      {step === 4 && data.intent && (
+      {step === 4 && data.intent && data.jobId && (
         <Step4Diagnose
           intent={data.intent}
-          categories={data.intent === JobIntent.IMPROVEMENT ? data.categories : undefined}
+          jobId={data.jobId}
           onNext={handleStep4Next}
           onBack={() => setStep(3)}
         />
@@ -215,7 +239,6 @@ export default function NewJobWizardPage() {
       {step === 5 && data.intent && effectiveCategory && data.jobId && (
         <Step5Contractors
           categories={data.categories.length ? data.categories : [effectiveCategory]}
-          jobId={data.jobId}
           selectedIds={data.selectedContractorIds}
           onToggle={toggleContractor}
           onSubmit={handleSubmit}

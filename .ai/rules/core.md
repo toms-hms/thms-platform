@@ -18,6 +18,16 @@ async filter(opts: FilterOpts = {}) { const { zipCode, category, search } = opts
 ## API responses
 Always `{ data: {} }` or `{ error: { code, message } }`. No other shape.
 
+## Enums and model constants
+Always use the defined enum or constant instead of a raw string for model values.
+- `JobIntent.ISSUE` not `'ISSUE'`
+- `TradeCategory.HVAC` not `'HVAC'`
+- `JobStatus.DRAFT` not `'DRAFT'`
+- `UserRole.ADMIN` not `'ADMIN'`
+
+Use them as `Record` keys too: `Record<JobIntent, string>` not `Record<string, string>`.
+All enums are exported from `@thms/shared`.
+
 ## State transitions
 Never auto-transition job or contractor status. The user controls all state.
 
@@ -31,9 +41,22 @@ Every manager implements:
 
 Routes use `permit()` middleware for individual object access.
 
+## Comments
+Every exported function must have a one-line JSDoc comment describing what it does, its key parameter assumptions, and what it returns. No commenting the obvious.
+```ts
+/** Returns the contractor whose email matches the given address (case-insensitive). */
+async filterEmail(email: string): Promise<Contractor | undefined>
+```
+
+## Manager methods
+See `.ai/skills/manager.md` for naming conventions and principles before writing any manager method.
+
+## Migrations
+Never write migration SQL by hand for schema changes. Run `npm run db:generate` in `apps/api/` to generate from the Drizzle model. See `.ai/skills/migrations.md` for when custom SQL is acceptable.
+
 ## Tests
-Each module has `factories/` (one factory per model) and `__tests__/` (Manager, service, route).
-Shared test infra in `src/test/`. See `.ai/skills/testing/SKILL.md` for the full pattern.
+Each module has `factories/` (one per model) and `__tests__/` (Manager, service, route).
+Shared test infra in `src/test/`. See `.ai/skills/testing.md` for the full pattern.
 
 ## Permissions
-See `.ai/skills/permissioning/SKILL.md` for the full pattern before touching any route or manager.
+See `.ai/skills/permissioning.md` for the full pattern before touching any route or manager.

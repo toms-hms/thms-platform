@@ -28,6 +28,7 @@ Detailed how-to guides for common task types:
 - Permissioning pattern: `.ai/skills/permissioning.md`
 - API file structure: `.ai/skills/api-file-structure.md`
 - AI file structure: `.ai/skills/ai-structure.md`
+- Migrations: `.ai/skills/migrations.md`
 
 ## Memory
 Consult `.claude/memory/MEMORY.md` for the index of what has been built. Load individual files only when relevant.

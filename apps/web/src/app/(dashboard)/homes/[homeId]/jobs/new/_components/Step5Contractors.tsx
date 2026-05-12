@@ -14,7 +14,6 @@ interface Contractor {
 
 interface Props {
   categories: TradeCategory[];
-  jobId: string;
   selectedIds: string[];
   onToggle: (id: string) => void;
   onSubmit: () => void;
@@ -24,25 +23,34 @@ interface Props {
 }
 
 export default function Step5Contractors({
-  categories, jobId, selectedIds, onToggle, onSubmit, onBack, submitting, error,
+  categories, selectedIds, onToggle, onSubmit, onBack, submitting, error,
 }: Props) {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
+  const categoryKey = categories.join('|');
 
   const categoryLabels = categories.map(cat =>
     CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === cat)?.label ?? cat
   );
 
   useEffect(() => {
+    const categoriesForRequest = categoryKey
+      ? categoryKey.split('|') as TradeCategory[]
+      : [];
     setLoading(true);
-    fetch(`/api/v1/contractors?jobId=${encodeURIComponent(jobId)}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-    })
-      .then(r => r.json())
-      .then(d => setContractors(d.data ?? []))
+    Promise.all(categoriesForRequest.map(category =>
+      fetch(`/api/v1/contractors?category=${category}&homeZipFilter=true`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      }).then(r => r.json())
+    ))
+      .then(results => {
+        const byId = new Map<string, Contractor>();
+        results.flatMap(d => d.data ?? []).forEach((contractor: Contractor) => byId.set(contractor.id, contractor));
+        setContractors(Array.from(byId.values()));
+      })
       .catch(() => setContractors([]))
       .finally(() => setLoading(false));
-  }, [jobId]);
+  }, [categoryKey]);
 
   const MAX = 3;
   const canSelect = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX;

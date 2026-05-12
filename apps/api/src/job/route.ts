@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
-import { CreateJobSchema, UpdateJobSchema, AssignContractorSchema, UpdateJobContractorSchema } from './schema';
+import { CreateJobSchema, UpdateJobSchema, AssignContractorSchema, UpdateJobContractorSchema, DiagnoseSchema, SuggestTradeCategoriesSchema } from './schema';
 import { CreateQuoteSchema } from '../quote/schema';
 import { CreateAIGenerationSchema, EmailDraftSchema } from '../ai/schema';
 import { JobManager } from './models/JobManager';
@@ -34,6 +34,17 @@ jobCollectionRouter.get('/',
         { status: req.query.status as string, category: req.query.category as string }
       );
       res.json({ data: jobs });
+    } catch (err) { next(err); }
+  }
+);
+
+jobCollectionRouter.post('/category-suggestions',
+  permit(HomeManager, (req) => (req.params as any).homeId),
+  validate(SuggestTradeCategoriesSchema),
+  async (req, res, next) => {
+    try {
+      const suggestions = await jobService.suggestTradeCategories(req.body);
+      res.json({ data: suggestions });
     } catch (err) { next(err); }
   }
 );
@@ -238,6 +249,28 @@ jobRouter.get('/:jobId/ai-generations',
     try {
       const gens = await aiService.listAIGenerations(req.params.jobId);
       res.json({ data: gens });
+    } catch (err) { next(err); }
+  }
+);
+
+// AI diagnostic Q&A
+jobRouter.post('/:jobId/diagnose/start',
+  permit(JobManager, (req) => req.params.jobId),
+  async (req, res, next) => {
+    try {
+      const result = await aiService.startDiagnose(req.params.jobId);
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  }
+);
+
+jobRouter.post('/:jobId/diagnose',
+  permit(JobManager, (req) => req.params.jobId),
+  validate(DiagnoseSchema),
+  async (req, res, next) => {
+    try {
+      const result = await aiService.diagnoseJob(req.params.jobId, req.body.message);
+      res.json({ data: result });
     } catch (err) { next(err); }
   }
 );

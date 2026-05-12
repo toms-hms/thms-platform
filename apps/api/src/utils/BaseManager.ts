@@ -22,7 +22,7 @@ export abstract class BaseManager<TTable extends PgTable> {
 
     const [result] = await db
       .select()
-      .from(this.table)
+      .from(this.table as PgTable)
       .where(and(...(conditions as SQL[])))
       .limit(1);
 

@@ -25,8 +25,22 @@ export function filterZipCode(zipCode?: string): SQL | undefined {
   return inArray(contractors.id, subq);
 }
 
+export function filterZipCodes(zipCodes?: string[]): SQL | undefined {
+  if (zipCodes === undefined) return undefined;
+  if (zipCodes.length === 0) return sql`1 = 0`;
+  const subq = db
+    .select({ contractorId: contractorZipCodes.contractorId })
+    .from(contractorZipCodes)
+    .where(inArray(contractorZipCodes.zipCode, zipCodes));
+  return inArray(contractors.id, subq);
+}
+
 export function filterCategory(category?: TradeCategory): SQL | undefined {
   return category ? arrayContains(contractors.categories, [category]) : undefined;
+}
+
+export function filterIsGlobal(isGlobal?: boolean): SQL | undefined {
+  return isGlobal === undefined ? undefined : eq(contractors.isGlobal, isGlobal);
 }
 
 export function filterEmail(email?: string): SQL | undefined {

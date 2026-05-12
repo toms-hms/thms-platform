@@ -8,11 +8,9 @@
     "start": "node dist/index.js",
     "test": "jest --runInBand",
     "test:coverage": "jest --runInBand --coverage",
-    "db:generate": "prisma generate --schema=prisma/schema",
-    "db:migrate": "prisma migrate dev --schema=prisma/schema",
-    "db:migrate:deploy": "prisma migrate deploy --schema=prisma/schema",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio --schema=prisma/schema"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0",

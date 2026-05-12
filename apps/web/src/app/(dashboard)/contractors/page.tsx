@@ -1,14 +1,14 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
+import Link from 'next/link';
 import { TradeCategory, UserRole } from '@thms/shared';
 import { useRouter } from 'next/navigation';
 import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';
+import { createMyVendor } from '@/app/(dashboard)/my-vendors/mutations';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
-import Table, { Column } from '@/components/ui/Table';
 import Selector, { SelectorOption } from '@/components/ui/Selector';
-import Dropdown from '@/components/ui/Dropdown';
 import { getStoredUser } from '@/lib/auth';
 
 const CATEGORY_LABELS: Record<TradeCategory, string> = {
@@ -31,68 +31,42 @@ const CATEGORY_OPTIONS: SelectorOption[] = [
   ...Object.values(TradeCategory).map((v) => ({ value: v, label: CATEGORY_LABELS[v] })),
 ];
 
-type Contractor = any;
-
-const COLUMNS: Column<Contractor>[] = [
-  {
-    key: 'name',
-    header: 'Name',
-    render: (c) => (
-      <div>
-        <span className="font-medium text-gray-900">{c.name}</span>
-        {c.companyName && <span className="ml-2 text-gray-400 text-xs">– {c.companyName}</span>}
-      </div>
-    ),
-  },
-  {
-    key: 'category',
-    header: 'Category',
-    render: (c) => (
-      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-        {CATEGORY_LABELS[c.category as TradeCategory] ?? c.category}
-      </span>
-    ),
-  },
-  { key: 'email', header: 'Email', render: (c) => c.email || '—' },
-  { key: 'phone', header: 'Phone', render: (c) => c.phone || '—' },
-  {
-    key: 'actions',
-    header: '',
-    render: (c) => (
-      <Dropdown
-        trigger={<button className="btn-secondary text-xs py-1 px-2">Actions ▾</button>}
-        items={[
-          { label: 'Edit', onClick: () => openEdit(c) },
-          { label: 'Delete', danger: true, onClick: () => handleDelete(c.id, c.name) },
-        ]}
-      />
-    ),
-  },
-];
-
-// openEdit / handleDelete need to be accessible from COLUMNS — using module-level refs
-let openEdit: (c: Contractor) => void = () => {};
-let handleDelete: (id: string, name: string) => void = () => {};
+type Contractor = {
+  id: string;
+  name: string;
+  companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  categories: TradeCategory[];
+  zipCodes: string[];
+  notes?: string | null;
+};
 
 export default function ContractorsPage() {
   const isAdmin = getStoredUser()?.role === UserRole.ADMIN;
   const router = useRouter();
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [homeZipFilter, setHomeZipFilter] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Contractor | null>(null);
   const [saving, setSaving] = useState(false);
+  const [addingId, setAddingId] = useState('');
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ name: '', companyName: '', email: '', phone: '', category: '', notes: '' });
+  const [form, setForm] = useState({ name: '', companyName: '', email: '', phone: '', category: '', zipCodes: '', notes: '' });
 
-  useEffect(() => { load(); }, [search, category]);
+  useEffect(() => { load(); }, [search, category, homeZipFilter]);
 
   async function load() {
     setLoading(true);
     try {
-      const res = await listContractors({ search: search || undefined, category: category || undefined });
+      const res = await listContractors({
+        search: search || undefined,
+        category: category || undefined,
+        homeZipFilter,
+      });
       setList(res.data);
     } catch {}
     setLoading(false);
@@ -103,18 +77,38 @@ export default function ContractorsPage() {
   }
 
   function openCreate() {
-    setForm({ name: '', companyName: '', email: '', phone: '', category: '', notes: '' });
+    setForm({ name: '', companyName: '', email: '', phone: '', category: '', zipCodes: '', notes: '' });
     setEditing(null);
     setError('');
     setShowCreate(true);
   }
 
-  openEdit = (c: Contractor) => {
-    setForm({ name: c.name, companyName: c.companyName || '', email: c.email || '', phone: c.phone || '', category: c.category, notes: c.notes || '' });
+  function openEdit(c: Contractor) {
+    setForm({
+      name: c.name,
+      companyName: c.companyName || '',
+      email: c.email || '',
+      phone: c.phone || '',
+      category: c.categories[0] || '',
+      zipCodes: c.zipCodes.join(', '),
+      notes: c.notes || '',
+    });
     setEditing(c);
     setError('');
     setShowCreate(true);
-  };
+  }
+
+  function payloadFromForm() {
+    return {
+      name: form.name,
+      companyName: form.companyName || undefined,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      categories: form.category ? [form.category] : [],
+      zipCodes: form.zipCodes.split(',').map((zipCode) => zipCode.trim()).filter(Boolean),
+      notes: form.notes || undefined,
+    };
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -122,10 +116,10 @@ export default function ContractorsPage() {
     setError('');
     try {
       if (editing) {
-        const res = await updateContractor(editing.id, form);
+        const res = await updateContractor(editing.id, payloadFromForm());
         setList((prev) => prev.map((c) => (c.id === editing.id ? res.data : c)));
       } else {
-        const res = await createContractor(form);
+        const res = await createContractor(payloadFromForm());
         setList((prev) => [res.data, ...prev]);
       }
       setShowCreate(false);
@@ -136,22 +130,49 @@ export default function ContractorsPage() {
     }
   }
 
-  handleDelete = async (contractorId: string, name: string) => {
+  async function handleAddToMyVendors(contractor: Contractor) {
+    setAddingId(contractor.id);
+    try {
+      await createMyVendor({
+        vendorId: contractor.id,
+        name: contractor.name,
+        companyName: contractor.companyName || undefined,
+        email: contractor.email || undefined,
+        phone: contractor.phone || undefined,
+        categories: contractor.categories,
+        zipCode: contractor.zipCodes[0],
+        notes: contractor.notes || undefined,
+      });
+    } catch {
+    } finally {
+      setAddingId('');
+    }
+  }
+
+  async function handleDelete(contractorId: string, name: string) {
     if (!confirm(`Delete ${name}?`)) return;
     try {
       await deleteContractor(contractorId);
       setList((prev) => prev.filter((c) => c.id !== contractorId));
     } catch {}
-  };
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Contractors</h1>
-        <button onClick={openCreate} className="btn-primary">+ Add Contractor</button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
+          {homeZipFilter && (
+            <p className="text-sm text-gray-500 mt-1">Filtered to ZIP codes from your homes.</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Link href="/my-vendors" className="btn-secondary">My Vendors</Link>
+          {isAdmin && <button onClick={openCreate} className="btn-primary">+ Add Vendor</button>}
+        </div>
       </div>
 
-      <div className="flex gap-3 mb-5">
+      <div className="flex flex-wrap gap-3 mb-5">
         <input
           type="text"
           className="input max-w-xs"
@@ -167,22 +188,90 @@ export default function ContractorsPage() {
             placeholder="All categories"
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setHomeZipFilter((value) => !value)}
+          className={homeZipFilter ? 'btn-secondary' : 'btn-primary'}
+        >
+          {homeZipFilter ? 'Clear ZIP filter' : 'Filter to my ZIPs'}
+        </button>
       </div>
 
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading...</div>
       ) : list.length === 0 ? (
         <EmptyState
-          title="No contractors found"
-          description="Add contractors to manage outreach and quotes."
-          action={<button onClick={openCreate} className="btn-primary">Add Contractor</button>}
+          title="No vendors found"
+          description="Clear filters or add a vendor to the global list."
+          action={isAdmin ? <button onClick={openCreate} className="btn-primary">Add Vendor</button> : undefined}
         />
       ) : (
-        <Table columns={COLUMNS} rows={list} getKey={(c) => c.id} pageSize={15} />
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categories</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ZIP codes</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {list.map((contractor) => (
+                <tr
+                  key={contractor.id}
+                  onClick={() => router.push(`/contractors/${contractor.id}`)}
+                  className="group hover:bg-gray-50 cursor-pointer"
+                >
+                  <td className="px-4 py-3 text-gray-700">
+                    <div>
+                      <span className="font-medium text-gray-900">{contractor.name}</span>
+                      {contractor.companyName && <span className="ml-2 text-gray-400 text-xs">- {contractor.companyName}</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    <div className="flex flex-wrap gap-1">
+                      {contractor.categories.map((value) => (
+                        <span key={value} className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                          {CATEGORY_LABELS[value] ?? value}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">{contractor.zipCodes.length ? contractor.zipCodes.join(', ') : '-'}</td>
+                  <td className="px-4 py-3 text-gray-700">
+                    <div>{contractor.email || '-'}</div>
+                    {contractor.phone && <div className="text-xs text-gray-400">{contractor.phone}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        className="btn-secondary text-xs py-1 px-2"
+                        onClick={(e) => { e.stopPropagation(); handleAddToMyVendors(contractor); }}
+                        disabled={addingId === contractor.id}
+                        aria-label="Add to my vendors"
+                      >
+                        {addingId === contractor.id ? 'Adding...' : '☆ Add to my vendors'}
+                      </button>
+                      {isAdmin && (
+                        <>
+                          <button type="button" className="btn-secondary text-xs py-1 px-2" onClick={(e) => { e.stopPropagation(); openEdit(contractor); }}>Edit</button>
+                          <button type="button" className="btn-danger text-xs py-1 px-2" onClick={(e) => { e.stopPropagation(); handleDelete(contractor.id, contractor.name); }}>Delete</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <Modal
-        title={editing ? 'Edit Contractor' : 'Add Contractor'}
+        title={editing ? 'Edit Vendor' : 'Add Vendor'}
         open={showCreate}
         onClose={() => setShowCreate(false)}
       >
@@ -209,6 +298,10 @@ export default function ContractorsPage() {
               placeholder="Select a category"
             />
           </div>
+          <div>
+            <label className="label">ZIP codes</label>
+            <input className="input" value={form.zipCodes} onChange={(e) => update('zipCodes', e.target.value)} placeholder="78701, 78702" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Email</label>
@@ -225,7 +318,7 @@ export default function ContractorsPage() {
           </div>
           <div className="flex gap-3 justify-end">
             <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : (editing ? 'Save Changes' : 'Add Contractor')}</button>
+            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : (editing ? 'Save Changes' : 'Add Vendor')}</button>
           </div>
         </form>
       </Modal>

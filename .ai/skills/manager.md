@@ -23,15 +23,26 @@ await ContractorManager.get({ id: '123', name: 'Smith' }) // AND conditions
 
 ## Composing multi-field queries — predicate helpers
 
-A Manager method that filters by N optional fields is composed from N module-level predicate helper functions, each returning `SQL | undefined`. The Manager method assembles them with `and(...)` and runs the query once. This is Drizzle's recommended composition pattern — fully typed, no chain accumulator, no class boilerplate.
+A Manager method that filters by N optional fields is composed from N predicate helper functions, each returning `SQL | undefined`. The Manager method assembles them with `and(...)` and runs the query once. This is Drizzle's recommended composition pattern — fully typed, no chain accumulator, no class boilerplate.
+
+### File layout
+
+Predicate helpers always live in a sibling file `<Name>Manager.where.ts`, imported into the Manager as `import * as where from './<Name>Manager.where'`. Always extract, even at one or two helpers. The convention beats the threshold judgment call: every Manager with predicates has a paired `.where.ts` file, so finding them is mechanical.
 
 ```typescript
-// At the top of ContractorManager.ts:
-// ---------------------------------------------------------------------------
-// Predicate helpers — return `SQL | undefined` for composition inside `and(...)`.
-// ---------------------------------------------------------------------------
+// apps/api/src/contractor/models/ContractorManager.where.ts
+import { arrayContains, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
+import { db } from '@/db';
+import { TradeCategory } from '@thms/shared';
+import { contractors } from './Contractor';
+import { contractorZipCodes } from './ContractorZipCode';
 
-function filterZipCode(zipCode?: string): SQL | undefined {
+// Predicate helpers — return `SQL | undefined` for composition inside `and(...)`.
+// `filter<Field>` narrows by an exact attribute. `search` is a fuzzy multi-column
+// ILIKE OR — not a filter. Each helper is a no-op when its argument is undefined
+// so the manager method passes request query params unconditionally.
+
+export function filterZipCode(zipCode?: string): SQL | undefined {
   if (!zipCode) return undefined;
   const subq = db
     .select({ contractorId: contractorZipCodes.contractorId })
@@ -40,11 +51,15 @@ function filterZipCode(zipCode?: string): SQL | undefined {
   return inArray(contractors.id, subq);
 }
 
-function filterCategory(category?: TradeCategory): SQL | undefined {
+export function filterCategory(category?: TradeCategory): SQL | undefined {
   return category ? arrayContains(contractors.categories, [category]) : undefined;
 }
 
-function search(query?: string): SQL | undefined {
+export function filterEmail(email?: string): SQL | undefined {
+  return email ? ilike(contractors.email, email) : undefined;
+}
+
+export function search(query?: string): SQL | undefined {
   if (!query) return undefined;
   const q = `%${query}%`;
   return or(
@@ -53,18 +68,28 @@ function search(query?: string): SQL | undefined {
     ilike(contractors.email, q),
   );
 }
+```
 
-interface FilterOpts { zipCode?: string; category?: TradeCategory; search?: string; }
+```typescript
+// apps/api/src/contractor/models/ContractorManager.ts
+import * as where from './ContractorManager.where';
 
-// Manager method composes them
+interface FilterOpts {
+  zipCode?: string;
+  category?: TradeCategory;
+  email?: string;
+  search?: string;
+}
+
 class ContractorManagerClass extends BaseManager<typeof contractors> {
   readonly table = contractors;
 
-  async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
+  async filter({ zipCode, category, email, search }: FilterOpts = {}): Promise<Contractor[]> {
     return db.select().from(contractors).where(and(
-      filterZipCode(opts.zipCode),
-      filterCategory(opts.category),
-      search(opts.search),
+      where.filterZipCode(zipCode),
+      where.filterCategory(category),
+      where.filterEmail(email),
+      where.search(search),
     ));
   }
 }
@@ -72,30 +97,12 @@ class ContractorManagerClass extends BaseManager<typeof contractors> {
 
 ### `filter<Field>` vs `search`
 
-- **`filter<Field>`** — exact predicate against one column or relation. Each `filter*` narrows the result set in a precise way.
+- **`filter<Field>`** — exact predicate against one column or relation. Each `filter*` narrows the result set in a precise way. Single-field exact-match lookups (e.g. `filterEmail`) are predicate helpers too — call via `Manager.filter({ email })`, not a separate Manager method.
 - **`search`** — fuzzy text match across multiple columns using a single `OR` of `ILIKE`. Not prefixed `filter*` because it isn't narrowing by an exact attribute. One query, never composed from single-field text matches.
 
 ### Optional-arg pattern
 
-Every predicate helper accepts an optional argument and returns `undefined` when absent. `and(...)` skips `undefined` natively, so the Manager method passes request query params unconditionally without null checks.
-
-### File organization
-
-Predicate helpers live at the top of `<Name>Manager.ts` in a banner-commented section above the Manager class. When the helper set exceeds ~5 functions OR is consumed by a file other than the Manager, extract to a sibling `<Name>Manager.where.ts` and import as a namespace:
-
-```typescript
-import * as ContractorWhere from './ContractorManager.where';
-
-async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
-  return db.select().from(contractors).where(and(
-    ContractorWhere.filterZipCode(opts.zipCode),
-    ContractorWhere.filterCategory(opts.category),
-    ContractorWhere.search(opts.search),
-  ));
-}
-```
-
-Helper names are unchanged on extraction — same `filter<Field>` / `search` rules apply inside the namespace.
+Every predicate helper accepts an optional argument and returns `undefined` when absent. `and(...)` skips `undefined` natively, so the Manager method passes request query params unconditionally without null checks. The `Manager.filter` signature destructures `FilterOpts` directly — the `where` namespace prevents parameter names like `search` from shadowing the helper.
 
 ### Why not a chainable QuerySet class
 
@@ -106,14 +113,15 @@ A `<Model>Query` accumulator (Django/Rails style) has been considered and reject
 - Each Manager needs its own `<Model>Query` class, with duplicated `whereClause()` / `all()` / `first()` boilerplate (or a base class that adds indirection).
 - The pattern solves a problem TypeScript + Drizzle don't have. Predicate-helper composition is what Drizzle's own docs recommend for this case.
 
-## Eager Manager methods
+## Manager methods (non-read)
 
-Single-record lookups and mutations live on the Manager class as eager methods, not as predicate helpers:
+The Manager class exposes these methods alongside the unified `filter(opts)` read entry point:
 
-- **`get({ field: value })`** — inherited from `BaseManager`, throws `NotFoundError` if not found. Use for ID-based and other exact-match terminal lookups.
-- **`filterEmail(email)`** — module-specific terminal exact-match lookup. Named `filter<Field>` for consistency with predicate helpers, but *runs* the query rather than returning a predicate fragment.
+- **`get({ field: value })`** — inherited from `BaseManager`, throws `NotFoundError` if not found. Use only when you expect the record to exist (e.g. ID-based lookups behind a `permit()` middleware). For "does this exist?" lookups, use `filter({ field: value })` — it returns an empty array on miss instead of throwing.
 - **`create` / `update` / `delete`** — mutations. Return the bare affected entity.
 - **`hasPermission` / `listForUser`** — required stubs for the permissioning framework. These names are fixed by the framework contract. Do not rename them.
+
+There are no per-field eager read methods on the Manager. Single-field exact-match lookups are predicate helpers in `.where.ts` and are invoked through `filter({ field: value })`.
 
 ## `attach<Object>` for relations
 

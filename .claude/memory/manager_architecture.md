@@ -26,9 +26,9 @@ async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
 
 **Why not a chainable QuerySet class:** A `<Model>Query` accumulator (Django/Rails style) requires `as SQL` casts, throws away Drizzle's per-step type narrowing, adds per-Manager boilerplate, and solves a problem TypeScript + Drizzle don't have. See `.ai/skills/manager.md` for the full rationale.
 
-**File organization:** Predicate helpers live at the top of `<Name>Manager.ts` in a banner-commented section above the Manager class. When the helper set exceeds ~5 functions OR is consumed by a file other than the Manager, extract to a sibling `<Name>Manager.where.ts` and import as a namespace (`import * as ContractorWhere from './ContractorManager.where'`).
+**File organization:** Predicate helpers live in a sibling file `<Name>Manager.where.ts`, imported into the Manager as `import * as where from './ContractorManager.where'`. Always extract — even at 1–3 helpers. The convention beats the threshold judgment call: every Manager with predicates has a paired `.where.ts` file, so finding them is mechanical.
 
-Single-record exact-match lookups and mutations stay as eager methods on the Manager (`get({...})` from BaseManager, `filterEmail`, `create`, `update`, `delete`) — they're not building blocks for composition.
+Single-field exact-match lookups are predicate helpers too (e.g. `filterEmail(email?)`), called via `Manager.filter({ email })`. There is no per-field eager `filterEmail` method on the Manager — `filter` is the unified read path. Use `BaseManager.get({ id })` only for the throw-on-missing case (you expect the record to exist). Mutations (`create`, `update`, `delete`) and framework stubs (`hasPermission`, `listForUser`) stay as Manager methods.
 
 ## Core pattern: filter* returns bare, attach* enriches
 

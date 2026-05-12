@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { and, arrayContains, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { homes } from '@/home/models/Home';
 import { jobs } from '@/job/models/Job';
@@ -9,6 +9,7 @@ import { BaseManager } from '@/utils/BaseManager';
 import { TradeCategory, UserRole } from '@thms/shared';
 import { contractors, type Contractor, type NewContractor } from './Contractor';
 import { contractorZipCodes } from './ContractorZipCode';
+import * as where from './ContractorManager.where';
 
 export type ContractorWithRelations = Contractor & {
   zipCodes: string[];
@@ -25,40 +26,10 @@ export async function attachZipCodes(rows: Contractor[]): Promise<ContractorWith
   }));
 }
 
-// ---------------------------------------------------------------------------
-// Predicate helpers — return `SQL | undefined` for composition inside `and(...)`.
-// `filter<Field>` narrows the result set by an exact attribute. `search` is a
-// fuzzy multi-column ILIKE OR — not a filter. Each helper is a no-op when its
-// argument is undefined so the manager method passes request query params
-// unconditionally without null checks.
-// ---------------------------------------------------------------------------
-
-function filterZipCode(zipCode?: string): SQL | undefined {
-  if (!zipCode) return undefined;
-  const subq = db
-    .select({ contractorId: contractorZipCodes.contractorId })
-    .from(contractorZipCodes)
-    .where(eq(contractorZipCodes.zipCode, zipCode));
-  return inArray(contractors.id, subq);
-}
-
-function filterCategory(category?: TradeCategory): SQL | undefined {
-  return category ? arrayContains(contractors.categories, [category]) : undefined;
-}
-
-function search(query?: string): SQL | undefined {
-  if (!query) return undefined;
-  const q = `%${query}%`;
-  return or(
-    ilike(contractors.name, q),
-    ilike(contractors.companyName, q),
-    ilike(contractors.email, q),
-  );
-}
-
 interface FilterOpts {
   zipCode?: string;
   category?: TradeCategory;
+  email?: string;
   search?: string;
 }
 
@@ -66,18 +37,13 @@ class ContractorManagerClass extends BaseManager<typeof contractors> {
   readonly table = contractors;
 
   /** Returns contractors matching any combination of optional filters in a single query. */
-  async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
+  async filter({ zipCode, category, email, search }: FilterOpts = {}): Promise<Contractor[]> {
     return db.select().from(contractors).where(and(
-      filterZipCode(opts.zipCode),
-      filterCategory(opts.category),
-      search(opts.search),
+      where.filterZipCode(zipCode),
+      where.filterCategory(category),
+      where.filterEmail(email),
+      where.search(search),
     ));
-  }
-
-  /** Returns the contractor whose email matches (case-insensitive), or undefined if not found. */
-  async filterEmail(email: string): Promise<Contractor | undefined> {
-    const [c] = await db.select().from(contractors).where(ilike(contractors.email, email)).limit(1);
-    return c ?? undefined;
   }
 
   /** Always returns true — global contractors are visible to all users. Required by the permit middleware. */

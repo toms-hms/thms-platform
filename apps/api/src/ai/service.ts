@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import { JobIntent } from '@thms/shared';
-import { eq } from 'drizzle-orm';
 import { getDownloadUrl } from '../upload/service';
 import { s3Client, BUCKET_NAME } from '../config/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -12,10 +11,6 @@ import { JobImageManager } from './models/JobImageManager';
 import { JobManager } from '../job/models/JobManager';
 import { ContractorManager } from '../contractor/models/ContractorManager';
 import { HomeManager } from '../home/models/HomeManager';
-import { db } from '../db';
-import { contractors } from '../contractor/models/Contractor';
-import { jobs } from '../job/models/Job';
-import { homes } from '../home/models/Home';
 
 function getOpenAI() {
   if (!env.OPENAI_API_KEY) throw new Error('OpenAI API key not configured');
@@ -97,13 +92,7 @@ export async function draftEmail(data: {
   const home = await HomeManager.findById(job.homeId);
   if (!home) throw new Error('Home not found');
 
-  const contractorResults = await db
-    .select()
-    .from(contractors)
-    .where(eq(contractors.id, data.contractorIds[0]));
-  // Fetch all contractors in the list
-  const contractorList = await Promise.all(data.contractorIds.map((id) => ContractorManager.findById(id)));
-  const validContractors = contractorList.filter(Boolean) as NonNullable<typeof contractorList[0]>[];
+  const validContractors = await ContractorManager.filter({ ids: data.contractorIds });
 
   const openai = getOpenAI();
   const drafts: Array<{ contractorId: string; subject: string; bodyText: string; bodyHtml: string }> = [];

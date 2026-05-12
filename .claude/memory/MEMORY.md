@@ -2,6 +2,7 @@
 
 - [Job Diagnosis & Management Tool](job_diagnosis_management.md) — Full product spec for the guided maintenance workflow — wizard, AI diagnostic, contractor outreach, job detail dashboard
 - [Permission Architecture](permissions_architecture.md) — Decisions made on the permissioning system — hasPermission pattern, caching strategy, route design
+- [Manager Architecture](manager_architecture.md) — filter/attach split, cross-module imports, JOIN vs separate queries, optional query pattern, in-memory filtering prohibition
 - [Testing Architecture](testing_architecture.md) — Test structure decisions — colocated tests, factories per model, cleanup pattern, what each layer tests
 - [Contractor detail page with job history](thm-11_2026-05-07.md) — GET /contractors/:id route + detail page showing name, company, categories, zip codes, contact info, notes, and a job history table with per-job status badges; contractor cards now navigate to the detail page on click
 - [Job creation wizard UI — stepper and IMPROVEMENT category](thm-2_2026-05-07.md) — Multi-step job wizard refactored with a stepper component, step labels, and IMPROVEMENT as a selectable category; steps 2–5 each have their own component under jobs/new/_components/

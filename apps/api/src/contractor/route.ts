@@ -1,107 +1,136 @@
 import { Router } from 'express';
 import { authenticateJWT, AuthenticatedRequest, requireRole } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { CreateContractorSchema, UpdateContractorSchema } from './schema';
-import { attachZipCodes, ContractorManager } from '@/contractor/models/ContractorManager';
 import { permit } from '@/permissions/permit';
 import { PermissionService } from '@/permissions/PermissionService';
 import { HomeManager } from '@/home/models/HomeManager';
-import { NotFoundError } from '@/utils/errors';
-import * as contractorService from './service';
+import { attachZipCodes, ContractorManager } from '@/contractor/models/ContractorManager';
+import { CreateContractorSchema, UpdateContractorSchema } from './schema';
 import { TradeCategory, UserRole } from '@thms/shared';
+import * as contractorService from './service';
 
 const router = Router();
 router.use(authenticateJWT);
 
+/** GET / — global contractor list with optional filters; all filtering happens in SQL. */
 router.get('/', async (req, res, next) => {
   try {
     const { userId, role } = (req as unknown as AuthenticatedRequest).user;
-    const { search, category, homeZipFilter } = req.query as { search?: string; category?: string; homeZipFilter?: string };
-    const bareContractors = await PermissionService.list(ContractorManager, userId, role);
+    const { search, category, zipCode, homeZipFilter } = req.query as {
+      search?: string;
+      category?: TradeCategory;
+      zipCode?: string;
+      homeZipFilter?: string;
+    };
 
-    // Only attach zip codes when the homeZipFilter requires them — avoids the extra query otherwise
-    const contractors = homeZipFilter === 'true'
+    // When homeZipFilter=true, fetch the user's home zip codes and pass them as a filter.
+    const homeZipCodes = homeZipFilter === 'true'
+      ? (await PermissionService.list(HomeManager, userId, role)).map((h: { zipCode: string }) => h.zipCode)
+      : undefined;
+
+    const bareContractors = await ContractorManager.filter({
+      isGlobal: true,
+      search,
+      category,
+      zipCode,
+      zipCodes: homeZipCodes,
+    });
+
+    // Attach zip codes only when the caller has requested zip-based filtering and may want them in the response.
+    const result = homeZipFilter === 'true'
       ? await attachZipCodes(bareContractors)
       : bareContractors;
 
-    const homeZipCodes = homeZipFilter === 'true'
-      ? (await PermissionService.list(HomeManager, userId, role)).map((home: { zipCode: string }) => home.zipCode)
-      : [];
-
-    const filtered = contractors.filter((c) => {
-      if (search) {
-        const s = search.toLowerCase();
-        if (!c.name.toLowerCase().includes(s) && !c.companyName?.toLowerCase().includes(s) && !c.email?.toLowerCase().includes(s)) return false;
-      }
-      if (category && !c.categories.includes(category as TradeCategory)) return false;
-      if (homeZipFilter === 'true' && !('zipCodes' in c && (c.zipCodes as string[]).some((z) => homeZipCodes.includes(z)))) return false;
-      return true;
-    });
-    res.json({ data: filtered });
-  } catch (err) { next(err); }
+    res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post('/', requireRole(UserRole.ADMIN), validate(CreateContractorSchema), async (req, res, next) => {
-  try {
-    const contractor = await contractorService.createContractor(req.body);
-    res.status(201).json({ data: contractor });
-  } catch (err) { next(err); }
-});
+router.post(
+  '/',
+  requireRole(UserRole.ADMIN),
+  validate(CreateContractorSchema),
+  async (req, res, next) => {
+    try {
+      const contractor = await contractorService.createContractor(req.body);
+      res.status(201).json({ data: contractor });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-router.get('/:contractorId',
+router.get(
+  '/:contractorId',
   permit(ContractorManager, (req) => req.params.contractorId),
   async (req, res, next) => {
     try {
-      const contractor = await ContractorManager.filterById(req.params.contractorId);
-      if (!contractor) throw new NotFoundError('Contractor');
+      const contractor = await contractorService.getContractor(req.params.contractorId);
       const [withZips] = await attachZipCodes([contractor]);
       res.json({ data: withZips });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
-router.get('/:contractorId/jobs',
+router.get(
+  '/:contractorId/jobs',
   permit(ContractorManager, (req) => req.params.contractorId),
   async (req, res, next) => {
     try {
-      const contractor = await ContractorManager.filterById(req.params.contractorId);
-      if (!contractor) throw new NotFoundError('Contractor');
+      await contractorService.getContractor(req.params.contractorId);
       const history = await ContractorManager.listJobHistory(req.params.contractorId);
       res.json({ data: history });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
-router.post('/:contractorId/promote',
+router.post(
+  '/:contractorId/promote',
   requireRole(UserRole.ADMIN),
   async (req, res, next) => {
     try {
       const contractor = await contractorService.promoteContractor(req.params.contractorId);
       res.json({ data: contractor });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
-router.patch('/:contractorId',
+router.patch(
+  '/:contractorId',
   requireRole(UserRole.ADMIN),
   permit(ContractorManager, (req) => req.params.contractorId),
   validate(UpdateContractorSchema),
   async (req, res, next) => {
     try {
-      const contractor = await contractorService.updateContractor(req.params.contractorId, req.body);
+      const contractor = await contractorService.updateContractor(
+        req.params.contractorId,
+        req.body
+      );
       res.json({ data: contractor });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
-router.delete('/:contractorId',
+router.delete(
+  '/:contractorId',
   requireRole(UserRole.ADMIN),
   permit(ContractorManager, (req) => req.params.contractorId),
   async (req, res, next) => {
     try {
       await contractorService.deleteContractor(req.params.contractorId);
       res.json({ data: { success: true } });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 );
 

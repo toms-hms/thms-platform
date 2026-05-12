@@ -26,8 +26,7 @@ export async function createUserContractor(userId: string, data: CreateUserContr
     );
     contractorId = newContractor.id;
   } else {
-    const contractor = await ContractorManager.filterById(contractorId);
-    if (!contractor) throw new NotFoundError('Contractor');
+    await ContractorManager.get({ id: contractorId });
   }
 
   const existing = await UserContractorManager.filterExisting(userId, contractorId);

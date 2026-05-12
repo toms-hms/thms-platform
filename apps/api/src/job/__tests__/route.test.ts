@@ -8,7 +8,7 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { TradeCategory } from '@thms/shared';
+import { JobIntent, TradeCategory } from '@thms/shared';
 
 async function cleanup() {
   const testUsers = await db.select().from(users).where(like(users.email, 'test-job-route%'));
@@ -46,9 +46,15 @@ describe('Jobs API', () => {
     it('creates a job', async () => {
       const res = await request(app).post(`/api/v1/homes/${homeId}/jobs`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ title: 'Fix Sink', category: TradeCategory.PLUMBING, description: 'Dripping faucet' });
+        .send({
+          title: 'Fix Sink',
+          intent: JobIntent.IMPROVEMENT,
+          category: TradeCategory.PLUMBING,
+          description: 'Dripping faucet',
+        });
       expect(res.status).toBe(201);
       expect(res.body.data.title).toBe('Fix Sink');
+      expect(res.body.data.intent).toBe(JobIntent.IMPROVEMENT);
       expect(res.body.data.status).toBe('DRAFT');
       jobId = res.body.data.id;
     });
@@ -169,6 +175,50 @@ describe('Jobs API', () => {
         .send({ status: 'PLANNING' });
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('PLANNING');
+    });
+
+    it('updates ai session with an intent-discriminated summary', async () => {
+      const aiSession = {
+        messages: [
+          { role: 'user', content: 'The faucet is dripping.' },
+          { role: 'assistant', content: 'How severe is the leak?' },
+        ],
+        summary: {
+          intent: 'ISSUE',
+          rootCause: 'Likely worn faucet cartridge',
+          severity: 'LOW',
+          scope: 'Inspect faucet and replace cartridge if needed',
+          priceRange: [100, 250],
+          constraints: ['Kitchen access required'],
+        },
+      };
+
+      const res = await request(app).patch(`/api/v1/jobs/${jobId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ aiSession });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.aiSession).toEqual(aiSession);
+    });
+
+    it('rejects ai session summaries discriminated by the old kind field', async () => {
+      const res = await request(app).patch(`/api/v1/jobs/${jobId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          aiSession: {
+            messages: [],
+            summary: {
+              kind: 'ISSUE',
+              rootCause: 'Likely worn faucet cartridge',
+              severity: 'LOW',
+              scope: 'Inspect faucet and replace cartridge if needed',
+              priceRange: [100, 250],
+              constraints: [],
+            },
+          },
+        });
+
+      expect(res.status).toBe(400);
     });
 
     it('403 for non-member', async () => {

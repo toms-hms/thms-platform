@@ -1,29 +1,34 @@
 ---
 name: Manager Architecture — patterns and tradeoffs
-description: Settled decisions on manager method design — QuerySet vs Manager, filter vs search distinction, filter/attach split, cross-module imports, JOIN vs separate queries, optional query pattern, in-memory filtering prohibition
+description: Settled decisions on manager method design — predicate-helper composition, filter vs search distinction, attach pattern for relations, cross-module imports, JOIN vs separate queries, optional-arg pattern, in-memory filtering prohibition
 type: project
 ---
 
-## QuerySet vs Manager methods
+## Composing multi-field queries — predicate helpers
 
-Composable multi-field queries live on a `<Model>Query` class returned by `Manager.query()`. Each method is lazy, returns `this`, and is a no-op when its argument is undefined. Terminate with `.all()` or `.first()`.
-
-Single-record exact-match lookups and mutations stay as eager methods on the manager (`get({...})`, `filterEmail`, `create`, `update`, `delete`).
+A Manager method that filters by N optional fields is composed from N module-level predicate helper functions, each returning `SQL | undefined`. The Manager method assembles them with `and(...)` and runs the query once. This is Drizzle's recommended composition pattern — fully typed, no chain accumulator, no class boilerplate.
 
 ```typescript
-// QuerySet — chainable, one query
-await ContractorManager.query()
-  .filterZipCode(zipCode)
-  .filterCategory(category)
-  .search(text)
-  .all();
+// Predicate helpers at the top of ContractorManager.ts
+function filterZipCode(zipCode?: string): SQL | undefined { /* ... */ }
+function filterCategory(category?: TradeCategory): SQL | undefined { /* ... */ }
+function search(query?: string): SQL | undefined { /* ... */ }
 
-// Manager — eager
-await ContractorManager.get({ id });
-await ContractorManager.filterEmail(email);
+// Manager method composes them
+async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
+  return db.select().from(contractors).where(and(
+    filterZipCode(opts.zipCode),
+    filterCategory(opts.category),
+    search(opts.search),
+  ));
+}
 ```
 
-See `.ai/skills/manager.md` for the full convention.
+**Why not a chainable QuerySet class:** A `<Model>Query` accumulator (Django/Rails style) requires `as SQL` casts, throws away Drizzle's per-step type narrowing, adds per-Manager boilerplate, and solves a problem TypeScript + Drizzle don't have. See `.ai/skills/manager.md` for the full rationale.
+
+**File organization:** Predicate helpers live at the top of `<Name>Manager.ts` in a banner-commented section above the Manager class. When the helper set exceeds ~5 functions OR is consumed by a file other than the Manager, extract to a sibling `<Name>Manager.where.ts` and import as a namespace (`import * as ContractorWhere from './ContractorManager.where'`).
+
+Single-record exact-match lookups and mutations stay as eager methods on the Manager (`get({...})` from BaseManager, `filterEmail`, `create`, `update`, `delete`) — they're not building blocks for composition.
 
 ## Core pattern: filter* returns bare, attach* enriches
 
@@ -60,30 +65,31 @@ For `filterJob` specifically: joining `Job` and `Home` on indexed PKs with `LIMI
 
 ## filter vs search
 
-The QuerySet distinguishes two kinds of predicates:
+Predicate helpers split into two kinds:
 
-- **`filter<Field>`** — exact predicate against one column or relation (e.g. `filterZipCode`, `filterCategory`). One filter narrows the result set in a precise way.
-- **`search`** — fuzzy text match across multiple columns using a single `OR` of `ILIKE` (e.g. name + companyName + email). Not a filter.
+- **`filter<Field>`** — exact predicate against one column or relation (e.g. `filterZipCode`, `filterCategory`). Each `filter*` narrows the result set in a precise way.
+- **`search`** — fuzzy text match across multiple columns using a single `OR` of `ILIKE` (e.g. name + companyName + email). Not prefixed `filter*` because it isn't narrowing by an exact attribute.
 
-`search` is one query, never chained single-field text matches. The individual exact-match single-record lookups (e.g. `filterEmail`) live on the manager, not the QuerySet — they're terminal lookups, not building blocks for `search`.
+`search` is one query, never composed from single-field text matches. The individual exact-match single-record lookups (e.g. `filterEmail`) live on the Manager, not as predicate helpers — they're terminal lookups, not building blocks for `search`.
 
-## Optional query pattern — no-op if undefined
+## Optional-arg pattern — `undefined` is a no-op
 
-Every QuerySet method accepts an optional argument and is a no-op when undefined. Callers pass request query params unconditionally without null checks:
+Every predicate helper accepts an optional argument and returns `undefined` when absent. `and(...)` skips `undefined` natively, so the Manager method passes request query params unconditionally without null checks:
 
 ```typescript
-// Route — no null check needed
-const results = await ContractorManager.query()
-  .filterZipCode(req.query.zipCode)
-  .filterCategory(req.query.category)
-  .search(req.query.search)
-  .all();
+// Manager method
+async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
+  return db.select().from(contractors).where(and(
+    filterZipCode(opts.zipCode),
+    filterCategory(opts.category),
+    search(opts.search),
+  ));
+}
 
-// QuerySet method
-filterZipCode(zipCode?: string): this {
-  if (!zipCode) return this;
-  // ...push condition
-  return this;
+// Predicate helper
+function filterZipCode(zipCode?: string): SQL | undefined {
+  if (!zipCode) return undefined;
+  // ...return inArray / eq / etc.
 }
 ```
 

@@ -39,6 +39,7 @@ export interface CreateJobInput {
 
 export interface UpdateJobInput {
   title?: string;
+  intent?: JobIntent;
   category?: TradeCategory;
   description?: string;
   notes?: string;

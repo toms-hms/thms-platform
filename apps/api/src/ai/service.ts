@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { eq } from 'drizzle-orm';
+import { JobIntent } from '@thms/shared';
 import { getDownloadUrl } from '../upload/service';
 import { s3Client, BUCKET_NAME } from '../config/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -11,10 +11,6 @@ import { JobImageManager } from './models/JobImageManager';
 import { JobManager } from '../job/models/JobManager';
 import { ContractorManager } from '../contractor/models/ContractorManager';
 import { HomeManager } from '../home/models/HomeManager';
-import { db } from '../db';
-import { contractors } from '../contractor/models/Contractor';
-import { jobs } from '../job/models/Job';
-import { homes } from '../home/models/Home';
 
 function getOpenAI() {
   if (!env.OPENAI_API_KEY) throw new Error('OpenAI API key not configured');
@@ -96,13 +92,7 @@ export async function draftEmail(data: {
   const home = await HomeManager.findById(job.homeId);
   if (!home) throw new Error('Home not found');
 
-  const contractorResults = await db
-    .select()
-    .from(contractors)
-    .where(eq(contractors.id, data.contractorIds[0]));
-  // Fetch all contractors in the list
-  const contractorList = await Promise.all(data.contractorIds.map((id) => ContractorManager.findById(id)));
-  const validContractors = contractorList.filter(Boolean) as NonNullable<typeof contractorList[0]>[];
+  const validContractors = await ContractorManager.filter({ ids: data.contractorIds });
 
   const openai = getOpenAI();
   const drafts: Array<{ contractorId: string; subject: string; bodyText: string; bodyHtml: string }> = [];
@@ -150,6 +140,235 @@ Return a JSON object with these fields:
   }
 
   return drafts;
+}
+
+const SYSTEM_PROMPTS: Record<JobIntent, string> = {
+  [JobIntent.ISSUE]: `You are helping a homeowner describe a home problem so contractors can quote accurately without a site visit.
+Ask focused questions with suggested options. Cover: what is broken, when it started, urgency, and contractor context.
+Always call ask_question for your next question. After 2-4 exchanges call generate_summary.
+If the answers reveal the selected trade categories are wrong or incomplete, also call suggest_categories — but only if genuinely needed.`,
+
+  [JobIntent.IMPROVEMENT]: `You are helping a homeowner scope a home improvement project so contractors can submit comparable bids.
+Ask focused questions with suggested options. Cover: desired outcome, budget range, timeline, constraints.
+Always call ask_question for your next question. After 2-4 exchanges call generate_summary.
+If the answers reveal the selected trade categories are wrong or incomplete, also call suggest_categories — but only if genuinely needed.`,
+
+  [JobIntent.RECURRING_WORK]: `You are helping a homeowner define a recurring home maintenance service so contractors can bid a repeating contract.
+Ask focused questions with suggested options. Cover: tasks, frequency, access and timing constraints.
+Always call ask_question for your next question. After 2-4 exchanges call generate_summary.
+If the answers reveal the selected trade categories are wrong or incomplete, also call suggest_categories — but only if genuinely needed.`,
+};
+
+const SUGGEST_CATEGORIES_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'suggest_categories',
+    description: 'Call this only if the answers reveal the initially selected trade categories are wrong or incomplete. Suggest the correct categories with a reason for each.',
+    parameters: {
+      type: 'object',
+      properties: {
+        suggestions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              category: { type: 'string', description: 'TradeCategory enum value e.g. PLUMBING, HVAC.' },
+              reason:   { type: 'string', description: 'One sentence explaining why this category is needed.' },
+            },
+            required: ['category', 'reason'],
+          },
+        },
+      },
+      required: ['suggestions'],
+    },
+  },
+};
+
+const ASK_QUESTION_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'ask_question',
+    description: 'Ask the homeowner the next clarifying question with suggested answer options.',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'The question to ask.' },
+        options:  { type: 'array', items: { type: 'string' }, description: '3-4 suggested answers the homeowner can pick or ignore.' },
+      },
+      required: ['question', 'options'],
+    },
+  },
+};
+
+const SUMMARY_TOOLS: Record<JobIntent, OpenAI.Chat.Completions.ChatCompletionTool> = {
+  [JobIntent.ISSUE]: {
+    type: 'function',
+    function: {
+      name: 'generate_summary',
+      description: 'Generate a contractor-ready brief once you have enough context.',
+      parameters: {
+        type: 'object',
+        properties: {
+          rootCause:   { type: 'string', description: 'What is broken or wrong, in plain language.' },
+          severity:    { type: 'string', description: 'How urgent — e.g. "urgent", "moderate", "low".' },
+          scope:       { type: 'string', description: 'Full contractor-ready brief.' },
+          priceRange:  { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+          constraints: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['rootCause', 'severity', 'scope', 'priceRange', 'constraints'],
+      },
+    },
+  },
+  [JobIntent.IMPROVEMENT]: {
+    type: 'function',
+    function: {
+      name: 'generate_summary',
+      description: 'Generate a contractor-ready scope of work once you have enough context.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope:       { type: 'string', description: 'Full scope of work.' },
+          priceRange:  { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+          constraints: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['scope', 'priceRange', 'constraints'],
+      },
+    },
+  },
+  [JobIntent.RECURRING_WORK]: {
+    type: 'function',
+    function: {
+      name: 'generate_summary',
+      description: 'Generate a recurring service specification once you have enough context.',
+      parameters: {
+        type: 'object',
+        properties: {
+          frequency:   { type: 'string', description: 'How often — e.g. "weekly", "quarterly".' },
+          scope:       { type: 'string', description: 'Full service spec.' },
+          priceRange:  { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+          constraints: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['frequency', 'scope', 'priceRange'],
+      },
+    },
+  },
+};
+
+interface DiagnoseResult {
+  question: string | null;
+  options: string[];
+  summary: ReturnType<typeof JobManager.findById> extends Promise<infer T> ? T extends null ? never : NonNullable<T>['aiSession'] extends infer S ? S extends null | undefined ? never : NonNullable<S>['summary'] : never : never;
+  suggestedCategories: Array<{ category: string; reason: string }> | null;
+  messages: Array<{ role: string; content: string }>;
+}
+
+/** Conducts one turn of the AI diagnostic Q&A. Returns the next question, and optionally a summary and/or category suggestions. */
+export async function diagnoseJob(jobId: string, userMessage: string) {
+  const job = await JobManager.findById(jobId);
+  if (!job) throw new Error('Job not found');
+
+  const openai = getOpenAI();
+  const intent = job.intent as JobIntent;
+  const systemPrompt = SYSTEM_PROMPTS[intent] ?? SYSTEM_PROMPTS[JobIntent.ISSUE];
+  const summaryTool = SUMMARY_TOOLS[intent] ?? SUMMARY_TOOLS[JobIntent.ISSUE];
+
+  const existingSession = job.aiSession ?? { messages: [], summary: null };
+  const newUserMessage = { role: 'user' as const, content: userMessage };
+  const history = [...existingSession.messages, newUserMessage];
+
+  const contextPrefix = [
+    `Job title: ${job.title}`,
+    `Category: ${job.category}`,
+    job.description ? `Homeowner's description: ${job.description}` : null,
+  ].filter(Boolean).join('\n');
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: `${systemPrompt}\n\n${contextPrefix}` },
+      ...history.map((m) => ({ role: m.role, content: m.content })),
+    ],
+    tools: [ASK_QUESTION_TOOL, SUGGEST_CATEGORIES_TOOL, summaryTool],
+    tool_choice: 'required',
+  });
+
+  const choice = response.choices[0];
+  // The model may call multiple tools in one turn (e.g. suggest_categories + ask_question)
+  const toolCalls = choice.message.tool_calls ?? [];
+
+  let question: string | null = null;
+  let options: string[] = [];
+  let summary = existingSession.summary;
+  let suggestedCategories: Array<{ category: string; reason: string }> | null = null;
+
+  for (const toolCall of toolCalls) {
+    const args = JSON.parse(toolCall.function.arguments);
+    if (toolCall.function.name === 'ask_question') {
+      question = args.question;
+      options = args.options ?? [];
+    } else if (toolCall.function.name === 'generate_summary') {
+      summary = { intent: job.intent, ...args } as typeof summary;
+    } else if (toolCall.function.name === 'suggest_categories') {
+      suggestedCategories = args.suggestions ?? [];
+    }
+  }
+
+  const assistantContent = question ?? 'Brief complete.';
+  const updatedMessages = [...history, { role: 'assistant' as const, content: assistantContent }];
+
+  await JobManager.update(jobId, {
+    aiSession: { messages: updatedMessages, summary },
+  });
+
+  return { question, options, summary, suggestedCategories, messages: updatedMessages };
+}
+
+/** Returns the first question for a job's diagnostic session (no user message needed). */
+export async function startDiagnose(jobId: string) {
+  const job = await JobManager.findById(jobId);
+  if (!job) throw new Error('Job not found');
+
+  const openai = getOpenAI();
+  const intent = job.intent as JobIntent;
+  const systemPrompt = SYSTEM_PROMPTS[intent] ?? SYSTEM_PROMPTS[JobIntent.ISSUE];
+  const summaryTool = SUMMARY_TOOLS[intent] ?? SUMMARY_TOOLS[JobIntent.ISSUE];
+
+  const contextPrefix = [
+    `Job title: ${job.title}`,
+    `Category: ${job.category}`,
+    job.description ? `Homeowner's description: ${job.description}` : null,
+  ].filter(Boolean).join('\n');
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: `${systemPrompt}\n\n${contextPrefix}` },
+      { role: 'user', content: 'Start the diagnostic.' },
+    ],
+    tools: [ASK_QUESTION_TOOL, SUGGEST_CATEGORIES_TOOL, summaryTool],
+    tool_choice: 'required',
+  });
+
+  const toolCalls = response.choices[0].message.tool_calls ?? [];
+  let question: string | null = null;
+  let options: string[] = [];
+  let suggestedCategories: Array<{ category: string; reason: string }> | null = null;
+
+  for (const toolCall of toolCalls) {
+    const args = JSON.parse(toolCall.function.arguments);
+    if (toolCall.function.name === 'ask_question') {
+      question = args.question;
+      options = args.options ?? [];
+    } else if (toolCall.function.name === 'suggest_categories') {
+      suggestedCategories = args.suggestions ?? [];
+    }
+  }
+
+  await JobManager.update(job.id, {
+    aiSession: { messages: [{ role: 'assistant', content: question ?? '' }], summary: null },
+  });
+
+  return { question, options, summary: null, suggestedCategories, messages: [{ role: 'assistant', content: question ?? '' }] };
 }
 
 export async function listAIGenerations(jobId: string) {

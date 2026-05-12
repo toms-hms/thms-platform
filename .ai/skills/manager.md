@@ -16,12 +16,14 @@ export const ContractorManager = new ContractorManagerClass();
 
 **`readonly table` must be annotated explicitly with `typeof <table>`.** Without the annotation, TS infers the literal Drizzle table type — which references internal `PgColumn` / `PgColumnBuilder` / `PgTableWithColumns` types that aren't directly importable, and `declaration: true` emit fails with TS2883. The `typeof <table>` annotation is portable because the table value is imported in the same file.
 
-`BaseManager` provides a generic `get(where)` method — a typed single-record lookup from partial model fields:
+`BaseManager` provides a generic `get(where)` method — a typed single-record lookup from partial model fields that throws `NotFoundError` if not found:
+
 ```typescript
 await ContractorManager.get({ id: '123' })
-await ContractorManager.get({ email: 'joe@example.com' })
 await ContractorManager.get({ id: '123', name: 'Smith' }) // AND conditions
 ```
+
+Use `get` only when you expect the record to exist (e.g. ID-based lookups behind a `permit()` middleware). For "does this exist?" lookups, use `filter({...})` — it returns an empty array on miss instead of throwing.
 
 ## Composing multi-field queries — predicate helpers
 
@@ -31,34 +33,81 @@ A Manager method that filters by N optional fields is composed from N predicate 
 
 Predicate helpers always live in a sibling file `<Name>Manager.where.ts`, imported into the Manager as `import * as where from './<Name>Manager.where'`. Always extract, even at one or two helpers. The convention beats the threshold judgment call: every Manager with predicates has a paired `.where.ts` file, so finding them is mechanical.
 
+### Predicate naming — always plural, value-bearing, explicit
+
+Every value-bearing predicate name is **plural** and takes an **array**. There are no singular value-bearing predicates. When a caller has only one value, it wraps it in `[value]` at the call site.
+
+The rule eliminates a class of bugs where a route adds a "filter by multiple X" feature and grows a parallel plural method alongside the singular one (we had `filterZipCode` *and* `filterZipCodes` for two days until this rule landed).
+
+Names use the *type* of the value, not a generic noun. `filterTradeCategories`, not `filterCategory` — the latter is ambiguous (job category? trade category? CSS category?). Be specific.
+
+| Predicate                                                    | Notes                                                                                   |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `filterIds(ids?: string[])`                                  | By primary key list. Empty array matches nothing (returns `sql\`1 = 0\``).              |
+| `filterZipCodes(zipCodes?: string[])`                        | Contractor serves any of these zip codes (subquery on the join table).                  |
+| `filterTradeCategories(tradeCategories?: TradeCategory[])`   | Any of the contractor's categories is in the given list (`arrayOverlaps`).              |
+| `filterEmails(emails?: string[])`                            | Case-insensitive — `OR` of `ILIKE`s.                                                    |
+
+Exempt from the plural rule:
+
+- **Boolean predicates** (`filterIsGlobal(isGlobal?: boolean)`) — there's no array-of-booleans semantic; the value is a flag.
+- **`search`** — not a filter and not plural-named. It's a single fuzzy query string used in an OR over multiple columns; "search by a list of queries" isn't a coherent operation.
+
+### Empty array vs undefined
+
+Every predicate accepts an optional argument and returns `undefined` when absent — the predicate is a no-op. `and(...)` skips `undefined` natively, so the Manager method passes request query params unconditionally without null checks.
+
+When the argument is an **empty array**, that's semantically different from `undefined`:
+
+- `undefined` = "I'm not filtering by this attribute at all" → no-op.
+- `[]` = "I'm filtering for matches in this empty set" → match nothing → `sql\`1 = 0\``.
+
+This matters for route handlers that build filter lists conditionally: passing `[]` for "no values to match" produces zero results, not all results.
+
+### Example
+
 ```typescript
 // apps/api/src/contractor/models/ContractorManager.where.ts
-import { arrayContains, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
+import { arrayOverlaps, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db';
 import { TradeCategory } from '@thms/shared';
 import { contractors } from './Contractor';
 import { contractorZipCodes } from './ContractorZipCode';
 
 // Predicate helpers — return `SQL | undefined` for composition inside `and(...)`.
-// `filter<Field>` narrows by an exact attribute. `search` is a fuzzy multi-column
-// ILIKE OR — not a filter. Each helper is a no-op when its argument is undefined
-// so the manager method passes request query params unconditionally.
+// Value-bearing predicates are plural and take arrays. Boolean predicates
+// (filterIsGlobal) and `search` are exempt.
 
-export function filterZipCode(zipCode?: string): SQL | undefined {
-  if (!zipCode) return undefined;
+export function filterIds(ids?: string[]): SQL | undefined {
+  if (ids === undefined) return undefined;
+  if (ids.length === 0) return sql`1 = 0`;
+  return inArray(contractors.id, ids);
+}
+
+export function filterZipCodes(zipCodes?: string[]): SQL | undefined {
+  if (zipCodes === undefined) return undefined;
+  if (zipCodes.length === 0) return sql`1 = 0`;
   const subq = db
     .select({ contractorId: contractorZipCodes.contractorId })
     .from(contractorZipCodes)
-    .where(eq(contractorZipCodes.zipCode, zipCode));
+    .where(inArray(contractorZipCodes.zipCode, zipCodes));
   return inArray(contractors.id, subq);
 }
 
-export function filterCategory(category?: TradeCategory): SQL | undefined {
-  return category ? arrayContains(contractors.categories, [category]) : undefined;
+export function filterTradeCategories(tradeCategories?: TradeCategory[]): SQL | undefined {
+  if (tradeCategories === undefined) return undefined;
+  if (tradeCategories.length === 0) return sql`1 = 0`;
+  return arrayOverlaps(contractors.categories, tradeCategories);
 }
 
-export function filterEmail(email?: string): SQL | undefined {
-  return email ? ilike(contractors.email, email) : undefined;
+export function filterEmails(emails?: string[]): SQL | undefined {
+  if (emails === undefined) return undefined;
+  if (emails.length === 0) return sql`1 = 0`;
+  return or(...emails.map((e) => ilike(contractors.email, e)));
+}
+
+export function filterIsGlobal(isGlobal?: boolean): SQL | undefined {
+  return isGlobal === undefined ? undefined : eq(contractors.isGlobal, isGlobal);
 }
 
 export function search(query?: string): SQL | undefined {
@@ -77,20 +126,26 @@ export function search(query?: string): SQL | undefined {
 import * as where from './ContractorManager.where';
 
 interface FilterOpts {
-  zipCode?: string;
-  category?: TradeCategory;
-  email?: string;
+  ids?: string[];
+  zipCodes?: string[];
+  tradeCategories?: TradeCategory[];
+  emails?: string[];
+  isGlobal?: boolean;
   search?: string;
 }
 
 class ContractorManagerClass extends BaseManager<typeof contractors> {
   readonly table: typeof contractors = contractors;
 
-  async filter({ zipCode, category, email, search }: FilterOpts = {}): Promise<Contractor[]> {
+  async filter({
+    ids, zipCodes, tradeCategories, emails, isGlobal, search,
+  }: FilterOpts = {}): Promise<Contractor[]> {
     return db.select().from(contractors).where(and(
-      where.filterZipCode(zipCode),
-      where.filterCategory(category),
-      where.filterEmail(email),
+      where.filterIds(ids),
+      where.filterZipCodes(zipCodes),
+      where.filterTradeCategories(tradeCategories),
+      where.filterEmails(emails),
+      where.filterIsGlobal(isGlobal),
       where.search(search),
     ));
   }
@@ -99,12 +154,8 @@ class ContractorManagerClass extends BaseManager<typeof contractors> {
 
 ### `filter<Field>` vs `search`
 
-- **`filter<Field>`** — exact predicate against one column or relation. Each `filter*` narrows the result set in a precise way. Single-field exact-match lookups (e.g. `filterEmail`) are predicate helpers too — call via `Manager.filter({ email })`, not a separate Manager method.
+- **`filter<Field>`** — exact predicate against one column or relation, plural-named, array-valued. Each `filter*` narrows the result set in a precise way. Single-field exact-match lookups (e.g. `filterEmails`) live as predicate helpers — call via `Manager.filter({ emails: [...] })`, not as a separate Manager method.
 - **`search`** — fuzzy text match across multiple columns using a single `OR` of `ILIKE`. Not prefixed `filter*` because it isn't narrowing by an exact attribute. One query, never composed from single-field text matches.
-
-### Optional-arg pattern
-
-Every predicate helper accepts an optional argument and returns `undefined` when absent. `and(...)` skips `undefined` natively, so the Manager method passes request query params unconditionally without null checks. The `Manager.filter` signature destructures `FilterOpts` directly — the `where` namespace prevents parameter names like `search` from shadowing the helper.
 
 ### Why not a chainable QuerySet class
 
@@ -119,11 +170,11 @@ A `<Model>Query` accumulator (Django/Rails style) has been considered and reject
 
 The Manager class exposes these methods alongside the unified `filter(opts)` read entry point:
 
-- **`get({ field: value })`** — inherited from `BaseManager`, throws `NotFoundError` if not found. Use only when you expect the record to exist (e.g. ID-based lookups behind a `permit()` middleware). For "does this exist?" lookups, use `filter({ field: value })` — it returns an empty array on miss instead of throwing.
+- **`get({ field: value })`** — inherited from `BaseManager`, throws `NotFoundError` if not found. Use only when you expect the record to exist.
 - **`create` / `update` / `delete`** — mutations. Return the bare affected entity.
 - **`hasPermission` / `listForUser`** — required stubs for the permissioning framework. These names are fixed by the framework contract. Do not rename them.
 
-There are no per-field eager read methods on the Manager. Single-field exact-match lookups are predicate helpers in `.where.ts` and are invoked through `filter({ field: value })`.
+There are no per-field eager read methods on the Manager. Single-field exact-match lookups are predicate helpers in `.where.ts` and are invoked through `filter({...})`.
 
 ## `attach<Object>` for relations
 
@@ -142,7 +193,7 @@ Enriches an existing list of bare records with a related entity via one batched 
 
 ## Data flow
 
-- **GET routes → Manager directly.** Routes own reads. Call Manager methods and `attach*` inline — no service wrapper.
+- **GET routes → Manager directly.** Routes own reads. Call Manager methods and `attach*` inline — no service wrapper. Wrap singleton query params in arrays at the call site.
 - **Mutation routes → Service → Manager.** Services own business logic for writes: orchestration, validation, error handling.
 
 ```typescript
@@ -153,10 +204,17 @@ router.get('/:id', permit(...), async (req, res, next) => {
   res.json({ data: withZips });
 });
 
-// Route — GET list, no zip codes needed, no service involved
+// Route — GET list. Singleton query params (zipCode, category) get wrapped in arrays.
 router.get('/', async (req, res, next) => {
-  const { search, zipCode, category } = req.query as { /* ... */ };
-  const result = await ContractorManager.filter({ zipCode, category, search });
+  const { search, zipCode, category } = req.query as {
+    search?: string; zipCode?: string; category?: TradeCategory;
+  };
+  const result = await ContractorManager.filter({
+    isGlobal: true,
+    search,
+    zipCodes: zipCode ? [zipCode] : undefined,
+    tradeCategories: category ? [category] : undefined,
+  });
   res.json({ data: result });
 });
 
@@ -181,4 +239,12 @@ async filter(opts: FilterOpts = {}): Promise<ContractorWithRelations[]> {
 async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
   return db.select().from(contractors).where(and(/* ... */));
 }
+```
+
+```typescript
+// BAD — singular value-bearing predicate; parallel plural variant will appear in a year
+export function filterZipCode(zipCode?: string): SQL | undefined { /* ... */ }
+
+// GOOD — plural from day one; single-value callers wrap in [zipCode]
+export function filterZipCodes(zipCodes?: string[]): SQL | undefined { /* ... */ }
 ```

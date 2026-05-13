@@ -17,7 +17,7 @@ src/{module}/
   factories/
     ModelName.factory.ts       — one factory per model
   __tests__/
-    ModelNameManager.test.ts   — unit tests: DB operations, hasPermission, listForUser
+    ModelNameManager.test.ts   — unit tests: DB operations, hasPermission, where.filterUser
     service.test.ts            — service layer: orchestration, cache invalidation
     route.test.ts              — integration: HTTP via supertest, 401/403/200
 ```
@@ -86,7 +86,7 @@ async function loginAs(email: string) {
 ### `ModelNameManager.test.ts`
 - CRUD: `create`, `findById`, `update`, `delete`
 - `hasPermission(userId, resourceId)`: true for owner/member, false for non-member, false for unknown ID
-- `listForUser(userId, role)`: USER returns scoped results, ADMIN returns all
+- `where.filterUser(userId)`: list queries return only rows visible to that user
 
 ### `service.test.ts`
 - Cache warming on create/add (`PermissionService.set`)

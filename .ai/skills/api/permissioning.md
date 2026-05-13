@@ -1,6 +1,6 @@
 ---
 name: api-permissioning
-description: Guide for implementing permissions on a new resource — hasPermission, listForUser, permit middleware, and cache invalidation.
+description: Guide for implementing permissions on a new resource — hasPermission, where.filterUser, permit middleware, and cache invalidation.
 ---
 
 # Permissioning Pattern
@@ -8,29 +8,34 @@ description: Guide for implementing permissions on a new resource — hasPermiss
 Every resource follows two separate access paths:
 
 - Single-object authorization uses `permit(...)` → `PermissionService.check(...)` → `manager.hasPermission(...)`.
-- Collection visibility uses `PermissionService.list(...)` → `manager.listForUser(...)`.
+- Collection visibility uses `PermissionService.list(...)` with `where.filterUser(userId)`.
 
-Do not blur these together. A permission check must be an explicit boolean check for one resource. A list query is backend filtering for a collection.
+Do not blur these together. A permission check must be an explicit boolean check for one resource. A list query applies a SQL visibility predicate for the collection.
 
-## Two required methods on every manager
+## Required manager pieces
 
 Names are fixed by the framework — do not rename them.
 
 ### `hasPermission(userId, resourceId): Promise<boolean>`
 - Dedicated authorization check for one resource ID.
 - Pure boolean data check — no role branching.
-- Do not implement by calling `filterUser`, `listForUser`, or fetching a user-visible list and scanning it.
+- Do not implement by calling `filterUser`, fetching a user-visible list, or scanning list results.
 - Query the exact row needed for the check, or delegate to the owning parent resource.
 - Only `true` results are cached by `PermissionService.check`; false always hits DB to avoid stale denials.
 - Nested resources delegate up the ownership chain.
 
-### `listForUser(userId, role, ...args): Promise<T[]>`
-- Collection visibility query for list routes.
-- Role-aware query strategy — the only place role matters.
-- May call helper methods like `filterUser`, `filterAll`, or `queryForHome`.
+### `where.filterUser(userId): SQL | undefined`
+- SQL visibility predicate for collection routes.
+- Lives in `models/ModelNameManager.where.ts`.
+- Encodes which rows may be returned to this user in lists.
+- May use joins, subqueries, ownership columns, or membership tables.
+- Must not be used for write/update/delete authorization.
+- Must not replace `hasPermission` for single-object routes.
+
+### `PermissionService.list(...)`
+- Applies `where.filterUser(userId)` to list queries and warms the cache for returned rows.
 - Must not loop over rows and call `hasPermission` per item.
-- `ADMIN` → all records in the requested collection scope.
-- `USER` → scoped query using joins, ownership filters, or parent membership checks.
+- Admin/global list behavior should be explicit in the route or manager query; do not hide admin semantics inside `filterUser`.
 
 ## Ownership chain
 
@@ -47,6 +52,25 @@ CommunicationManager → delegates to JobManager
 
 ```typescript
 // New resource owned by a Home
+// DocumentManager.where.ts
+import { and, eq, exists, type SQL } from 'drizzle-orm';
+import { db } from '@/db';
+import { userHomes } from '@/home/models/UserHome';
+import { documents } from './Document';
+
+/** Matches documents readable by the given user through home membership. */
+export function filterUser(userId: string): SQL {
+  return exists(
+    db.select({ id: userHomes.id })
+      .from(userHomes)
+      .where(and(
+        eq(userHomes.userId, userId),
+        eq(userHomes.homeId, documents.homeId),
+      )),
+  );
+}
+
+// New resource owned by a Home
 class DocumentManagerClass extends BaseManager<typeof documents> {
   readonly table: typeof documents = documents;
 
@@ -57,13 +81,12 @@ class DocumentManagerClass extends BaseManager<typeof documents> {
     return HomeManager.hasPermission(userId, doc.homeId);
   }
 
-  /** Returns documents visible to the user in a collection route. */
-  async listForUser(userId: string, role: UserRole, homeId: string) {
-    return role === UserRole.ADMIN
-      ? db.select().from(documents).where(eq(documents.homeId, homeId))
-      : db.select().from(documents)
-          .innerJoin(userHomes, eq(userHomes.homeId, documents.homeId))
-          .where(and(eq(documents.homeId, homeId), eq(userHomes.userId, userId)));
+  /** Returns documents for a home using the caller-provided visibility predicate. */
+  async listForHome(homeId: string, visibility: SQL) {
+    return db.select().from(documents).where(and(
+      eq(documents.homeId, homeId),
+      visibility,
+    ));
   }
 }
 ```
@@ -73,16 +96,23 @@ class DocumentManagerClass extends BaseManager<typeof documents> {
 ### Collection routes — `PermissionService.list`
 
 ```typescript
+import * as documentWhere from './models/DocumentManager.where';
+
 router.get('/', async (req, res, next) => {
   try {
-    const { userId, role } = getUser(req);
-    const items = await PermissionService.list(MyManager, userId, role, extraArg);
+    const { userId } = getUser(req);
+    const items = await PermissionService.list(
+      DocumentManager,
+      userId,
+      documentWhere.filterUser(userId),
+      (visibility) => DocumentManager.listForHome(homeId, visibility),
+    );
     res.json({ data: items });
   } catch (err) { next(err); }
 });
 ```
 
-`PermissionService.list` delegates to `manager.listForUser(...)` and warms the cache for returned rows. The manager is responsible for the scoped SQL query.
+`PermissionService.list` applies `where.filterUser(userId)` through the list query and warms the cache for returned rows. It is collection visibility filtering, not single-object authorization.
 
 ### Single-object routes — `permit` middleware
 

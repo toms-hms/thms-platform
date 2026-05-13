@@ -32,11 +32,14 @@ Use `get` only when the record is expected to exist (e.g. after `permit()` middl
 
 Multi-field filters are composed from predicate helper functions, each returning `SQL | undefined`. They always live in `<Name>Manager.where.ts`, imported with `import * as where from './<Name>Manager.where'`.
 
+Every permissioned resource also defines `filterUser(userId)` in its `.where.ts` file. That predicate is the collection visibility filter used by `PermissionService.list`; it is not used for single-object authorization.
+
 ### Naming rules
 
 - **Plural, array-valued** for every value-bearing predicate. Single-value callers wrap in `[value]`.
 - **Domain-explicit** names: `filterTradeCategories`, not `filterCategories`.
 - **Boolean predicates** (`filterIsGlobal(isGlobal?: boolean)`) are exempt from the plural rule.
+- **`filterUser(userId)`** is the reserved collection visibility predicate for permissioned list routes.
 - **`search`** is not prefixed `filter*` — it's a fuzzy OR across multiple columns.
 
 ### Empty array vs undefined
@@ -191,17 +194,19 @@ async update(id: string, data: Partial<NewContractor>, zipCodes?: string[]): Pro
 
 ## Required permissioning stubs
 
-Every manager must implement these two methods (names are fixed by the framework):
+Every manager must implement `hasPermission` for single-object authorization, and its `.where.ts` file must export `filterUser` for collection visibility. Do not implement `hasPermission` by calling `filterUser`.
 
 ```typescript
+// ContractorManager.ts
 /** Always returns true — global contractors are visible to all users. */
 async hasPermission(_userId: string, _resourceId: string): Promise<boolean> {
   return true;
 }
 
-/** Returns all global contractors for any role. */
-async listForUser(_userId: string, _role: UserRole): Promise<Contractor[]> {
-  return this.filter({ isGlobal: true });
+// ContractorManager.where.ts
+/** Matches contractors visible in user-facing collection routes. */
+export function filterUser(_userId: string): SQL | undefined {
+  return eq(contractors.isGlobal, true);
 }
 ```
 

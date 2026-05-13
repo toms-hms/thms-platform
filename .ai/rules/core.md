@@ -42,9 +42,9 @@ Never auto-transition job or contractor status. The user controls all state.
 JWT Bearer token required on all routes except `/auth/register` and `/auth/login`.
 
 ## Managers
-Every manager implements:
+Every permissioned manager implements:
 - `hasPermission(userId, resourceId)` — pure data check, no role logic
-- `listForUser(userId, role, ...args)` — role-aware query
+- `models/ModelNameManager.where.ts` exports `filterUser(userId)` — SQL visibility predicate for list routes
 
 Routes use `permit()` middleware for individual object access.
 

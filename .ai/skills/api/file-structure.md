@@ -18,7 +18,7 @@ src/{module}/
   factories/
     ModelName.factory.ts      — One factory per model (test use only)
   __tests__/
-    ModelNameManager.test.ts  — Unit tests: CRUD, hasPermission, listForUser
+    ModelNameManager.test.ts  — Unit tests: CRUD, hasPermission, where.filterUser
     service.test.ts           — Service layer: orchestration, cache invalidation
     route.test.ts             — Integration tests: HTTP via supertest
   route.ts    — Router only. No business logic.

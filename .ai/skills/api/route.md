@@ -42,6 +42,7 @@ import { JobManager } from './models/JobManager';
 import { permit } from '../permissions/permit';
 import { PermissionService } from '../permissions/PermissionService';
 import { HomeManager } from '../home/models/HomeManager';
+import * as jobWhere from './models/JobManager.where';
 import * as jobService from './service';
 
 function getUser(req: Parameters<typeof authenticateJWT>[0]) {
@@ -52,16 +53,21 @@ function getUser(req: Parameters<typeof authenticateJWT>[0]) {
 export const jobCollectionRouter = Router({ mergeParams: true });
 jobCollectionRouter.use(authenticateJWT);
 
-// List — role-aware via PermissionService.list
+// List — applies the collection visibility predicate via PermissionService.list
 jobCollectionRouter.get('/',
   permit(HomeManager, (req) => (req.params as any).homeId),
   async (req, res, next) => {
     try {
-      const { userId, role } = getUser(req);
+      const { userId } = getUser(req);
       const jobs = await PermissionService.list(
-        JobManager, userId, role,
-        (req.params as any).homeId,
-        { status: req.query.status as string, category: req.query.category as string },
+        JobManager,
+        userId,
+        jobWhere.filterUser(userId),
+        (visibility) => JobManager.listForHome(
+          (req.params as any).homeId,
+          { status: req.query.status as string, category: req.query.category as string },
+          visibility,
+        ),
       );
       res.json({ data: jobs });
     } catch (err) { next(err); }

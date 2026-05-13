@@ -44,8 +44,8 @@ Routes use `permit()` middleware for individual object access.
 ## Comments
 Every exported function must have a one-line JSDoc comment describing what it does, its key parameter assumptions, and what it returns. No commenting the obvious.
 ```ts
-/** Returns the contractor whose email matches the given address (case-insensitive). */
-async filterEmail(email: string): Promise<Contractor | undefined>
+/** Returns contractors whose email matches any of the given addresses (case-insensitive). */
+export function filterEmails(emails?: string[]): SQL | undefined
 ```
 
 ## Manager methods

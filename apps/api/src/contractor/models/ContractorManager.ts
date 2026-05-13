@@ -28,25 +28,25 @@ export async function attachZipCodes(rows: Contractor[]): Promise<ContractorWith
 
 interface FilterOpts {
   ids?: string[];
-  zipCode?: string;
   zipCodes?: string[];
-  category?: TradeCategory;
-  email?: string;
-  search?: string;
+  tradeCategories?: TradeCategory[];
+  emails?: string[];
   isGlobal?: boolean;
+  search?: string;
 }
 
 class ContractorManagerClass extends BaseManager<typeof contractors> {
   readonly table: typeof contractors = contractors;
 
   /** Returns contractors matching any combination of optional filters in a single query. */
-  async filter({ ids, zipCode, zipCodes, category, email, search, isGlobal }: FilterOpts = {}): Promise<Contractor[]> {
+  async filter({
+    ids, zipCodes, tradeCategories, emails, isGlobal, search,
+  }: FilterOpts = {}): Promise<Contractor[]> {
     return db.select().from(contractors).where(and(
       where.filterIds(ids),
-      where.filterZipCode(zipCode),
       where.filterZipCodes(zipCodes),
-      where.filterCategory(category),
-      where.filterEmail(email),
+      where.filterTradeCategories(tradeCategories),
+      where.filterEmails(emails),
       where.filterIsGlobal(isGlobal),
       where.search(search),
     ));

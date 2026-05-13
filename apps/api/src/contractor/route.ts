@@ -23,17 +23,18 @@ router.get('/', async (req, res, next) => {
       homeZipFilter?: string;
     };
 
-    // When homeZipFilter=true, fetch the user's home zip codes and pass them as a filter.
+    // When homeZipFilter=true, fetch the user's home zip codes and use them as the zip filter.
+    // An explicit ?zipCode= query param takes precedence.
     const homeZipCodes = homeZipFilter === 'true'
       ? (await PermissionService.list(HomeManager, userId, role)).map((h: { zipCode: string }) => h.zipCode)
       : undefined;
+    const zipCodesFilter = zipCode ? [zipCode] : homeZipCodes;
 
     const bareContractors = await ContractorManager.filter({
       isGlobal: true,
       search,
-      category,
-      zipCode,
-      zipCodes: homeZipCodes,
+      tradeCategories: category ? [category] : undefined,
+      zipCodes: zipCodesFilter,
     });
 
     // Attach zip codes only when the caller has requested zip-based filtering and may want them in the response.

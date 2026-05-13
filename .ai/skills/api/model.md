@@ -21,8 +21,8 @@ src/{module}/models/
 ```typescript
 // apps/api/src/job/models/Job.ts
 import { jsonb, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { homes } from '../../home/models/Home';
-import { users } from '../../auth/models/User';
+import { homes } from '@/home/models/Home';
+import { users } from '@/auth/models/User';
 import type { AiSession } from '@thms/shared';
 
 export const jobStatusEnum = pgEnum('JobStatus', ['DRAFT', 'PLANNING', ...]);

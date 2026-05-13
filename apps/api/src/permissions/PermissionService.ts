@@ -1,4 +1,3 @@
-import LRUCache from 'lru-cache';
 import { UserRole } from '@thms/shared';
 
 export interface PermissionedManager {
@@ -6,7 +5,20 @@ export interface PermissionedManager {
   listForUser(userId: string, role: UserRole, ...args: any[]): Promise<any[]>;
 }
 
-const cache = new LRUCache<string, boolean>({
+type CacheLike<K, V> = {
+  get(key: K): V | undefined;
+  set(key: K, value: V): void;
+  del(key: K): void;
+};
+
+type CacheCtor<K, V> = new (options?: {
+  max?: number;
+  maxAge?: number;
+}) => CacheLike<K, V>;
+
+const LRUCache = require('lru-cache') as CacheCtor<string, boolean>;
+
+const cache = new LRUCache({
   max: 10_000,
   maxAge: 1000 * 60 * 5, // 5 min
 });

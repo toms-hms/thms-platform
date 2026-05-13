@@ -59,17 +59,17 @@ async function seed() {
   ]).onConflictDoNothing();
 
   // ── Contractors (global) ──────────────────────────────────────────────────
-  const contractorData: { category: TradeCategory; name: string; companyName: string; email: string; phone: string }[] = [
-    { category: TradeCategory.PLUMBING,            name: 'Mike Torres',    companyName: 'Torres Plumbing',         email: 'mike@torresplumbing.com',    phone: '5125550101' },
-    { category: TradeCategory.ELECTRICAL,          name: 'Sarah Chen',     companyName: 'Chen Electric',           email: 'sarah@chenelectric.com',     phone: '5125550102' },
-    { category: TradeCategory.HVAC,                name: 'David Park',     companyName: 'Park Heating & Cooling',  email: 'david@parkhvac.com',         phone: '5125550103' },
-    { category: TradeCategory.ROOFING,             name: 'James Williams', companyName: 'Williams Roofing Co.',    email: 'james@williamsroofing.com',  phone: '5125550104' },
-    { category: TradeCategory.PAINTING,            name: 'Ana Reyes',      companyName: 'Reyes Painting',          email: 'ana@reyespainting.com',      phone: '5125550105' },
-    { category: TradeCategory.LANDSCAPING,         name: 'Tom Green',      companyName: 'Green Thumb Landscaping', email: 'tom@greenthumb.com',         phone: '5125550106' },
-    { category: TradeCategory.GENERAL_CONTRACTING, name: 'Lisa Brown',     companyName: 'Brown Build & Renovate',  email: 'lisa@brownbuild.com',        phone: '5125550107' },
-    { category: TradeCategory.CARPENTRY,           name: 'Carlos Rivera',  companyName: 'Rivera Woodworks',        email: 'carlos@riverawood.com',      phone: '5125550108' },
-    { category: TradeCategory.FLOORING,            name: 'Emma Davis',     companyName: 'Davis Floors',            email: 'emma@davisfloors.com',       phone: '5125550109' },
-    { category: TradeCategory.PEST_CONTROL,        name: 'Kevin Nguyen',   companyName: 'Nguyen Pest Solutions',   email: 'kevin@nguyenpest.com',       phone: '5125550110' },
+  const contractorData: { categories: TradeCategory[]; name: string; companyName: string; email: string; phone: string }[] = [
+    { categories: [TradeCategory.PLUMBING],            name: 'Mike Torres',    companyName: 'Torres Plumbing',         email: 'mike@torresplumbing.com',    phone: '5125550101' },
+    { categories: [TradeCategory.ELECTRICAL],          name: 'Sarah Chen',     companyName: 'Chen Electric',           email: 'sarah@chenelectric.com',     phone: '5125550102' },
+    { categories: [TradeCategory.HVAC],                name: 'David Park',     companyName: 'Park Heating & Cooling',  email: 'david@parkhvac.com',         phone: '5125550103' },
+    { categories: [TradeCategory.ROOFING],             name: 'James Williams', companyName: 'Williams Roofing Co.',    email: 'james@williamsroofing.com',  phone: '5125550104' },
+    { categories: [TradeCategory.PAINTING],            name: 'Ana Reyes',      companyName: 'Reyes Painting',          email: 'ana@reyespainting.com',      phone: '5125550105' },
+    { categories: [TradeCategory.LANDSCAPING],         name: 'Tom Green',      companyName: 'Green Thumb Landscaping', email: 'tom@greenthumb.com',         phone: '5125550106' },
+    { categories: [TradeCategory.GENERAL_CONTRACTING], name: 'Lisa Brown',     companyName: 'Brown Build & Renovate',  email: 'lisa@brownbuild.com',        phone: '5125550107' },
+    { categories: [TradeCategory.CARPENTRY],           name: 'Carlos Rivera',  companyName: 'Rivera Woodworks',        email: 'carlos@riverawood.com',      phone: '5125550108' },
+    { categories: [TradeCategory.FLOORING],            name: 'Emma Davis',     companyName: 'Davis Floors',            email: 'emma@davisfloors.com',       phone: '5125550109' },
+    { categories: [TradeCategory.PEST_CONTROL],        name: 'Kevin Nguyen',   companyName: 'Nguyen Pest Solutions',   email: 'kevin@nguyenpest.com',       phone: '5125550110' },
   ];
 
   for (const c of contractorData) {

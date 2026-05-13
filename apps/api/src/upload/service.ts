@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { createId } from '@paralleldrive/cuid2';
 import { JobImageManager } from '../ai/models/JobImageManager';
 import { JobManager } from '../job/models/JobManager';
+import { NotFoundError } from '../utils/errors';
 
 export async function getUploadUrl(jobId: string, userId: string, fileName: string, contentType: string, kind = 'SOURCE') {
   const ext = fileName.split('.').pop() || 'bin';
@@ -36,7 +37,8 @@ export async function deleteObject(key: string) {
 }
 
 export async function listJobImages(jobId: string, userId: string) {
-  const job = await JobManager.findByIdForUser(jobId, userId);
+  const allowed = await JobManager.hasPermission(userId, jobId);
+  if (!allowed) throw new NotFoundError('Job');
   const images = await JobImageManager.listForJob(jobId);
   return Promise.all(images.map(async (img) => ({ ...img, url: await getDownloadUrl(img.storageKey) })));
 }
@@ -44,7 +46,8 @@ export async function listJobImages(jobId: string, userId: string) {
 export async function deleteJobImage(imageId: string, userId: string) {
   const image = await JobImageManager.findById(imageId);
   if (!image) throw new Error('Image not found');
-  await JobManager.findByIdForUser(image.jobId, userId);
+  const allowed = await JobManager.hasPermission(userId, image.jobId);
+  if (!allowed) throw new NotFoundError('Job');
   await deleteObject(image.storageKey);
   await JobImageManager.delete(imageId);
 }

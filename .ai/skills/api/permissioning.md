@@ -5,21 +5,32 @@ description: Guide for implementing permissions on a new resource — hasPermiss
 
 # Permissioning Pattern
 
-Every resource follows a consistent two-method permission pattern on its manager, enforced via `PermissionService` and `permit` middleware.
+Every resource follows two separate access paths:
+
+- Single-object authorization uses `permit(...)` → `PermissionService.check(...)` → `manager.hasPermission(...)`.
+- Collection visibility uses `PermissionService.list(...)` → `manager.listForUser(...)`.
+
+Do not blur these together. A permission check must be an explicit boolean check for one resource. A list query is backend filtering for a collection.
 
 ## Two required methods on every manager
 
 Names are fixed by the framework — do not rename them.
 
 ### `hasPermission(userId, resourceId): Promise<boolean>`
-- Pure data check — no role branching
-- Only caches `true` — false always hits DB to avoid stale denials
-- Nested resources delegate up the ownership chain
+- Dedicated authorization check for one resource ID.
+- Pure boolean data check — no role branching.
+- Do not implement by calling `filterUser`, `listForUser`, or fetching a user-visible list and scanning it.
+- Query the exact row needed for the check, or delegate to the owning parent resource.
+- Only `true` results are cached by `PermissionService.check`; false always hits DB to avoid stale denials.
+- Nested resources delegate up the ownership chain.
 
 ### `listForUser(userId, role, ...args): Promise<T[]>`
-- Role-aware query strategy — the only place role matters
-- `ADMIN` → all records
-- `USER` → scoped query (membership join or ownership check)
+- Collection visibility query for list routes.
+- Role-aware query strategy — the only place role matters.
+- May call helper methods like `filterUser`, `filterAll`, or `queryForHome`.
+- Must not loop over rows and call `hasPermission` per item.
+- `ADMIN` → all records in the requested collection scope.
+- `USER` → scoped query using joins, ownership filters, or parent membership checks.
 
 ## Ownership chain
 
@@ -41,12 +52,12 @@ class DocumentManagerClass extends BaseManager<typeof documents> {
 
   /** Delegates permission check up to the owning home. */
   async hasPermission(userId: string, documentId: string): Promise<boolean> {
-    const doc = await this.get({ id: documentId }).catch(() => null);
+    const doc = await this.findById(documentId);
     if (!doc) return false;
     return HomeManager.hasPermission(userId, doc.homeId);
   }
 
-  /** ADMIN returns all documents for the home; USER adds a membership join. */
+  /** Returns documents visible to the user in a collection route. */
   async listForUser(userId: string, role: UserRole, homeId: string) {
     return role === UserRole.ADMIN
       ? db.select().from(documents).where(eq(documents.homeId, homeId))
@@ -59,7 +70,7 @@ class DocumentManagerClass extends BaseManager<typeof documents> {
 
 ## Wiring routes
 
-### Lists — `PermissionService.list`
+### Collection routes — `PermissionService.list`
 
 ```typescript
 router.get('/', async (req, res, next) => {
@@ -71,7 +82,9 @@ router.get('/', async (req, res, next) => {
 });
 ```
 
-### Individual object access — `permit` middleware
+`PermissionService.list` delegates to `manager.listForUser(...)` and warms the cache for returned rows. The manager is responsible for the scoped SQL query.
+
+### Single-object routes — `permit` middleware
 
 ```typescript
 import { permit } from '../permissions/permit';
@@ -93,6 +106,8 @@ router.patch('/:documentId',
   handler,
 );
 ```
+
+`permit(...)` delegates to `manager.hasPermission(...)`. This is the authorization gate for `GET /:id`, `PATCH /:id`, `DELETE /:id`, and nested single-object actions.
 
 ### Admin-only actions
 

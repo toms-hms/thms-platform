@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { JobIntent, TradeCategory } from '@thms/shared';
@@ -64,6 +64,13 @@ export default function NewJobWizardPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [homeZipCodes, setHomeZipCodes] = useState<string[]>([]);
+
+  useEffect(() => {
+    request<{ data: { zipCode: string } }>(`/api/v1/homes/${homeId}`)
+      .then((res) => setHomeZipCodes(res.data.zipCode ? [res.data.zipCode] : []))
+      .catch(() => setHomeZipCodes([]));
+  }, [homeId]);
 
   function update(fields: Partial<WizardData>) {
     setData((prev) => ({ ...prev, ...fields }));
@@ -239,6 +246,7 @@ export default function NewJobWizardPage() {
       {step === 5 && data.intent && effectiveCategory && data.jobId && (
         <Step5Contractors
           categories={data.categories.length ? data.categories : [effectiveCategory]}
+          zipCodes={homeZipCodes}
           selectedIds={data.selectedContractorIds}
           onToggle={toggleContractor}
           onSubmit={handleSubmit}

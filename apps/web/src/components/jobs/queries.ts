@@ -16,10 +16,15 @@ export function listAIGenerations(jobId: string) {
   return request<{ data: any[] }>(`/api/v1/jobs/${jobId}/ai-generations`);
 }
 
-export function listContractors(params?: { search?: string; category?: string }) {
+export function listContractors(params?: {
+  search?: string;
+  tradeCategories?: string[];
+  zipCodes?: string[];
+}) {
   const qs = new URLSearchParams();
   if (params?.search) qs.set('search', params.search);
-  if (params?.category) qs.set('category', params.category);
+  params?.tradeCategories?.forEach((category) => qs.append('tradeCategories', category));
+  params?.zipCodes?.forEach((zipCode) => qs.append('zipCodes', zipCode));
   return request<{ data: any[] }>(`/api/v1/contractors${qs.toString() ? `?${qs}` : ''}`);
 }
 

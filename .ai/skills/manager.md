@@ -193,7 +193,7 @@ Enriches an existing list of bare records with a related entity via one batched 
 
 ## Data flow
 
-- **GET routes → Manager directly.** Routes own reads. Call Manager methods and `attach*` inline — no service wrapper. Wrap singleton query params in arrays at the call site.
+- **GET routes → Manager directly.** Routes own reads. Call Manager methods and `attach*` inline — no service wrapper. Public list filters stay plural and explicit (`tradeCategories`, `zipCodes`); callers with one value still send a one-item list.
 - **Mutation routes → Service → Manager.** Services own business logic for writes: orchestration, validation, error handling.
 
 ```typescript
@@ -204,16 +204,14 @@ router.get('/:id', permit(...), async (req, res, next) => {
   res.json({ data: withZips });
 });
 
-// Route — GET list. Singleton query params (zipCode, category) get wrapped in arrays.
+// Route — GET list. Public filters are plural and domain-explicit.
 router.get('/', async (req, res, next) => {
-  const { search, zipCode, category } = req.query as {
-    search?: string; zipCode?: string; category?: TradeCategory;
-  };
+  const { search } = req.query as { search?: string };
   const result = await ContractorManager.filter({
     isGlobal: true,
     search,
-    zipCodes: zipCode ? [zipCode] : undefined,
-    tradeCategories: category ? [category] : undefined,
+    zipCodes: stringList(req.query.zipCodes),
+    tradeCategories: tradeCategoryList(req.query.tradeCategories),
   });
   res.json({ data: result });
 });

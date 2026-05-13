@@ -5,7 +5,7 @@ import { TradeCategory, UserRole } from '@thms/shared';
 import { useRouter } from 'next/navigation';
 import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';
-import { createMyVendor } from '@/app/(dashboard)/my-vendors/mutations';
+import { createUserContractor } from '@/app/(dashboard)/my-rolodex/mutations';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Selector, { SelectorOption } from '@/components/ui/Selector';
@@ -48,8 +48,8 @@ export default function ContractorsPage() {
   const [list, setList] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [homeZipFilter, setHomeZipFilter] = useState(true);
+  const [selectedTradeCategory, setSelectedTradeCategory] = useState('');
+  const [zipFilter, setZipFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Contractor | null>(null);
   const [saving, setSaving] = useState(false);
@@ -57,15 +57,15 @@ export default function ContractorsPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', companyName: '', email: '', phone: '', category: '', zipCodes: '', notes: '' });
 
-  useEffect(() => { load(); }, [search, category, homeZipFilter]);
+  useEffect(() => { load(); }, [search, selectedTradeCategory, zipFilter]);
 
   async function load() {
     setLoading(true);
     try {
       const res = await listContractors({
         search: search || undefined,
-        category: category || undefined,
-        homeZipFilter,
+        tradeCategories: selectedTradeCategory ? [selectedTradeCategory] : undefined,
+        zipCodes: zipFilter.trim() ? [zipFilter.trim()] : undefined,
       });
       setList(res.data);
     } catch {}
@@ -133,14 +133,14 @@ export default function ContractorsPage() {
   async function handleAddToMyVendors(contractor: Contractor) {
     setAddingId(contractor.id);
     try {
-      await createMyVendor({
-        vendorId: contractor.id,
+      await createUserContractor({
+        contractorId: contractor.id,
         name: contractor.name,
         companyName: contractor.companyName || undefined,
         email: contractor.email || undefined,
         phone: contractor.phone || undefined,
         categories: contractor.categories,
-        zipCode: contractor.zipCodes[0],
+        zipCodes: contractor.zipCodes.length ? contractor.zipCodes : undefined,
         notes: contractor.notes || undefined,
       });
     } catch {
@@ -162,12 +162,9 @@ export default function ContractorsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
-          {homeZipFilter && (
-            <p className="text-sm text-gray-500 mt-1">Filtered to ZIP codes from your homes.</p>
-          )}
         </div>
         <div className="flex gap-2">
-          <Link href="/my-vendors" className="btn-secondary">My Vendors</Link>
+          <Link href="/my-rolodex" className="btn-secondary">My Rolodex</Link>
           {isAdmin && <button onClick={openCreate} className="btn-primary">+ Add Vendor</button>}
         </div>
       </div>
@@ -183,18 +180,18 @@ export default function ContractorsPage() {
         <div className="w-52">
           <Selector
             options={CATEGORY_OPTIONS}
-            value={category}
-            onChange={setCategory}
+            value={selectedTradeCategory}
+            onChange={setSelectedTradeCategory}
             placeholder="All categories"
           />
         </div>
-        <button
-          type="button"
-          onClick={() => setHomeZipFilter((value) => !value)}
-          className={homeZipFilter ? 'btn-secondary' : 'btn-primary'}
-        >
-          {homeZipFilter ? 'Clear ZIP filter' : 'Filter to my ZIPs'}
-        </button>
+        <input
+          type="text"
+          className="input max-w-32"
+          placeholder="ZIP"
+          value={zipFilter}
+          onChange={(e) => setZipFilter(e.target.value)}
+        />
       </div>
 
       {loading ? (

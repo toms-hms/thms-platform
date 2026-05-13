@@ -14,6 +14,7 @@ interface Contractor {
 
 interface Props {
   categories: TradeCategory[];
+  zipCodes: string[];
   selectedIds: string[];
   onToggle: (id: string) => void;
   onSubmit: () => void;
@@ -23,34 +24,43 @@ interface Props {
 }
 
 export default function Step5Contractors({
-  categories, selectedIds, onToggle, onSubmit, onBack, submitting, error,
+  categories, zipCodes, selectedIds, onToggle, onSubmit, onBack, submitting, error,
 }: Props) {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
-  const categoryKey = categories.join('|');
+  const tradeCategoryKey = categories.join('|');
+  const zipKey = zipCodes.join('|');
 
   const categoryLabels = categories.map(cat =>
     CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === cat)?.label ?? cat
   );
 
   useEffect(() => {
-    const categoriesForRequest = categoryKey
-      ? categoryKey.split('|') as TradeCategory[]
+    const tradeCategoriesForRequest = tradeCategoryKey
+      ? tradeCategoryKey.split('|') as TradeCategory[]
       : [];
+    const zipCodesForRequest = zipKey
+      ? zipKey.split('|')
+      : [];
+    if (tradeCategoriesForRequest.length === 0 || zipCodesForRequest.length === 0) {
+      setContractors([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    Promise.all(categoriesForRequest.map(category =>
-      fetch(`/api/v1/contractors?category=${category}&homeZipFilter=true`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-      }).then(r => r.json())
-    ))
-      .then(results => {
-        const byId = new Map<string, Contractor>();
-        results.flatMap(d => d.data ?? []).forEach((contractor: Contractor) => byId.set(contractor.id, contractor));
-        setContractors(Array.from(byId.values()));
-      })
+    const qs = new URLSearchParams();
+    tradeCategoriesForRequest.forEach((tradeCategory) =>
+      qs.append('tradeCategories', tradeCategory)
+    );
+    zipCodesForRequest.forEach((zipCode) => qs.append('zipCodes', zipCode));
+    fetch(`/api/v1/contractors?${qs}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+    })
+      .then(r => r.json())
+      .then(result => setContractors(result.data ?? []))
       .catch(() => setContractors([]))
       .finally(() => setLoading(false));
-  }, [categoryKey]);
+  }, [tradeCategoryKey, zipKey]);
 
   const MAX = 3;
   const canSelect = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX;

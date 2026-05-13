@@ -24,6 +24,8 @@ Detailed how-to guides for common task types:
 - New web page: `.ai/skills/new-web-page.md`
 - Testing pattern: `.ai/skills/testing.md`
 - Permissioning pattern: `.ai/skills/permissioning.md`
+- API route contracts: `.ai/skills/api-route.md`
+- Web query contracts: `.ai/skills/web-query.md`
 - API file structure: `.ai/skills/api-file-structure.md`
 - AI file structure: `.ai/skills/ai-structure.md`
 - Migrations: `.ai/skills/migrations.md`

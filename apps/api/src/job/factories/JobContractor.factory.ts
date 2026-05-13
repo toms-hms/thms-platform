@@ -1,4 +1,5 @@
 import { Factory } from 'fishery';
+import { createId } from '@paralleldrive/cuid2';
 import { JobContractorManager } from '@/job/models/JobContractorManager';
 import type { JobContractor } from '@/job/models/JobContractor';
 
@@ -6,7 +7,14 @@ export const jobContractorFactory = Factory.define<JobContractor, { jobId: strin
   onCreate((jc) => JobContractorManager.upsert(jc.jobId, jc.contractorId));
 
   return {
-    jobId: transientParams.jobId ?? '',
-    contractorId: transientParams.contractorId ?? '',
+    id:              createId(),
+    jobId:           transientParams.jobId ?? '',
+    contractorId:    transientParams.contractorId ?? '',
+    status:          'NOT_CONTACTED',
+    lastContactedAt: null,
+    lastResponseAt:  null,
+    notes:           null,
+    createdAt:       new Date(),
+    updatedAt:       new Date(),
   };
 });

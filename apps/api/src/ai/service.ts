@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { JobIntent } from '@thms/shared';
+import { JobIntent, AiSession } from '@thms/shared';
 import { getDownloadUrl } from '../upload/service';
 import { s3Client, BUCKET_NAME } from '../config/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -257,7 +257,7 @@ const SUMMARY_TOOLS: Record<JobIntent, OpenAI.Chat.Completions.ChatCompletionToo
 interface DiagnoseResult {
   question: string | null;
   options: string[];
-  summary: ReturnType<typeof JobManager.findById> extends Promise<infer T> ? T extends null ? never : NonNullable<T>['aiSession'] extends infer S ? S extends null | undefined ? never : NonNullable<S>['summary'] : never : never;
+  summary: AiSession['summary'];
   suggestedCategories: Array<{ category: string; reason: string }> | null;
   messages: Array<{ role: string; content: string }>;
 }

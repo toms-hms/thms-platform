@@ -5,12 +5,10 @@ import { users } from '../../auth/models/User';
 import { contractors } from '../models/Contractor';
 import { homes } from '@/home/models/Home';
 import { userHomes } from '@/home/models/UserHome';
-import { eq, inArray, like } from 'drizzle-orm';
+import { inArray, like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
-import { homeFactory } from '@/home/factories/Home.factory';
-import { jobFactory } from '@/job/factories/Job.factory';
-import { JobIntent, TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory, UserRole } from '@thms/shared';
 
 async function cleanup() {
   const testUsers = await db
@@ -76,66 +74,66 @@ describe('Contractors API', () => {
       expect(Array.isArray(res.body.data)).toBe(true);
     });
 
-    it('filters by category', async () => {
+    it('filters by trade categories', async () => {
       await contractorFactory.create({
         name: 'Test Route Contractor',
         categories: [TradeCategory.ELECTRICAL],
       });
       const res = await request(app)
-        .get(`/api/v1/contractors?category=${TradeCategory.ELECTRICAL}`)
+        .get(`/api/v1/contractors?tradeCategories=${TradeCategory.ELECTRICAL}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.status).toBe(200);
       res.body.data.forEach((c: any) => expect(c.categories).toContain(TradeCategory.ELECTRICAL));
     });
 
-    it('filters by job category and home zip code', async () => {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, 'test-contractor-route@example.com'))
-        .limit(1);
-      expect(user).toBeDefined();
-
-      const home = await homeFactory.create(
-        { name: 'Test Route Contractor Home', zipCode: '78745' },
-        { transient: { userId: user!.id } }
-      );
-      const job = await jobFactory.create(
-        {
-          title: 'Test Route Contractor Plumbing Job',
-          intent: JobIntent.ISSUE,
-          category: TradeCategory.PLUMBING,
-        },
-        { transient: { homeId: home.id, userId: user!.id } }
-      );
-
+    it('filters by explicit trade categories and zip codes', async () => {
       const matching = await contractorFactory.create({
         name: 'Test Route Contractor Matching Plumber',
         categories: [TradeCategory.PLUMBING],
         zipCodes: ['78745', '78746'],
       });
-      await contractorFactory.create({
+      const wrongCategory = await contractorFactory.create({
         name: 'Test Route Contractor Wrong Category',
         categories: [TradeCategory.ELECTRICAL],
         zipCodes: ['78745'],
       });
-      await contractorFactory.create({
+      const wrongZip = await contractorFactory.create({
         name: 'Test Route Contractor Wrong Zip',
         categories: [TradeCategory.PLUMBING],
         zipCodes: ['78701'],
       });
-      await contractorFactory.create({
+      const noZip = await contractorFactory.create({
         name: 'Test Route Contractor No Zip',
         categories: [TradeCategory.PLUMBING],
         zipCodes: [],
       });
 
       const res = await request(app)
-        .get(`/api/v1/contractors?jobId=${job.id}`)
+        .get(`/api/v1/contractors?tradeCategories=${TradeCategory.PLUMBING}&zipCodes=78745`)
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.map((c: any) => c.id)).toEqual([matching.id]);
+      const ids = res.body.data.map((c: any) => c.id);
+      expect(ids).toContain(matching.id);
+      expect(ids).not.toContain(wrongCategory.id);
+      expect(ids).not.toContain(wrongZip.id);
+      expect(ids).not.toContain(noZip.id);
+    });
+
+    it('rejects singular list filter names', async () => {
+      const res = await request(app)
+        .get(`/api/v1/contractors?category=${TradeCategory.PLUMBING}&zipCode=78745`)
+        .set('Authorization', `Bearer ${userToken}`);
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toContain('tradeCategories');
+    });
+
+    it('rejects invalid trade categories', async () => {
+      const res = await request(app)
+        .get('/api/v1/contractors?tradeCategories=deck')
+        .set('Authorization', `Bearer ${userToken}`);
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toContain('Invalid trade category');
     });
 
     it('401 without token', async () => {

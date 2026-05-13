@@ -18,6 +18,13 @@ async filter(opts: FilterOpts = {}) { const { zipCode, category, search } = opts
 ## API responses
 Always `{ data: {} }` or `{ error: { code, message } }`. No other shape.
 
+## API and client contracts
+Use explicit domain names and plural arrays for list filters whenever a field can
+hold multiple values. Do not add singular aliases for convenience. A client that
+filters contractors by one category still sends `tradeCategories=[value]`, not
+`category=value`; one ZIP still uses `zipCodes=[value]`, not `zipCode=value`.
+Prefer `tradeCategories` over generic `categories` at API/client boundaries.
+
 ## Enums and model constants
 Always use the defined enum or constant instead of a raw string for model values.
 - `JobIntent.ISSUE` not `'ISSUE'`

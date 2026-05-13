@@ -20,11 +20,14 @@ src/{module}/models/
 
 ```typescript
 // apps/api/src/job/models/Job.ts
-import { pgTable, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
-import { jobStatusEnum, jobIntentEnum, tradeCategoryEnum } from '../../db/enums';
+import { jsonb, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { homes } from '../../home/models/Home';
 import { users } from '../../auth/models/User';
 import type { AiSession } from '@thms/shared';
+
+export const jobStatusEnum = pgEnum('JobStatus', ['DRAFT', 'PLANNING', ...]);
+export const jobIntentEnum = pgEnum('JobIntent', ['ISSUE', 'IMPROVEMENT', 'RECURRING_WORK']);
+export const tradeCategoryEnum = pgEnum('TradeCategory', ['PLUMBING', 'ELECTRICAL', ...]);
 
 export const jobs = pgTable('Job', {
   id:              text('id').primaryKey(),
@@ -58,10 +61,10 @@ export type NewJob = typeof jobs.$inferInsert;
 
 ## Enum columns
 
-Enum types are defined once in `src/db/enums.ts` as `pgEnum(...)`. Import and use them in models — never use a raw `text` column with a comment-described set of values.
+Drizzle enum types live with the owning model or module, not in a shared `src/db/enums.ts` file. Define the `pgEnum(...)` near the table that owns the column, export it when another model in the same domain needs it, and import it directly from that owning model/module. Never use a raw `text` column with a comment-described set of values.
 
 ```typescript
-// src/db/enums.ts
+// apps/api/src/job/models/Job.ts
 import { pgEnum } from 'drizzle-orm/pg-core';
 
 export const jobStatusEnum    = pgEnum('JobStatus',    ['DRAFT', 'PLANNING', ...]);

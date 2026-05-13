@@ -51,7 +51,7 @@ src/{module}/
 | Business logic | `service.ts` |
 | JWT decode | `middleware/auth.middleware.ts` |
 | Env var | `config/env.ts` |
-| Enum definition | `src/db/enums.ts` |
+| Drizzle enum definition | Owning `models/ModelName.ts` or module-local model enum file |
 | Table re-export (for drizzle-kit) | `src/db/schema.ts` |
 
 ## Naming conventions

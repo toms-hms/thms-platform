@@ -14,7 +14,6 @@ src/{module}/
 src/db/
   index.ts               Single Drizzle client (import { db } from '../db')
   schema.ts              Re-exports all tables for drizzle-kit
-  enums.ts               All pgEnum definitions
 ```
 Modules: `auth`, `home`, `job`, `contractor`, `quote`, `communication`, `integration`, `ai`, `upload`
 

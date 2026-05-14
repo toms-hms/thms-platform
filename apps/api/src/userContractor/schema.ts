@@ -1,9 +1,17 @@
 import { z } from 'zod';
 import { TradeCategory } from '@thms/shared';
-import type { TypedRequest } from '@/middleware/auth.middleware';
+import type {
+  TypedRequest,
+  TypedParamsRequest,
+  TypedBodyRequest,
+} from '@/middleware/auth.middleware';
 
-export const UserContractorSchema = z.object({ userContractorId: z.string().min(1) });
-export type UserContractorRequest = TypedRequest<z.infer<typeof UserContractorSchema>>;
+export const UserContractorParamsSchema = z.object({ userContractorId: z.string().min(1) });
+
+export type GetUserContractorRequest    = TypedParamsRequest<typeof UserContractorParamsSchema>;
+export type CreateUserContractorRequest = TypedBodyRequest<typeof CreateUserContractorSchema>;
+export type DeleteUserContractorRequest = TypedParamsRequest<typeof UserContractorParamsSchema>;
+export type UserContractorsRequest      = TypedRequest;
 
 export const CreateUserContractorSchema = z.object({
   contractorId: z.string().min(1).optional(),

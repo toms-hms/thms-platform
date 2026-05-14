@@ -1,9 +1,15 @@
 import { z } from 'zod';
-import type { TypedRequest } from '@/middleware/auth.middleware';
+import type {
+  TypedRequest,
+  TypedParamsRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
 
-export const HomeSchema = z.object({ homeId: z.string().min(1) });
-export type HomeRequest = TypedRequest<z.infer<typeof HomeSchema>>;
-export type HomesRequest = TypedRequest;
+export const HomeParamsSchema = z.object({ homeId: z.string().min(1) });
+export type GetHomeRequest    = TypedParamsRequest<typeof HomeParamsSchema>;
+export type UpdateHomeRequest = TypedParamsBodyRequest<typeof HomeParamsSchema, typeof UpdateHomeSchema>;
+export type DeleteHomeRequest = TypedParamsRequest<typeof HomeParamsSchema>;
+export type CreateHomeRequest = TypedRequest;
 
 export const CreateHomeSchema = z.object({
   name: z.string().min(1),

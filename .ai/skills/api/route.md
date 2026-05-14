@@ -15,15 +15,26 @@ src/{module}/route.ts   — Express Router only
 
 Each handler follows this order:
 1. Auth middleware (`authenticateJWT`)
-2. Permission middleware (`permit(...)` or `requireRole(...)`)
-3. Input validation (`validate(Schema)` or `validate(Schema, 'query')`)
-4. Manager call (reads) or service call (mutations)
-5. `res.json({ data: result })` or `next(err)`
+2. `validate(ParamsSchema, 'params')` — validates path params before permit
+3. Permission middleware (`permit(...)` or `requireRole(...)`)
+4. `validate(QuerySchema, 'query')` or `validate(BodySchema)` — query or body validation
+5. Manager call (reads) or service call (mutations)
+6. `res.json({ data: result })` or `next(err)`
 
 ## GET vs mutation routing
 
 - **Reads → call managers directly**, even when assembling multiple relations with `Promise.all`.
 - **Mutations → call a service function** when the write involves more than one step.
+
+## Input source rules
+
+| Input | When to use |
+|-------|-------------|
+| `req.params` | Resource identity: `:jobId`, `:homeId`, `:contractorId` |
+| `req.query` | GET list filters: `?status=DRAFT&category=PLUMBING` |
+| `req.body` | Create, update, and action payloads |
+
+Validate each source separately with the matching schema. Params validation always comes first so the ID is known to be valid before the permission check runs.
 
 ## Standard GET + mutation pattern
 
@@ -34,10 +45,15 @@ import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import {
-  GetHomeJobsSchema, GetJobSchema, GetJobsSchema, DeleteJobSchema,
-  GetHomeJobsRequest, GetJobsRequest, GetJobRequest,
+  JobParamsSchema, HomeJobsParamsSchema, JobsQuerySchema,
+  JobContractorParamsSchema,
+  GetJobRequest, GetJobsRequest, GetHomeJobsRequest,
   CreateHomeJobRequest, UpdateJobRequest, DeleteJobRequest,
+  AssignContractorRequest, UpdateJobContractorRequest,
+  DiagnoseRequest, SuggestCategoriesRequest,
   CreateJobSchema, UpdateJobSchema,
+  AssignContractorSchema, UpdateJobContractorSchema,
+  DiagnoseSchema, SuggestTradeCategoriesSchema,
 } from './schema';
 import { JobManager } from './models/JobManager';
 import { JobContractorManager } from './models/JobContractorManager';
@@ -54,9 +70,9 @@ export const homeJobRouter = Router({ mergeParams: true });
 homeJobRouter.use(authenticateJWT);
 
 homeJobRouter.get('/',
+  validate(HomeJobsParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
-  validate(GetHomeJobsSchema, 'params'),
-  validate(GetJobsSchema, 'query'),
+  validate(JobsQuerySchema, 'query'),
   async (req: GetHomeJobsRequest, res: Response, next: NextFunction) => {
     try {
       const { userId, role } = req.user;
@@ -66,14 +82,25 @@ homeJobRouter.get('/',
   },
 );
 
-homeJobRouter.post('/',
+homeJobRouter.post('/category-suggestions',
+  validate(HomeJobsParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
-  validate(GetHomeJobsSchema, 'params'),
+  validate(SuggestTradeCategoriesSchema),
+  async (req: SuggestCategoriesRequest, res: Response, next: NextFunction) => {
+    try {
+      const suggestions = await aiService.suggestTradeCategories(req.body);
+      res.json({ data: suggestions });
+    } catch (err) { next(err); }
+  },
+);
+
+homeJobRouter.post('/',
+  validate(HomeJobsParamsSchema, 'params'),
+  permit(HomeManager, (req) => req.params.homeId),
   validate(CreateJobSchema),
   async (req: CreateHomeJobRequest, res: Response, next: NextFunction) => {
     try {
-      const { userId } = req.user;
-      const job = await jobService.createJob(req.params.homeId, userId, req.body);
+      const job = await jobService.createJob(req.params.homeId, req.user.userId, req.body);
       res.status(201).json({ data: job });
     } catch (err) { next(err); }
   },
@@ -84,7 +111,7 @@ export const jobRouter = Router();
 jobRouter.use(authenticateJWT);
 
 jobRouter.get('/',
-  validate(GetJobsSchema, 'query'),
+  validate(JobsQuerySchema, 'query'),
   async (req: GetJobsRequest, res: Response, next: NextFunction) => {
     try {
       const { userId, role } = req.user;
@@ -96,7 +123,7 @@ jobRouter.get('/',
 
 // GET with relation assembly — call managers directly, no service wrapper
 jobRouter.get('/:jobId',
-  validate(GetJobSchema, 'params'),
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
@@ -114,7 +141,7 @@ jobRouter.get('/:jobId',
 );
 
 jobRouter.patch('/:jobId',
-  validate(GetJobSchema, 'params'),
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(UpdateJobSchema),
   async (req: UpdateJobRequest, res: Response, next: NextFunction) => {
@@ -126,12 +153,48 @@ jobRouter.patch('/:jobId',
 );
 
 jobRouter.delete('/:jobId',
-  validate(DeleteJobSchema, 'params'),
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   async (req: DeleteJobRequest, res: Response, next: NextFunction) => {
     try {
       await jobService.deleteJob(req.params.jobId);
       res.json({ data: null });
+    } catch (err) { next(err); }
+  },
+);
+
+jobRouter.post('/:jobId/diagnose',
+  validate(JobParamsSchema, 'params'),
+  permit(JobManager, (req) => req.params.jobId),
+  validate(DiagnoseSchema),
+  async (req: DiagnoseRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await aiService.diagnoseJob({ jobId: req.params.jobId, message: req.body.message, userId: req.user.userId });
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  },
+);
+
+jobRouter.post('/:jobId/contractors',
+  validate(JobParamsSchema, 'params'),
+  permit(JobManager, (req) => req.params.jobId),
+  validate(AssignContractorSchema),
+  async (req: AssignContractorRequest, res: Response, next: NextFunction) => {
+    try {
+      const jc = await jobService.assignContractor(req.params.jobId, req.body.contractorId, req.body.notes);
+      res.status(201).json({ data: jc });
+    } catch (err) { next(err); }
+  },
+);
+
+jobRouter.patch('/:jobId/contractors/:jobContractorId',
+  validate(JobContractorParamsSchema, 'params'),
+  permit(JobManager, (req) => req.params.jobId),
+  validate(UpdateJobContractorSchema),
+  async (req: UpdateJobContractorRequest, res: Response, next: NextFunction) => {
+    try {
+      const jc = await jobService.updateJobContractor(req.params.jobContractorId, req.body);
+      res.json({ data: jc });
     } catch (err) { next(err); }
   },
 );
@@ -149,40 +212,30 @@ app.use('/api/v1/jobs', jobRouter);
 
 The parent-scoped router uses `Router({ mergeParams: true })` so the parent `:id` param is accessible in handlers.
 
-## Request Type Names
+## Request type naming
 
-Request type names describe the HTTP route contract:
+Request types describe the HTTP operation:
 
-- GET handlers always use `Get...Request`: `GetJobRequest`, `GetJobsRequest`, `GetHomeJobsRequest`.
-- Create handlers use `Create...Request`: `CreateHomeJobRequest` for `POST /homes/:homeId/jobs`.
-- Update handlers use `Update...Request`: `UpdateJobRequest` for `PATCH /jobs/:jobId`.
-- Delete handlers use `Delete...Request`: `DeleteJobRequest` for `DELETE /jobs/:jobId`.
-- Action handlers use the action name: `AssignContractorRequest`, `StartDiagnoseRequest`, `SendEmailRequest`.
-- GET schemas also start with `Get`: `GetJobSchema`, `GetJobsSchema`, `GetHomeJobsSchema`.
+- `Get...Request` — all GET handlers
+- `Create...Request` — POST handlers that create a resource
+- `Update...Request` — PATCH handlers
+- `Delete...Request` — DELETE handlers
+- Action name — action sub-routes: `AssignContractorRequest`, `DiagnoseRequest`, `SuggestCategoriesRequest`
 
-Map HTTP input sources consistently:
-
-| Input source | Use for |
-|--------------|---------|
-| `req.params` | Path identity, e.g. `:jobId`, `:homeId` |
-| `req.query` | GET list filters |
-| `req.body` | Create, update, and action payloads |
-
-Do not use one broad type like `JobRequest` or `ContractorsRequest` for every handler in a module. A route with params and body gets a request type composed from both schemas.
+Never use one broad type like `JobRequest` for multiple handlers. A PATCH handler has different params+body than a GET handler even on the same path.
 
 ## List filter rules
 
-- Accept explicit query filters from the caller.
-- Pass filters directly to a manager method so filtering stays in SQL.
-- Use plural query names for every list filter that can hold multiple values.
+- Validate query params with `validate(XsQuerySchema, 'query')`.
+- Use plural names for every filter that can hold multiple values: `tradeCategories`, `zipCodes`.
 - Do not support singular aliases.
-- Use domain-explicit names: `tradeCategories`, not `categories`.
-- Validate query params with `validate(Schema, 'query')` — the handler's `TypedRequest` type gives you the typed `req.query`.
+- Use domain-explicit names: `tradeCategories` not `categories`.
+- Pass `req.query` directly to the manager filter method.
 
 ```typescript
 // Good
 router.get('/',
-  validate(GetContractorsSchema, 'query'),
+  validate(ContractorsQuerySchema, 'query'),
   async (req: GetContractorsRequest, res: Response, next: NextFunction) => {
     const result = await ContractorManager.filter(req.query);
     res.json({ data: result });

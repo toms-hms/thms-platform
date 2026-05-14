@@ -1,11 +1,18 @@
 import { z } from 'zod';
 import { QuoteStatus } from '@thms/shared';
-import type { TypedRequest } from '@/middleware/auth.middleware';
+import type {
+  TypedParamsRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
 
-export const QuoteSchema = z.object({ quoteId: z.string().min(1) });
-export const JobQuotesSchema = z.object({ jobId: z.string().min(1) });
-export type QuoteRequest = TypedRequest<z.infer<typeof QuoteSchema>>;
-export type JobQuotesRequest = TypedRequest<z.infer<typeof JobQuotesSchema>>;
+export const QuoteParamsSchema     = z.object({ quoteId: z.string().min(1) });
+export const JobQuotesParamsSchema = z.object({ jobId:   z.string().min(1) });
+
+export type GetJobQuotesRequest   = TypedParamsRequest<typeof JobQuotesParamsSchema>;
+export type GetQuoteRequest       = TypedParamsRequest<typeof QuoteParamsSchema>;
+export type CreateJobQuoteRequest = TypedParamsBodyRequest<typeof JobQuotesParamsSchema, typeof CreateQuoteSchema>;
+export type UpdateQuoteRequest    = TypedParamsBodyRequest<typeof QuoteParamsSchema, typeof UpdateQuoteSchema>;
+export type DeleteQuoteRequest    = TypedParamsRequest<typeof QuoteParamsSchema>;
 
 export const CreateQuoteSchema = z.object({
   contractorId: z.string().min(1),

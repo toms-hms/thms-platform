@@ -3,8 +3,11 @@ import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import {
-  HomeJobsRequest,
-  JobRequest, JobsSchema,
+  HomeJobsParamsSchema, JobParamsSchema, JobContractorParamsSchema, JobsQuerySchema,
+  GetJobRequest, GetHomeJobsRequest,
+  CreateHomeJobRequest, UpdateJobRequest, DeleteJobRequest,
+  AssignContractorRequest, UpdateJobContractorRequest,
+  DiagnoseRequest,
   CreateJobSchema, UpdateJobSchema,
   AssignContractorSchema, UpdateJobContractorSchema,
   DiagnoseSchema,
@@ -31,9 +34,10 @@ export const homeJobRouter = Router({ mergeParams: true });
 homeJobRouter.use(authenticateJWT);
 
 homeJobRouter.get('/',
+  validate(HomeJobsParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
-  validate(JobsSchema, 'query'),
-  async (req: HomeJobsRequest, res: Response, next: NextFunction) => {
+  validate(JobsQuerySchema, 'query'),
+  async (req: GetHomeJobsRequest, res: Response, next: NextFunction) => {
     try {
       const { userId, role } = req.user;
       const jobs = await PermissionService.list(JobManager, userId, role, req.params.homeId, req.query);
@@ -43,9 +47,10 @@ homeJobRouter.get('/',
 );
 
 homeJobRouter.post('/',
+  validate(HomeJobsParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
   validate(CreateJobSchema),
-  async (req: HomeJobsRequest, res: Response, next: NextFunction) => {
+  async (req: CreateHomeJobRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
       const job = await jobService.createJob(req.params.homeId, userId, req.body);
@@ -59,8 +64,9 @@ export const jobRouter = Router();
 jobRouter.use(authenticateJWT);
 
 jobRouter.get('/:jobId',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const { jobId } = req.params;
       const [job, contractors, images, quotes, communications, aiGenerations] = await Promise.all([
@@ -77,9 +83,10 @@ jobRouter.get('/:jobId',
 );
 
 jobRouter.patch('/:jobId',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(UpdateJobSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: UpdateJobRequest, res: Response, next: NextFunction) => {
     try {
       const job = await jobService.updateJob(req.params.jobId, req.body);
       res.json({ data: job });
@@ -88,8 +95,9 @@ jobRouter.patch('/:jobId',
 );
 
 jobRouter.delete('/:jobId',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: DeleteJobRequest, res: Response, next: NextFunction) => {
     try {
       await jobService.deleteJob(req.params.jobId);
       res.json({ data: { success: true } });
@@ -99,8 +107,9 @@ jobRouter.delete('/:jobId',
 
 // Contractors
 jobRouter.get('/:jobId/contractors',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const jcs = await JobContractorManager.listForJob(req.params.jobId);
       res.json({ data: jcs });
@@ -109,9 +118,10 @@ jobRouter.get('/:jobId/contractors',
 );
 
 jobRouter.post('/:jobId/contractors',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(AssignContractorSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: AssignContractorRequest, res: Response, next: NextFunction) => {
     try {
       const jc = await jobService.assignContractor(req.params.jobId, req.body.contractorId, req.body.notes);
       res.status(201).json({ data: jc });
@@ -120,9 +130,10 @@ jobRouter.post('/:jobId/contractors',
 );
 
 jobRouter.patch('/:jobId/contractors/:jobContractorId',
+  validate(JobContractorParamsSchema, 'params'),
   permit(JobContractorManager, (req) => req.params.jobContractorId),
   validate(UpdateJobContractorSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: UpdateJobContractorRequest, res: Response, next: NextFunction) => {
     try {
       const jc = await jobService.updateJobContractorStatus(req.params.jobContractorId, req.body.status, req.body.notes);
       res.json({ data: jc });
@@ -131,8 +142,9 @@ jobRouter.patch('/:jobId/contractors/:jobContractorId',
 );
 
 jobRouter.delete('/:jobId/contractors/:jobContractorId',
+  validate(JobContractorParamsSchema, 'params'),
   permit(JobContractorManager, (req) => req.params.jobContractorId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: UpdateJobContractorRequest, res: Response, next: NextFunction) => {
     try {
       await jobService.removeContractorFromJob(req.params.jobContractorId);
       res.json({ data: { success: true } });
@@ -142,8 +154,9 @@ jobRouter.delete('/:jobId/contractors/:jobContractorId',
 
 // Images
 jobRouter.get('/:jobId/images',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const images = await JobImageManager.listForJob(req.params.jobId);
       const withUrls = await Promise.all(images.map(async (img) => ({ ...img, url: await uploadService.getDownloadUrl(img.storageKey) })));
@@ -153,8 +166,9 @@ jobRouter.get('/:jobId/images',
 );
 
 jobRouter.post('/:jobId/images/upload-url',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const { fileName, contentType, kind } = req.body;
       const result = await uploadService.getUploadUrl(req.params.jobId, req.user.userId, fileName, contentType, kind);
@@ -164,8 +178,9 @@ jobRouter.post('/:jobId/images/upload-url',
 );
 
 jobRouter.post('/:jobId/images/confirm',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const image = await uploadService.confirmUpload({
         jobId: req.params.jobId,
@@ -180,8 +195,9 @@ jobRouter.post('/:jobId/images/confirm',
 );
 
 jobRouter.delete('/:jobId/images/:imageId',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       await uploadService.deleteJobImage(req.params.imageId, req.user.userId);
       res.json({ data: { success: true } });
@@ -191,8 +207,9 @@ jobRouter.delete('/:jobId/images/:imageId',
 
 // Quotes
 jobRouter.get('/:jobId/quotes',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const quotes = await QuoteManager.listForJob(req.params.jobId);
       res.json({ data: quotes });
@@ -201,9 +218,10 @@ jobRouter.get('/:jobId/quotes',
 );
 
 jobRouter.post('/:jobId/quotes',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(CreateQuoteSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const quote = await quoteService.createQuote(req.params.jobId, req.body);
       res.status(201).json({ data: quote });
@@ -213,8 +231,9 @@ jobRouter.post('/:jobId/quotes',
 
 // Communications
 jobRouter.get('/:jobId/communications',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const comms = await CommunicationManager.listForJob(req.params.jobId, {
         contractorId: req.query.contractorId as string,
@@ -228,9 +247,10 @@ jobRouter.get('/:jobId/communications',
 
 // AI generations
 jobRouter.post('/:jobId/ai-generations',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(CreateAIGenerationSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const gen = await aiService.generateImage({
         jobId: req.params.jobId,
@@ -246,8 +266,9 @@ jobRouter.post('/:jobId/ai-generations',
 );
 
 jobRouter.get('/:jobId/ai-generations',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const gens = await AIGenerationManager.listForJob(req.params.jobId);
       res.json({ data: gens });
@@ -257,8 +278,9 @@ jobRouter.get('/:jobId/ai-generations',
 
 // AI diagnostic Q&A
 jobRouter.post('/:jobId/diagnose/start',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const result = await aiService.startDiagnose(req.params.jobId);
       res.json({ data: result });
@@ -267,9 +289,10 @@ jobRouter.post('/:jobId/diagnose/start',
 );
 
 jobRouter.post('/:jobId/diagnose',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(DiagnoseSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: DiagnoseRequest, res: Response, next: NextFunction) => {
     try {
       const result = await aiService.diagnoseJob(req.params.jobId, req.body.message);
       res.json({ data: result });
@@ -279,9 +302,10 @@ jobRouter.post('/:jobId/diagnose',
 
 // Email drafting + sending
 jobRouter.post('/:jobId/email-drafts',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(EmailDraftSchema),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const drafts = await aiService.draftEmail({ jobId: req.params.jobId, userId: req.user.userId, ...req.body });
       res.json({ data: drafts });
@@ -290,8 +314,9 @@ jobRouter.post('/:jobId/email-drafts',
 );
 
 jobRouter.post('/:jobId/send-email',
+  validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
-  async (req: JobRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
       const result = await integrationService.sendViaGmail({
         userId: req.user.userId,

@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
-import { IntegrationRequest, IntegrationsRequest } from './schema';
+import { validate } from '@/middleware/validate.middleware';
+import { IntegrationParamsSchema, GetIntegrationsRequest, DeleteIntegrationRequest } from './schema';
 import { IntegrationManager } from './models/IntegrationManager';
 import * as integrationService from './service';
 
 const router = Router();
 router.use(authenticateJWT);
 
-router.get('/', async (req: IntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
   try {
     const list = await IntegrationManager.listForUser(req.user.userId);
     const data = list.map((i) => ({
@@ -19,14 +20,14 @@ router.get('/', async (req: IntegrationsRequest, res: Response, next: NextFuncti
   } catch (err) { next(err); }
 });
 
-router.get('/email/google/start', async (req: IntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/email/google/start', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
   try {
     const url = await integrationService.getGmailAuthUrl(req.user.userId);
     res.json({ data: { authorizationUrl: url } });
   } catch (err) { next(err); }
 });
 
-router.get('/email/google/callback', async (req: IntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/email/google/callback', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
   try {
     const { code, state } = req.query as { code: string; state: string };
     await integrationService.handleGmailCallback(code, state);
@@ -34,14 +35,14 @@ router.get('/email/google/callback', async (req: IntegrationsRequest, res: Respo
   } catch (err) { next(err); }
 });
 
-router.get('/email/microsoft/start', async (req: IntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/email/microsoft/start', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
   try {
     const url = await integrationService.getMicrosoftAuthUrl(req.user.userId);
     res.json({ data: { authorizationUrl: url } });
   } catch (err) { next(err); }
 });
 
-router.get('/email/microsoft/callback', async (req: IntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/email/microsoft/callback', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
   try {
     const { code, state } = req.query as { code: string; state: string };
     await integrationService.handleMicrosoftCallback(code, state);
@@ -49,7 +50,7 @@ router.get('/email/microsoft/callback', async (req: IntegrationsRequest, res: Re
   } catch (err) { next(err); }
 });
 
-router.post('/ai', async (req: IntegrationsRequest, res: Response, next: NextFunction) => {
+router.post('/ai', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
   try {
     const { provider, apiKey } = req.body;
     const integration = await integrationService.saveAIIntegration(req.user.userId, provider, apiKey);
@@ -57,11 +58,14 @@ router.post('/ai', async (req: IntegrationsRequest, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
-router.delete('/:integrationId', async (req: IntegrationRequest, res: Response, next: NextFunction) => {
-  try {
-    await integrationService.disconnectIntegration(req.params.integrationId, req.user.userId);
-    res.json({ data: { success: true } });
-  } catch (err) { next(err); }
-});
+router.delete('/:integrationId',
+  validate(IntegrationParamsSchema, 'params'),
+  async (req: DeleteIntegrationRequest, res: Response, next: NextFunction) => {
+    try {
+      await integrationService.disconnectIntegration(req.params.integrationId, req.user.userId);
+      res.json({ data: { success: true } });
+    } catch (err) { next(err); }
+  },
+);
 
 export default router;

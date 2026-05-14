@@ -5,11 +5,13 @@ import { validate } from '@/middleware/validate.middleware';
 import { permit } from '@/permissions/permit';
 import { PermissionService } from '@/permissions/PermissionService';
 import { attachContractor, UserContractorManager } from './models/UserContractorManager';
-import { CreateUserContractorSchema, UserContractorRequest, UserContractorSchema } from './schema';
-import type { TypedRequest } from '@/middleware/auth.middleware';
+import {
+  UserContractorParamsSchema,
+  DeleteUserContractorRequest,
+  UserContractorsRequest,
+  CreateUserContractorSchema,
+} from './schema';
 import * as userContractorService from './service';
-
-type UserContractorsRequest = TypedRequest;
 
 const router = Router();
 router.use(authenticateJWT);
@@ -31,9 +33,9 @@ router.post('/', validate(CreateUserContractorSchema), async (req: UserContracto
 });
 
 router.delete('/:userContractorId',
-  validate(UserContractorSchema, 'params'),
+  validate(UserContractorParamsSchema, 'params'),
   permit(UserContractorManager, (req) => req.params.userContractorId),
-  async (req: UserContractorRequest, res: Response, next: NextFunction) => {
+  async (req: DeleteUserContractorRequest, res: Response, next: NextFunction) => {
     try {
       await userContractorService.deleteUserContractor(req.user.userId, req.params.userContractorId);
       res.json({ data: { success: true } });

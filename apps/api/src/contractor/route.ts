@@ -6,14 +6,14 @@ import { permit } from '@/permissions/permit';
 import { attachZipCodes, ContractorManager } from '@/contractor/models/ContractorManager';
 import { BadRequestError } from '@/utils/errors';
 import {
-  ContractorRequest, ContractorSchema,
-  CreateContractorSchema, UpdateContractorSchema,
+  ContractorParamsSchema,
+  GetContractorRequest,
+  ContractorsRequest,
+  CreateContractorSchema,
+  UpdateContractorSchema,
 } from './schema';
-import type { TypedRequest } from '@/middleware/auth.middleware';
 import { TradeCategory, UserRole } from '@thms/shared';
 import * as contractorService from './service';
-
-type ContractorsRequest = TypedRequest;
 
 const router = Router();
 router.use(authenticateJWT);
@@ -83,8 +83,9 @@ router.post(
 
 router.get(
   '/:contractorId',
+  validate(ContractorParamsSchema, 'params'),
   permit(ContractorManager, (req) => req.params.contractorId),
-  async (req: ContractorRequest, res: Response, next: NextFunction) => {
+  async (req: GetContractorRequest, res: Response, next: NextFunction) => {
     try {
       const contractor = await ContractorManager.get({ id: req.params.contractorId });
       const [withZips] = await attachZipCodes([contractor]);
@@ -97,8 +98,9 @@ router.get(
 
 router.get(
   '/:contractorId/jobs',
+  validate(ContractorParamsSchema, 'params'),
   permit(ContractorManager, (req) => req.params.contractorId),
-  async (req: ContractorRequest, res: Response, next: NextFunction) => {
+  async (req: GetContractorRequest, res: Response, next: NextFunction) => {
     try {
       const history = await ContractorManager.listJobHistory(req.params.contractorId);
       res.json({ data: history });
@@ -110,8 +112,9 @@ router.get(
 
 router.post(
   '/:contractorId/promote',
+  validate(ContractorParamsSchema, 'params'),
   requireRole(UserRole.ADMIN),
-  async (req: ContractorRequest, res: Response, next: NextFunction) => {
+  async (req: GetContractorRequest, res: Response, next: NextFunction) => {
     try {
       const contractor = await contractorService.promoteContractor(req.params.contractorId);
       res.json({ data: contractor });
@@ -123,10 +126,11 @@ router.post(
 
 router.patch(
   '/:contractorId',
+  validate(ContractorParamsSchema, 'params'),
   requireRole(UserRole.ADMIN),
   permit(ContractorManager, (req) => req.params.contractorId),
   validate(UpdateContractorSchema),
-  async (req: ContractorRequest, res: Response, next: NextFunction) => {
+  async (req: GetContractorRequest, res: Response, next: NextFunction) => {
     try {
       const contractor = await contractorService.updateContractor(req.params.contractorId, req.body);
       res.json({ data: contractor });
@@ -138,9 +142,10 @@ router.patch(
 
 router.delete(
   '/:contractorId',
+  validate(ContractorParamsSchema, 'params'),
   requireRole(UserRole.ADMIN),
   permit(ContractorManager, (req) => req.params.contractorId),
-  async (req: ContractorRequest, res: Response, next: NextFunction) => {
+  async (req: GetContractorRequest, res: Response, next: NextFunction) => {
     try {
       await contractorService.deleteContractor(req.params.contractorId);
       res.json({ data: { success: true } });

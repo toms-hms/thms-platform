@@ -1,6 +1,11 @@
 import { z } from 'zod';
-import type { TypedRequest } from '@/middleware/auth.middleware';
+import type {
+  TypedRequest,
+  TypedParamsRequest,
+} from '@/middleware/auth.middleware';
 
-export const IntegrationSchema = z.object({ integrationId: z.string().min(1) });
-export type IntegrationRequest = TypedRequest<z.infer<typeof IntegrationSchema>>;
-export type IntegrationsRequest = TypedRequest;
+export const IntegrationParamsSchema = z.object({ integrationId: z.string().min(1) });
+
+export type GetIntegrationsRequest   = TypedRequest;
+export type GetIntegrationRequest    = TypedParamsRequest<typeof IntegrationParamsSchema>;
+export type DeleteIntegrationRequest = TypedParamsRequest<typeof IntegrationParamsSchema>;

@@ -1,10 +1,15 @@
 import { z } from 'zod';
-import type { TypedRequest } from '@/middleware/auth.middleware';
+import type {
+  TypedParamsRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
 
-export const CommunicationSchema = z.object({ communicationId: z.string().min(1) });
-export const JobCommunicationsSchema = z.object({ jobId: z.string().min(1) });
-export type CommunicationRequest = TypedRequest<z.infer<typeof CommunicationSchema>>;
-export type JobCommunicationsRequest = TypedRequest<z.infer<typeof JobCommunicationsSchema>>;
+export const CommunicationParamsSchema     = z.object({ communicationId: z.string().min(1) });
+export const JobCommunicationsParamsSchema = z.object({ jobId:           z.string().min(1) });
+
+export type GetJobCommunicationsRequest = TypedParamsRequest<typeof JobCommunicationsParamsSchema>;
+export type GetCommunicationRequest     = TypedParamsRequest<typeof CommunicationParamsSchema>;
+export type UpdateCommunicationRequest  = TypedParamsBodyRequest<typeof CommunicationParamsSchema, typeof UpdateCommunicationSchema>;
 
 export const UpdateCommunicationSchema = z.object({
   needsReview: z.boolean().optional(),

@@ -17,8 +17,13 @@ Each handler follows this order:
 1. Auth middleware (`authenticateJWT`)
 2. Permission middleware (`permit(...)` or `requireRole(...)`)
 3. Input validation (`validate(Schema)` or `validate(Schema, 'query')`)
-4. Service or manager call
+4. Manager call (reads) or service call (mutations)
 5. `res.json({ data: result })` or `next(err)`
+
+## GET vs mutation routing
+
+- **Reads → call managers directly**, even when assembling multiple relations with `Promise.all`.
+- **Mutations → call a service function** when the write involves more than one step.
 
 ## Standard GET + mutation pattern
 
@@ -35,6 +40,10 @@ import {
   CreateJobSchema, UpdateJobSchema,
 } from './schema';
 import { JobManager } from './models/JobManager';
+import { JobContractorManager } from './models/JobContractorManager';
+import { JobImageManager } from './models/JobImageManager';
+import { QuoteManager } from '@/quote/models/QuoteManager';
+import { CommunicationManager } from '@/communication/models/CommunicationManager';
 import { permit } from '@/permissions/permit';
 import { PermissionService } from '@/permissions/PermissionService';
 import { HomeManager } from '@/home/models/HomeManager';
@@ -83,12 +92,20 @@ jobRouter.get('/',
   },
 );
 
+// GET with relation assembly — call managers directly, no service wrapper
 jobRouter.get('/:jobId',
   permit(JobManager, (req) => req.params.jobId),
   async (req: JobRequest, res: Response, next: NextFunction) => {
     try {
-      const job = await jobService.getJob(req.params.jobId);
-      res.json({ data: job });
+      const { jobId } = req.params;
+      const [job, contractors, images, quotes, communications] = await Promise.all([
+        JobManager.get({ id: jobId }),
+        JobContractorManager.filter({ jobIds: [jobId] }),
+        JobImageManager.filter({ jobIds: [jobId] }),
+        QuoteManager.filter({ jobIds: [jobId] }),
+        CommunicationManager.filter({ jobIds: [jobId] }),
+      ]);
+      res.json({ data: { ...job, contractors, images, quotes, communications } });
     } catch (err) { next(err); }
   },
 );

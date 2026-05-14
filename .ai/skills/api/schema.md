@@ -5,16 +5,49 @@ description: Guide for writing Zod validation schemas — naming, enum usage, di
 
 # API Schema (Zod)
 
-All request validation goes in `src/{module}/schema.ts`. The file exports only Zod schemas — no imports from `route.ts` or `service.ts`.
+All request validation goes in `src/{module}/schema.ts`. The file exports Zod schemas and their derived request types — no imports from `route.ts` or `service.ts`.
 
 ## Naming conventions
 
-| Export | Pattern |
-|--------|---------|
-| Create request | `CreateXSchema` |
-| Update request | `UpdateXSchema` |
-| Full entity validation | `XSchema` |
-| Nested sub-object | descriptive name, e.g. `AiSessionSchema`, `ChatMessageSchema` |
+| Export | Pattern | Example |
+|--------|---------|---------|
+| Route params — single item | `XSchema` | `JobSchema` |
+| Route params — parent-scoped | `ParentXsSchema` | `HomeJobsSchema` |
+| Query params — list | `XsSchema` | `JobsSchema` |
+| Create body | `CreateXSchema` | `CreateJobSchema` |
+| Update body | `UpdateXSchema` | `UpdateJobSchema` |
+| Nested sub-object | descriptive name | `AiSessionSchema` |
+
+Request types are derived from schemas via `TypedRequest` and exported alongside them:
+
+| Schema | Request type |
+|--------|-------------|
+| `JobSchema` | `JobRequest` |
+| `HomeJobsSchema` | `HomeJobsRequest` |
+| `JobsSchema` | `JobsRequest` |
+
+## Params and query schemas
+
+```typescript
+import { TypedRequest } from '@/middleware/auth.middleware';
+
+// Route params — single item
+export const JobSchema = z.object({ jobId: z.string() });
+export type JobRequest = TypedRequest<z.infer<typeof JobSchema>>;
+
+// Route params — parent-scoped collection
+export const HomeJobsSchema = z.object({ homeId: z.string() });
+
+// Query params — list (shared by both routers)
+export const JobsSchema = z.object({
+  status:   z.nativeEnum(JobStatus).optional(),
+  category: z.nativeEnum(TradeCategory).optional(),
+});
+
+// Composed request types
+export type HomeJobsRequest = TypedRequest<z.infer<typeof HomeJobsSchema>, z.infer<typeof JobsSchema>>;
+export type JobsRequest     = TypedRequest<{}, z.infer<typeof JobsSchema>>;
+```
 
 ## Using shared enums
 
@@ -32,7 +65,7 @@ const schema = z.object({
 
 ## Update schema from create
 
-Use `.partial().extend()` to build an update schema from a create schema. This avoids duplicating field definitions.
+Use `.partial().extend()` to build an update schema from a create schema.
 
 ```typescript
 export const CreateJobSchema = z.object({
@@ -53,7 +86,7 @@ export const UpdateJobSchema = CreateJobSchema.partial().extend({
 
 ## Discriminated unions for intent-typed payloads
 
-The AI session summary varies by job intent. Model this as a union discriminated by a literal field, then make the outer schema accept any variant with `z.union([...])`.
+The AI session summary varies by job intent. Model this as a union discriminated by a literal field.
 
 ```typescript
 // apps/api/src/job/schema.ts
@@ -124,6 +157,7 @@ Use `z.string().min(1)` — not `z.string().cuid()`. IDs are CUID2 format which 
 
 ## Where schemas are used
 
-- Imported by `route.ts` into `validate(Schema)` middleware calls.
+- Imported by `route.ts` into `validate(Schema)` and `validate(Schema, 'query')` middleware calls.
 - Types inferred with `z.infer<typeof Schema>` for service function signatures.
+- `TypedRequest` compositions exported for use as handler parameter types in `route.ts`.
 - Never imported from `service.ts` or `models/`.

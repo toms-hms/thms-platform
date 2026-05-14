@@ -16,84 +16,76 @@ src/{module}/route.ts   — Express Router only
 Each handler follows this order:
 1. Auth middleware (`authenticateJWT`)
 2. Permission middleware (`permit(...)` or `requireRole(...)`)
-3. Input validation (`validate(Schema)`)
+3. Input validation (`validate(Schema)` or `validate(Schema, 'query')`)
 4. Service or manager call
 5. `res.json({ data: result })` or `next(err)`
-
-## Auth user extraction
-
-```typescript
-function getUser(req: Parameters<typeof authenticateJWT>[0]) {
-  return (req as unknown as AuthenticatedRequest).user;
-}
-```
-
-Use this helper at the top of route files — the cast is required because Express's `Request` type doesn't know about JWT claims.
 
 ## Standard GET + mutation pattern
 
 ```typescript
 // apps/api/src/job/route.ts (condensed)
 import { Router } from 'express';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.middleware';
-import { validate } from '../middleware/validate.middleware';
-import { CreateJobSchema, UpdateJobSchema } from './schema';
+import type { Response, NextFunction } from 'express';
+import { authenticateJWT } from '@/middleware/auth.middleware';
+import { validate } from '@/middleware/validate.middleware';
+import {
+  HomeJobsRequest, HomeJobsSchema,
+  JobRequest, JobSchema,
+  JobsRequest, JobsSchema,
+  CreateJobSchema, UpdateJobSchema,
+} from './schema';
 import { JobManager } from './models/JobManager';
-import { permit } from '../permissions/permit';
-import { PermissionService } from '../permissions/PermissionService';
-import { HomeManager } from '../home/models/HomeManager';
-import * as jobWhere from './models/JobManager.where';
+import { permit } from '@/permissions/permit';
+import { PermissionService } from '@/permissions/PermissionService';
+import { HomeManager } from '@/home/models/HomeManager';
 import * as jobService from './service';
 
-function getUser(req: Parameters<typeof authenticateJWT>[0]) {
-  return (req as unknown as AuthenticatedRequest).user;
-}
-
 // Mounted at /homes/:homeId/jobs — mergeParams: true so :homeId is visible
-export const jobCollectionRouter = Router({ mergeParams: true });
-jobCollectionRouter.use(authenticateJWT);
+export const homeJobRouter = Router({ mergeParams: true });
+homeJobRouter.use(authenticateJWT);
 
-// List — applies the collection visibility predicate via PermissionService.list
-jobCollectionRouter.get('/',
-  permit(HomeManager, (req) => (req.params as any).homeId),
-  async (req, res, next) => {
+homeJobRouter.get('/',
+  permit(HomeManager, (req) => req.params.homeId),
+  validate(JobsSchema, 'query'),
+  async (req: HomeJobsRequest, res: Response, next: NextFunction) => {
     try {
-      const { userId } = getUser(req);
-      const jobs = await PermissionService.list(
-        JobManager,
-        userId,
-        jobWhere.filterUser(userId),
-        (visibility) => JobManager.listForHome(
-          (req.params as any).homeId,
-          { status: req.query.status as string, category: req.query.category as string },
-          visibility,
-        ),
-      );
+      const { userId, role } = req.user;
+      const jobs = await PermissionService.list(JobManager, userId, role, req.params.homeId, req.query);
       res.json({ data: jobs });
     } catch (err) { next(err); }
   },
 );
 
-// Create — validate body, call service, 201
-jobCollectionRouter.post('/',
-  permit(HomeManager, (req) => (req.params as any).homeId),
+homeJobRouter.post('/',
+  permit(HomeManager, (req) => req.params.homeId),
   validate(CreateJobSchema),
-  async (req, res, next) => {
+  async (req: HomeJobsRequest, res: Response, next: NextFunction) => {
     try {
-      const { userId } = getUser(req);
-      const job = await jobService.createJob((req.params as any).homeId, userId, req.body);
+      const { userId } = req.user;
+      const job = await jobService.createJob(req.params.homeId, userId, req.body);
       res.status(201).json({ data: job });
     } catch (err) { next(err); }
   },
 );
 
-// Individual object router — mounted at /jobs
+// Mounted at /jobs
 export const jobRouter = Router();
 jobRouter.use(authenticateJWT);
 
+jobRouter.get('/',
+  validate(JobsSchema, 'query'),
+  async (req: JobsRequest, res: Response, next: NextFunction) => {
+    try {
+      const { userId, role } = req.user;
+      const jobs = await PermissionService.list(JobManager, userId, role, req.query);
+      res.json({ data: jobs });
+    } catch (err) { next(err); }
+  },
+);
+
 jobRouter.get('/:jobId',
   permit(JobManager, (req) => req.params.jobId),
-  async (req, res, next) => {
+  async (req: JobRequest, res: Response, next: NextFunction) => {
     try {
       const job = await jobService.getJob(req.params.jobId);
       res.json({ data: job });
@@ -104,7 +96,7 @@ jobRouter.get('/:jobId',
 jobRouter.patch('/:jobId',
   permit(JobManager, (req) => req.params.jobId),
   validate(UpdateJobSchema),
-  async (req, res, next) => {
+  async (req: JobRequest, res: Response, next: NextFunction) => {
     try {
       const job = await jobService.updateJob(req.params.jobId, req.body);
       res.json({ data: job });
@@ -114,7 +106,7 @@ jobRouter.patch('/:jobId',
 
 jobRouter.delete('/:jobId',
   permit(JobManager, (req) => req.params.jobId),
-  async (req, res, next) => {
+  async (req: JobRequest, res: Response, next: NextFunction) => {
     try {
       await jobService.deleteJob(req.params.jobId);
       res.json({ data: null });
@@ -125,13 +117,15 @@ jobRouter.delete('/:jobId',
 
 ## Two-router pattern
 
-Some modules export two routers — one scoped to a parent collection, one for individual objects mounted at the resource root. Both go into `app.ts`:
+Some modules export two routers — one scoped to a parent resource, one for the resource root. Both go into `app.ts`:
 
 ```typescript
 // src/app.ts
-app.use('/api/v1/homes/:homeId/jobs', jobCollectionRouter);
+app.use('/api/v1/homes/:homeId/jobs', homeJobRouter);
 app.use('/api/v1/jobs', jobRouter);
 ```
+
+The parent-scoped router uses `Router({ mergeParams: true })` so the parent `:id` param is accessible in handlers.
 
 ## List filter rules
 
@@ -140,22 +134,21 @@ app.use('/api/v1/jobs', jobRouter);
 - Use plural query names for every list filter that can hold multiple values.
 - Do not support singular aliases.
 - Use domain-explicit names: `tradeCategories`, not `categories`.
+- Validate query params with `validate(Schema, 'query')` — the handler's `TypedRequest` type gives you the typed `req.query`.
 
 ```typescript
-// Good: explicit plural filters passed through
-router.get('/', async (req, res, next) => {
-  const result = await ContractorManager.filter({
-    isGlobal: true,
-    search: req.query.search as string,
-    zipCodes: stringList(req.query.zipCodes),
-    tradeCategories: tradeCategoryList(req.query.tradeCategories),
-  });
-  res.json({ data: result });
-});
+// Good
+router.get('/',
+  validate(ContractorsSchema, 'query'),
+  async (req: ContractorsRequest, res: Response, next: NextFunction) => {
+    const result = await ContractorManager.filter(req.query);
+    res.json({ data: result });
+  },
+);
 
 // Bad: convenience param that hides a cross-resource lookup
 router.get('/', async (req, res, next) => {
-  const job = await JobManager.findById(req.query.jobId); // hidden lookup
+  const job = await JobManager.findById(req.query.jobId);
   const contractors = await ContractorManager.filter({ tradeCategories: [job.category] });
 });
 ```
@@ -163,7 +156,7 @@ router.get('/', async (req, res, next) => {
 ## Admin-only routes
 
 ```typescript
-import { requireRole } from '../middleware/auth.middleware';
+import { requireRole } from '@/middleware/auth.middleware';
 
 router.post('/', requireRole('ADMIN'), validate(CreateSchema), handler);
 ```

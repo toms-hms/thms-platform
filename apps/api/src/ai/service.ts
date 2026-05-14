@@ -371,10 +371,6 @@ export async function startDiagnose(jobId: string) {
   return { question, options, summary: null, suggestedCategories, messages: [{ role: 'assistant', content: question ?? '' }] };
 }
 
-export async function listAIGenerations(jobId: string) {
-  return AIGenerationManager.listForJob(jobId);
-}
-
 export async function retryGeneration(generationId: string, userId: string) {
   const gen = await AIGenerationManager.findById(generationId);
   if (!gen) throw new Error('Generation not found');

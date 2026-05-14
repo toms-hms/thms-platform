@@ -1,9 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
-import { ForbiddenError, NotFoundError } from '../utils/errors';
+import { ForbiddenError, NotFoundError } from '@/utils/errors';
 import { HomeManager } from './models/HomeManager';
 import { UserHomeManager } from './models/UserHomeManager';
-import { UserManager } from '../auth/models/UserManager';
-import { PermissionService } from '../permissions/PermissionService';
+import { UserManager } from '@/auth/models/UserManager';
+import { PermissionService } from '@/permissions/PermissionService';
 import type { CreateHomeInput, UpdateHomeInput } from '@thms/shared';
 
 export function formatAddress(home: { address1: string; address2?: string | null; city: string; state: string; zipCode: string }) {
@@ -26,12 +26,6 @@ export async function createHome(userId: string, data: CreateHomeInput) {
   });
   await UserHomeManager.create({ userId, homeId: home.id, role: 'OWNER' });
   PermissionService.set(userId, home.id);
-  return { ...home, fullAddress: formatAddress(home) };
-}
-
-export async function getHome(homeId: string) {
-  const home = await HomeManager.findById(homeId);
-  if (!home) throw new NotFoundError('Home');
   return { ...home, fullAddress: formatAddress(home) };
 }
 

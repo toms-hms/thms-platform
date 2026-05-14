@@ -1,5 +1,20 @@
 import { z } from 'zod';
 import { JobStatus, JobContractorStatus, JobIntent, TradeCategory } from '@thms/shared';
+import type { TypedRequest } from '@/middleware/auth.middleware';
+
+// Route params — single item
+export const JobSchema = z.object({ jobId: z.string().min(1) });
+// Route params — parent-scoped collection
+export const HomeJobsSchema = z.object({ homeId: z.string().min(1) });
+// Query params — list
+export const JobsSchema = z.object({
+  status: z.nativeEnum(JobStatus).optional(),
+  category: z.nativeEnum(TradeCategory).optional(),
+});
+
+export type JobRequest = TypedRequest<z.infer<typeof JobSchema>>;
+export type HomeJobsRequest = TypedRequest<z.infer<typeof HomeJobsSchema>, z.infer<typeof JobsSchema>>;
+export type JobsRequest = TypedRequest<Record<string, string>, z.infer<typeof JobsSchema>>;
 
 const CategorySuggestionSchema = z.object({
   category: z.nativeEnum(TradeCategory),

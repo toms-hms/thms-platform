@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import type { TypedRequest } from '@/middleware/auth.middleware';
+
+export type AuthRequest = TypedRequest;
 
 export const RegisterSchema = z.object({
   email: z.string().email(),

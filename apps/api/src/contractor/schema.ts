@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { TradeCategory } from '@thms/shared';
+import type { TypedRequest } from '@/middleware/auth.middleware';
+
+export const ContractorSchema = z.object({ contractorId: z.string().min(1) });
+export type ContractorRequest = TypedRequest<z.infer<typeof ContractorSchema>>;
+export type ContractorsRequest = TypedRequest;
 
 export const CreateContractorSchema = z.object({
   name:        z.string().min(1),

@@ -1,15 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
 import { verifyAccessToken } from '../utils/jwt.utils';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { UserRole } from '@thms/shared';
 
-export interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    email: string;
-    role: UserRole;
-  };
+type AuthenticatedUser = {
+  userId: string;
+  email: string;
+  role: UserRole;
+};
+
+declare global {
+  namespace Express {
+    interface Request {
+      user: AuthenticatedUser;
+    }
+  }
 }
+
+export interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUser;
+}
+
+/** Typed request with authenticated user and narrowed params, query, and body. */
+export type TypedRequest<
+  P extends ParamsDictionary = ParamsDictionary,
+  Q = Record<string, unknown>,
+  B = any
+> = Request<P, unknown, B, Q> & AuthenticatedRequest;
 
 export function authenticateJWT(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;

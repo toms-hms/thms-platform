@@ -2,10 +2,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { QuoteManager } from './models/QuoteManager';
 import type { CreateQuoteInput, UpdateQuoteInput } from '@thms/shared';
 
-export async function listQuotes(jobId: string) {
-  return QuoteManager.listForJob(jobId);
-}
-
 export async function createQuote(jobId: string, data: CreateQuoteInput) {
   return QuoteManager.create({
     id: createId(),

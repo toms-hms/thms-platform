@@ -1,19 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { NotFoundError } from '../utils/errors';
 import { CommunicationManager } from './models/CommunicationManager';
-
-export async function listCommunications(
-  jobId: string,
-  filters?: { contractorId?: string; needsReview?: boolean; direction?: string }
-) {
-  return CommunicationManager.listForJob(jobId, filters);
-}
-
-export async function getCommunication(communicationId: string) {
-  const comm = await CommunicationManager.findById(communicationId);
-  if (!comm) throw new NotFoundError('Communication');
-  return comm;
-}
 
 export async function updateCommunication(communicationId: string, data: { needsReview?: boolean; parsedSummary?: string }) {
   return CommunicationManager.update(communicationId, data);

@@ -97,38 +97,6 @@ describe('Jobs API', () => {
     });
   });
 
-  describe('POST /api/v1/homes/:homeId/jobs/category-suggestions', () => {
-    it('suggests categories with reasons', async () => {
-      const res = await request(app).post(`/api/v1/homes/${homeId}/jobs/category-suggestions`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          intent: 'IMPROVEMENT',
-          title: 'Bathroom remodel',
-          description: 'Replace shower tile, vanity, outlets, and lighting.',
-          selectedCategories: [TradeCategory.GENERAL_CONTRACTING],
-        });
-      expect(res.status).toBe(200);
-      expect(res.body.data.suggestions).toEqual(expect.arrayContaining([
-        expect.objectContaining({ category: TradeCategory.PLUMBING, reason: expect.any(String) }),
-        expect.objectContaining({ category: TradeCategory.ELECTRICAL, reason: expect.any(String) }),
-        expect.objectContaining({ category: TradeCategory.GENERAL_CONTRACTING, reason: expect.any(String) }),
-      ]));
-    });
-
-    it('401 without token', async () => {
-      const res = await request(app).post(`/api/v1/homes/${homeId}/jobs/category-suggestions`)
-        .send({ intent: 'ISSUE', title: 'Leak', description: 'Water under sink' });
-      expect(res.status).toBe(401);
-    });
-
-    it('403 for non-member', async () => {
-      const res = await request(app).post(`/api/v1/homes/${homeId}/jobs/category-suggestions`)
-        .set('Authorization', `Bearer ${otherToken}`)
-        .send({ intent: 'ISSUE', title: 'Leak', description: 'Water under sink' });
-      expect(res.status).toBe(403);
-    });
-  });
-
   describe('GET /api/v1/homes/:homeId/jobs', () => {
     it('lists jobs for home', async () => {
       const res = await request(app).get(`/api/v1/homes/${homeId}/jobs`).set('Authorization', `Bearer ${token}`);

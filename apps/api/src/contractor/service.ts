@@ -22,14 +22,9 @@ export async function createContractor(data: CreateContractorInput) {
   return withZips;
 }
 
-/** Returns the contractor by ID, throwing NotFoundError if not found. */
-export async function getContractor(contractorId: string) {
-  return ContractorManager.get({ id: contractorId });
-}
-
 /** Updates the contractor's fields and zip codes. Returns the updated record with zip codes attached. */
 export async function updateContractor(contractorId: string, data: Partial<CreateContractorInput>) {
-  await getContractor(contractorId);
+  await ContractorManager.get({ id: contractorId });
   const { zipCodes, ...rest } = data;
   const updated = await ContractorManager.update(contractorId, rest, zipCodes);
   const [withZips] = await attachZipCodes([updated]);
@@ -38,7 +33,7 @@ export async function updateContractor(contractorId: string, data: Partial<Creat
 
 /** Promotes a contractor to isGlobal: true. Admin only. */
 export async function promoteContractor(contractorId: string) {
-  await getContractor(contractorId);
+  await ContractorManager.get({ id: contractorId });
   const promoted = await ContractorManager.promote(contractorId);
   const [withZips] = await attachZipCodes([promoted]);
   return withZips;
@@ -46,6 +41,6 @@ export async function promoteContractor(contractorId: string) {
 
 /** Deletes the contractor, throwing NotFoundError if not found. */
 export async function deleteContractor(contractorId: string) {
-  await getContractor(contractorId);
+  await ContractorManager.get({ id: contractorId });
   await ContractorManager.delete(contractorId);
 }

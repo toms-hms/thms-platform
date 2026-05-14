@@ -1,5 +1,21 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+/** Builds a URL with query params, handling arrays as repeated keys (e.g. foo[]=1&foo[]=2 → foo=1&foo=2). */
+export function buildUrl(path: string, params?: Record<string, string | string[] | undefined>): string {
+  if (!params) return path;
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      value.forEach((v) => qs.append(key, v));
+    } else {
+      qs.set(key, value);
+    }
+  }
+  const queryString = qs.toString();
+  return queryString ? `${path}?${queryString}` : path;
+}
+
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');

@@ -84,11 +84,6 @@ export async function handleMicrosoftCallback(code: string, userId: string) {
   });
 }
 
-export async function listIntegrations(userId: string) {
-  const list = await IntegrationManager.listForUser(userId);
-  return list.map((i) => ({ id: i.id, type: i.type, provider: i.provider, email: i.email, status: 'CONNECTED', scopes: i.scopes, createdAt: i.createdAt, updatedAt: i.updatedAt }));
-}
-
 export async function disconnectIntegration(integrationId: string, userId: string) {
   const integration = await IntegrationManager.findById(integrationId);
   if (!integration || integration.userId !== userId) throw new NotFoundError('Integration');

@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import type { TypedRequest } from '@/middleware/auth.middleware';
+
+export const HomeSchema = z.object({ homeId: z.string().min(1) });
+export type HomeRequest = TypedRequest<z.infer<typeof HomeSchema>>;
+export type HomesRequest = TypedRequest;
 
 export const CreateHomeSchema = z.object({
   name: z.string().min(1),

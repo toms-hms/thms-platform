@@ -19,16 +19,31 @@ Load context on demand — do not load both unless the task spans both apps:
 - Frontend work: read `.ai/context/web.md`
 
 ## Skills
-Detailed how-to guides for common task types:
-- New API module: `.ai/skills/new-api-module.md`
-- New web page: `.ai/skills/new-web-page.md`
-- Testing pattern: `.ai/skills/testing.md`
-- Permissioning pattern: `.ai/skills/permissioning.md`
-- API route contracts: `.ai/skills/api-route.md`
-- Web query contracts: `.ai/skills/web-query.md`
-- API file structure: `.ai/skills/api-file-structure.md`
+Detailed how-to guides for common task types. Load only what the task requires.
+
+**Shared / cross-cutting**
 - AI file structure: `.ai/skills/ai-structure.md`
-- Migrations: `.ai/skills/migrations.md`
+- Shared package types (`@thms/shared`): `.ai/skills/shared-types.md`
+
+**Backend (API)**
+- File structure & module layout: `.ai/skills/api/file-structure.md`
+- Drizzle model / table definition: `.ai/skills/api/model.md`
+- Zod schema: `.ai/skills/api/schema.md`
+- Service layer: `.ai/skills/api/service.md`
+- Route handlers: `.ai/skills/api/route.md`
+- Manager (DB queries, predicates): `.ai/skills/api/manager.md`
+- Permissioning: `.ai/skills/api/permissioning.md`
+- Testing & factories: `.ai/skills/api/testing.md`
+- Test factories: `.ai/skills/api/factory.md`
+- Migrations: `.ai/skills/api/migrations.md`
+- AI service / OpenAI tool use: `.ai/skills/api/ai-service.md`
+
+**Frontend (Web)**
+- Page (Next.js App Router): `.ai/skills/web/page.md`
+- Component: `.ai/skills/web/component.md`
+- Custom hook: `.ai/skills/web/hook.md`
+- Form handling: `.ai/skills/web/form.md`
+- Query helpers & API contracts: `.ai/skills/web/query.md`
 
 ## Memory
 Consult `.claude/memory/MEMORY.md` for the index of what has been built. Load individual files only when relevant.

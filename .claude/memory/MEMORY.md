@@ -1,5 +1,7 @@
 # Memory Index
 
+- [THM-20 Skill Audit](thm-20_skill-audit.md) — Patterns established during skill review: TypedRequest, homeJobRouter, schema naming, service=mutations only, buildUrl; two pending code changes
+
 - [Job Diagnosis & Management Tool](job_diagnosis_management.md) — Full product spec for the guided maintenance workflow — wizard, AI diagnostic, contractor outreach, job detail dashboard
 - [Permission Architecture](permissions_architecture.md) — Decisions made on the permissioning system — hasPermission pattern, caching strategy, route design
 - [Manager Architecture](manager_architecture.md) — filter/attach split, cross-module imports, JOIN vs separate queries, optional query pattern, in-memory filtering prohibition

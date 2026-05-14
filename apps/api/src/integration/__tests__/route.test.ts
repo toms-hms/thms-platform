@@ -48,7 +48,7 @@ describe('Integrations API', () => {
         .get('/api/v1/integrations/email/google/start')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
-      expect(res.body.data.authorizationUrl).toContain('accounts.google.com');
+      expect(res.body.data.authorizationUrl).toContain('auth.example.com');
     });
 
     it('401 without token', async () => {

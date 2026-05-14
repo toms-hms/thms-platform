@@ -40,7 +40,7 @@ describe('Quotes API', () => {
     token = await loginAs('test-quote-route@example.com');
     otherToken = await loginAs('test-quote-route-other@example.com');
     const home = await homeFactory.create({}, { transient: { userId: user.id } });
-    const job = await jobFactory.create({}, { transient: { homeId: home.id, userId: user.id } });
+    const job = await jobFactory.create({ homeId: home.id, createdByUserId: user.id });
     const contractor = await contractorFactory.create();
     await jobContractorFactory.create({}, { transient: { jobId: job.id, contractorId: contractor.id } });
     jobId = job.id;

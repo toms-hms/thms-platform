@@ -2,6 +2,8 @@ import { db } from '@/db';
 import { users } from '@/auth/models/User';
 import { homes } from '@/home/models/Home';
 import { userHomes } from '@/home/models/UserHome';
+import { jobs } from '@/job/models/Job';
+import { communications } from '../models/Communication';
 import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
@@ -15,7 +17,12 @@ async function cleanup() {
   const testUsers = await db.select().from(users).where(like(users.email, `${EMAIL_NS}%`));
   for (const u of testUsers) {
     const uhs = await db.select().from(userHomes).where(eq(userHomes.userId, u.id));
-    if (uhs.length) await db.delete(homes).where(inArray(homes.id, uhs.map((uh) => uh.homeId)));
+    if (uhs.length) {
+      const homeIds = uhs.map((uh) => uh.homeId);
+      const testJobs = await db.select().from(jobs).where(inArray(jobs.homeId, homeIds));
+      if (testJobs.length) await db.delete(communications).where(inArray(communications.jobId, testJobs.map((j) => j.id)));
+      await db.delete(homes).where(inArray(homes.id, homeIds));
+    }
   }
   await db.delete(users).where(like(users.email, `${EMAIL_NS}%`));
 }

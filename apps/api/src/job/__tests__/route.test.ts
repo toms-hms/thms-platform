@@ -200,7 +200,7 @@ describe('Jobs API', () => {
   describe('DELETE /api/v1/jobs/:jobId', () => {
     it('deletes a job', async () => {
       const user = await db.select().from(users).where(like(users.email, 'test-job-route@example.com')).limit(1);
-      const extraJob = await jobFactory.create({}, { transient: { homeId, userId: user[0].id } });
+      const extraJob = await jobFactory.create({ homeId, createdByUserId: user[0].id });
       const res = await request(app).delete(`/api/v1/jobs/${extraJob.id}`).set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
     });

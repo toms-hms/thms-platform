@@ -28,7 +28,15 @@ export const IntegrationManager = {
       .values({ userId, provider, ...data })
       .onConflictDoUpdate({
         target: [integrations.userId, integrations.provider],
-        set: { ...data, updatedAt: new Date() },
+        set: {
+          type: data.type,
+          accessTokenEnc: data.accessTokenEnc,
+          refreshTokenEnc: data.refreshTokenEnc,
+          tokenExpiresAt: data.tokenExpiresAt,
+          email: data.email,
+          scopes: data.scopes,
+          updatedAt: new Date(),
+        },
       })
       .returning();
     return integration;

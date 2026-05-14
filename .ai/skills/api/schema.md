@@ -18,13 +18,18 @@ All request validation goes in `src/{module}/schema.ts`. The file exports Zod sc
 | Update body | `UpdateXSchema` | `UpdateJobSchema` |
 | Nested sub-object | descriptive name | `AiSessionSchema` |
 
-Request types are derived from schemas via `TypedRequest` and exported alongside them:
+Request types are derived from schemas via `TypedRequest` and exported alongside them. Name request types after the route contract, not just the resource. **Every GET handler request type starts with `Get`** so reads are easy to distinguish from mutation contracts.
 
-| Schema | Request type |
-|--------|-------------|
-| `JobSchema` | `JobRequest` |
-| `HomeJobsSchema` | `HomeJobsRequest` |
-| `JobsSchema` | `JobsRequest` |
+| Route | Schema input | Request type |
+|-------|--------------|--------------|
+| `GET /jobs/:jobId` | `JobSchema` params | `GetJobRequest` |
+| `GET /homes/:homeId/jobs` | `HomeJobsSchema` params + `JobsSchema` query | `GetHomeJobsRequest` |
+| `GET /jobs` | `JobsSchema` query | `GetJobsRequest` |
+| `POST /homes/:homeId/jobs` | `HomeJobsSchema` params + `CreateJobSchema` body | `CreateHomeJobRequest` |
+| `PATCH /jobs/:jobId` | `JobSchema` params + `UpdateJobSchema` body | `UpdateJobRequest` |
+| `DELETE /jobs/:jobId` | `JobSchema` params | `DeleteJobRequest` |
+
+Use the same pattern for other modules: `GetContractorsRequest`, `GetContractorRequest`, `CreateContractorRequest`, `UpdateContractorRequest`, `DeleteContractorRequest`, and parent-scoped reads like `GetContractorJobsRequest`.
 
 ## Params and query schemas
 
@@ -33,7 +38,6 @@ import { TypedRequest } from '@/middleware/auth.middleware';
 
 // Route params — single item
 export const JobSchema = z.object({ jobId: z.string() });
-export type JobRequest = TypedRequest<z.infer<typeof JobSchema>>;
 
 // Route params — parent-scoped collection
 export const HomeJobsSchema = z.object({ homeId: z.string() });
@@ -44,9 +48,23 @@ export const JobsSchema = z.object({
   category: z.nativeEnum(TradeCategory).optional(),
 });
 
-// Composed request types
-export type HomeJobsRequest = TypedRequest<z.infer<typeof HomeJobsSchema>, z.infer<typeof JobsSchema>>;
-export type JobsRequest     = TypedRequest<{}, z.infer<typeof JobsSchema>>;
+// GET request types
+export type GetJobRequest      = TypedRequest<z.infer<typeof JobSchema>>;
+export type GetHomeJobsRequest = TypedRequest<z.infer<typeof HomeJobsSchema>, z.infer<typeof JobsSchema>>;
+export type GetJobsRequest     = TypedRequest<{}, z.infer<typeof JobsSchema>>;
+
+// Mutation request types
+export type CreateHomeJobRequest = TypedRequest<
+  z.infer<typeof HomeJobsSchema>,
+  {},
+  z.infer<typeof CreateJobSchema>
+>;
+export type UpdateJobRequest = TypedRequest<
+  z.infer<typeof JobSchema>,
+  {},
+  z.infer<typeof UpdateJobSchema>
+>;
+export type DeleteJobRequest = TypedRequest<z.infer<typeof JobSchema>>;
 ```
 
 ## Using shared enums

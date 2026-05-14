@@ -45,7 +45,7 @@ Detailed how-to guides for common task types. Load only what the task requires.
 - Component: `.ai/skills/web/component.md`
 - Custom hook: `.ai/skills/web/hook.md`
 - Form handling: `.ai/skills/web/form.md`
-- Query helpers & API contracts: `.ai/skills/web/query.md`
+- API client (queries & mutations): `.ai/skills/web/api-client.md`
 
 ## Memory
 Consult `.claude/memory/MEMORY.md` for the index of what has been built. Load individual files only when relevant.

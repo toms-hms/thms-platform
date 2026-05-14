@@ -6,8 +6,8 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
+import { aiGenerationFactory } from '../factories/AIGeneration.factory';
 import { AIGenerationManager } from '../models/AIGenerationManager';
-import { createId } from '@paralleldrive/cuid2';
 
 const EMAIL_NS = 'test-ai-gen-manager';
 
@@ -37,17 +37,9 @@ describe('AIGenerationManager', () => {
 
   describe('create / update / listForJob', () => {
     it('creates, updates, and lists AI generations', async () => {
-      const gen = await AIGenerationManager.create({
-        id: createId(),
+      const gen = await aiGenerationFactory.create({
         jobId,
-        originalImageUrl: null,
-        prompt: 'Make it green',
-        generatedImageUrl: null,
-        provider: 'openai',
-        status: 'PENDING',
-        metadata: null,
         createdByUserId: userId,
-        updatedAt: new Date(),
       });
       expect(gen.id).toBeDefined();
       expect(gen.status).toBe('PENDING');

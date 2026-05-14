@@ -3,9 +3,8 @@ import { users } from '@/auth/models/User';
 import { integrations } from '../models/Integration';
 import { like, eq } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
+import { integrationFactory } from '../factories/Integration.factory';
 import { IntegrationManager } from '../models/IntegrationManager';
-import { createId } from '@paralleldrive/cuid2';
-import { encrypt } from '@/utils/crypto.utils';
 
 const EMAIL_NS = 'test-integration-manager';
 
@@ -30,16 +29,7 @@ describe('IntegrationManager', () => {
 
   describe('listForUser', () => {
     it('returns integrations for the user', async () => {
-      await IntegrationManager.upsertByProvider(userId, 'OPENAI', {
-        id: createId(),
-        type: 'AI',
-        accessTokenEnc: encrypt('test-key'),
-        refreshTokenEnc: null,
-        tokenExpiresAt: null,
-        email: null,
-        scopes: [],
-        updatedAt: new Date(),
-      });
+      await integrationFactory.create({ userId, provider: 'OPENAI', type: 'AI' });
       const list = await IntegrationManager.listForUser(userId);
       expect(list.some((i) => i.userId === userId)).toBe(true);
     });
@@ -47,41 +37,19 @@ describe('IntegrationManager', () => {
 
   describe('upsertByProvider', () => {
     it('creates or updates an integration', async () => {
-      const first = await IntegrationManager.upsertByProvider(userId, 'OPENAI', {
-        id: createId(),
-        type: 'AI',
-        accessTokenEnc: encrypt('key-1'),
-        refreshTokenEnc: null,
-        tokenExpiresAt: null,
-        email: null,
-        scopes: [],
-        updatedAt: new Date(),
-      });
-      const second = await IntegrationManager.upsertByProvider(userId, 'OPENAI', {
-        id: createId(),
-        type: 'AI',
-        accessTokenEnc: encrypt('key-2'),
-        refreshTokenEnc: null,
-        tokenExpiresAt: null,
-        email: null,
-        scopes: [],
-        updatedAt: new Date(),
-      });
+      const first = await integrationFactory.create({ userId, provider: 'OPENAI', type: 'AI' });
+      const second = await integrationFactory.create({ userId, provider: 'OPENAI', type: 'AI' });
       expect(second.id).toBe(first.id);
     });
   });
 
   describe('delete', () => {
     it('deletes an integration', async () => {
-      const integration = await IntegrationManager.upsertByProvider(userId, 'GOOGLE', {
-        id: createId(),
+      const integration = await integrationFactory.create({
+        userId,
+        provider: 'GOOGLE',
         type: 'EMAIL',
-        accessTokenEnc: encrypt('token'),
-        refreshTokenEnc: null,
-        tokenExpiresAt: null,
         email: 'test@gmail.com',
-        scopes: [],
-        updatedAt: new Date(),
       });
       await IntegrationManager.delete(integration.id);
       const found = await IntegrationManager.findById(integration.id);

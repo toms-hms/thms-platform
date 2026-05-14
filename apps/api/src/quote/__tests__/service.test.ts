@@ -54,7 +54,7 @@ describe('quote/service', () => {
 
   describe('updateQuote', () => {
     it('updates quote status', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       const updated = await quoteService.updateQuote(quote.id, { status: QuoteStatus.CONFIRMED });
       expect(updated.status).toBe(QuoteStatus.CONFIRMED);
     });
@@ -62,7 +62,7 @@ describe('quote/service', () => {
 
   describe('deleteQuote', () => {
     it('deletes the quote', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       await quoteService.deleteQuote(quote.id);
       const found = await QuoteManager.findById(quote.id);
       expect(found).toBeUndefined();

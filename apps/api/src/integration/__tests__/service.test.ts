@@ -3,10 +3,9 @@ import { users } from '@/auth/models/User';
 import { integrations } from '../models/Integration';
 import { like, eq } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
+import { integrationFactory } from '../factories/Integration.factory';
 import * as integrationService from '../service';
 import { IntegrationManager } from '../models/IntegrationManager';
-import { createId } from '@paralleldrive/cuid2';
-import { encrypt } from '@/utils/crypto.utils';
 
 const EMAIL_NS = 'test-integration-service';
 
@@ -42,15 +41,11 @@ describe('integration/service', () => {
 
   describe('disconnectIntegration', () => {
     it('deletes the integration', async () => {
-      const integration = await IntegrationManager.upsertByProvider(userId, 'GOOGLE', {
-        id: createId(),
+      const integration = await integrationFactory.create({
+        userId,
+        provider: 'GOOGLE',
         type: 'EMAIL',
-        accessTokenEnc: encrypt('token'),
-        refreshTokenEnc: null,
-        tokenExpiresAt: null,
         email: `${EMAIL_NS}@gmail.com`,
-        scopes: [],
-        updatedAt: new Date(),
       });
       await integrationService.disconnectIntegration(integration.id, userId);
       const found = await IntegrationManager.findById(integration.id);
@@ -59,16 +54,7 @@ describe('integration/service', () => {
 
     it('throws if user does not own the integration', async () => {
       const other = await userFactory.create({ email: `${EMAIL_NS}-other@example.com` });
-      const integration = await IntegrationManager.upsertByProvider(other.id, 'OPENAI', {
-        id: createId(),
-        type: 'AI',
-        accessTokenEnc: encrypt('key'),
-        refreshTokenEnc: null,
-        tokenExpiresAt: null,
-        email: null,
-        scopes: [],
-        updatedAt: new Date(),
-      });
+      const integration = await integrationFactory.create({ userId: other.id, provider: 'OPENAI', type: 'AI' });
       await expect(integrationService.disconnectIntegration(integration.id, userId)).rejects.toThrow();
     });
   });

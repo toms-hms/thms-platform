@@ -8,8 +8,8 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
+import { communicationFactory } from '../factories/Communication.factory';
 import { CommunicationManager } from '../models/CommunicationManager';
-import { createId } from '@paralleldrive/cuid2';
 
 const EMAIL_NS = 'test-comm-manager';
 
@@ -25,26 +25,6 @@ async function cleanup() {
     }
   }
   await db.delete(users).where(like(users.email, `${EMAIL_NS}%`));
-}
-
-async function createComm(jobId: string) {
-  return CommunicationManager.create({
-    id: createId(),
-    jobId,
-    contractorId: null,
-    channel: 'EMAIL',
-    direction: 'SENT',
-    subject: 'Test Subject',
-    bodyText: 'Body',
-    bodyHtml: null,
-    externalThreadId: null,
-    externalMessageId: null,
-    sentAt: new Date(),
-    receivedAt: null,
-    parsedSummary: null,
-    needsReview: false,
-    updatedAt: new Date(),
-  });
 }
 
 describe('CommunicationManager', () => {
@@ -67,12 +47,12 @@ describe('CommunicationManager', () => {
 
   describe('hasPermission', () => {
     it('returns true for job owner', async () => {
-      const comm = await createComm(jobId);
+      const comm = await communicationFactory.create({ jobId });
       expect(await CommunicationManager.hasPermission(userId, comm.id)).toBe(true);
     });
 
     it('returns false for non-owner', async () => {
-      const comm = await createComm(jobId);
+      const comm = await communicationFactory.create({ jobId });
       expect(await CommunicationManager.hasPermission(otherUserId, comm.id)).toBe(false);
     });
 
@@ -83,17 +63,19 @@ describe('CommunicationManager', () => {
 
   describe('listForJob', () => {
     it('returns communications for the job', async () => {
-      const comm = await createComm(jobId);
+      const comm = await communicationFactory.create({ jobId });
       const result = await CommunicationManager.listForJob(jobId);
       expect(result.some((r) => r.communication.id === comm.id)).toBe(true);
     });
 
     it('filters by needsReview', async () => {
-      await CommunicationManager.create({
-        id: createId(), jobId, contractorId: null, channel: 'EMAIL', direction: 'RECEIVED',
-        subject: 'Review', bodyText: 'Body', bodyHtml: null, externalThreadId: null,
-        externalMessageId: null, sentAt: null, receivedAt: new Date(),
-        parsedSummary: null, needsReview: true, updatedAt: new Date(),
+      await communicationFactory.create({
+        jobId,
+        direction: 'RECEIVED',
+        subject: 'Review',
+        sentAt: null,
+        receivedAt: new Date(),
+        needsReview: true,
       });
       const result = await CommunicationManager.listForJob(jobId, { needsReview: true });
       expect(result.every((r) => r.communication.needsReview === true)).toBe(true);
@@ -102,7 +84,7 @@ describe('CommunicationManager', () => {
 
   describe('create / update', () => {
     it('creates and updates a communication', async () => {
-      const comm = await createComm(jobId);
+      const comm = await communicationFactory.create({ jobId });
       expect(comm.id).toBeDefined();
 
       const updated = await CommunicationManager.update(comm.id, { needsReview: true });

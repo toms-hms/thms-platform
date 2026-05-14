@@ -45,12 +45,12 @@ describe('QuoteManager', () => {
 
   describe('hasPermission', () => {
     it('returns true for job owner', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       expect(await QuoteManager.hasPermission(userId, quote.id)).toBe(true);
     });
 
     it('returns false for non-owner', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       expect(await QuoteManager.hasPermission(otherUserId, quote.id)).toBe(false);
     });
 
@@ -61,7 +61,7 @@ describe('QuoteManager', () => {
 
   describe('create / update / delete', () => {
     it('creates, updates, and deletes a quote', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       expect(quote.id).toBeDefined();
 
       const updated = await QuoteManager.update(quote.id, { status: QuoteStatus.CONFIRMED });
@@ -74,7 +74,7 @@ describe('QuoteManager', () => {
 
   describe('listForUser', () => {
     it('returns quotes for jobs the user has access to', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       const result = await QuoteManager.listForUser(userId, UserRole.USER, jobId);
       expect(result.some((r) => r.quote.id === quote.id)).toBe(true);
     });

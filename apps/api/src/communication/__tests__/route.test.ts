@@ -10,8 +10,7 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { CommunicationManager } from '../models/CommunicationManager';
-import { createId } from '@paralleldrive/cuid2';
+import { communicationFactory } from '../factories/Communication.factory';
 
 const EMAIL_NS = 'test-comm-route';
 
@@ -45,23 +44,7 @@ describe('Communications API', () => {
     const home = await homeFactory.create({}, { transient: { userId: user.id } });
     const job = await jobFactory.create({ homeId: home.id, createdByUserId: user.id });
 
-    const comm = await CommunicationManager.create({
-      id: createId(),
-      jobId: job.id,
-      contractorId: null,
-      channel: 'EMAIL',
-      direction: 'SENT',
-      subject: 'Test Subject',
-      bodyText: 'Test body',
-      bodyHtml: null,
-      externalThreadId: null,
-      externalMessageId: null,
-      sentAt: new Date(),
-      receivedAt: null,
-      parsedSummary: null,
-      needsReview: false,
-      updatedAt: new Date(),
-    });
+    const comm = await communicationFactory.create({ jobId: job.id, bodyText: 'Test body' });
     commId = comm.id;
   });
 

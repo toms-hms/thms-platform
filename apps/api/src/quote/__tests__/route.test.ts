@@ -42,7 +42,7 @@ describe('Quotes API', () => {
     const home = await homeFactory.create({}, { transient: { userId: user.id } });
     const job = await jobFactory.create({ homeId: home.id, createdByUserId: user.id });
     const contractor = await contractorFactory.create();
-    await jobContractorFactory.create({}, { transient: { jobId: job.id, contractorId: contractor.id } });
+    await jobContractorFactory.create({ jobId: job.id, contractorId: contractor.id });
     jobId = job.id;
     contractorId = contractor.id;
   });
@@ -90,7 +90,7 @@ describe('Quotes API', () => {
 
   describe('PATCH /api/v1/quotes/:quoteId', () => {
     it('confirms a draft quote', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       const res = await request(app).patch(`/api/v1/quotes/${quote.id}`)
         .set('Authorization', `Bearer ${token}`)
         .send({ status: 'CONFIRMED' });
@@ -101,7 +101,7 @@ describe('Quotes API', () => {
 
   describe('DELETE /api/v1/quotes/:quoteId', () => {
     it('deletes a quote', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       const res = await request(app).delete(`/api/v1/quotes/${quote.id}`)
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);

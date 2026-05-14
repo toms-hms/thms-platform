@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
 import { JobContractorManager } from '@/job/models/JobContractorManager';
-import { JobContractorStatus } from '@thms/shared';
+import { JobContractorStatus } from '@/job/models/JobContractor';
 import type { JobContractor } from '@/job/models/JobContractor';
 
 export const jobContractorFactory = Factory.define<JobContractor>(({ onCreate, params }) => {

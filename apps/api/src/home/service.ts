@@ -4,14 +4,15 @@ import { HomeManager } from './models/HomeManager';
 import { UserHomeManager } from './models/UserHomeManager';
 import { UserManager } from '@/auth/models/UserManager';
 import { PermissionService } from '@/permissions/PermissionService';
-import type { CreateHomeInput, UpdateHomeInput } from '@thms/shared';
+import type { z } from 'zod';
+import { CreateHomeSchema, UpdateHomeSchema } from './schema';
 
 export function formatAddress(home: { address1: string; address2?: string | null; city: string; state: string; zipCode: string }) {
   const parts = [home.address1, home.address2].filter(Boolean);
   return `${parts.join(', ')}, ${home.city}, ${home.state} ${home.zipCode}`;
 }
 
-export async function createHome(userId: string, data: CreateHomeInput) {
+export async function createHome(userId: string, data: z.input<typeof CreateHomeSchema>) {
   const home = await HomeManager.create({
     id: createId(),
     name: data.name,
@@ -29,7 +30,7 @@ export async function createHome(userId: string, data: CreateHomeInput) {
   return { ...home, fullAddress: formatAddress(home) };
 }
 
-export async function updateHome(homeId: string, data: UpdateHomeInput) {
+export async function updateHome(homeId: string, data: z.infer<typeof UpdateHomeSchema>) {
   const updated = await HomeManager.update(homeId, { ...data, updatedAt: new Date() });
   return { ...updated, fullAddress: formatAddress(updated) };
 }

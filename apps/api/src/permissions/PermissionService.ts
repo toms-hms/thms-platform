@@ -1,4 +1,4 @@
-import { UserRole } from '@thms/shared';
+import { UserRole } from '@/auth/models/User';
 
 export interface PermissionedManager {
   hasPermission(userId: string, resourceId: string): Promise<boolean>;

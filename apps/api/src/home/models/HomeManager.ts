@@ -2,7 +2,7 @@ import { eq, desc } from 'drizzle-orm';
 import { db } from '../../db';
 import { homes, type Home, type NewHome } from './Home';
 import { NotFoundError } from '../../utils/errors';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '@/auth/models/User';
 
 export const HomeManager = {
   async findAll(): Promise<Home[]> {

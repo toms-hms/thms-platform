@@ -18,3 +18,6 @@ export const integrations = pgTable('Integration', {
 
 export type Integration    = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+
+export enum IntegrationType { EMAIL = 'EMAIL', AI = 'AI' }
+export enum IntegrationProvider { GOOGLE = 'GOOGLE', MICROSOFT = 'MICROSOFT', OPENAI = 'OPENAI' }

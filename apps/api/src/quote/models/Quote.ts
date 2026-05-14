@@ -18,3 +18,5 @@ export const quotes = pgTable('Quote', {
 
 export type Quote    = typeof quotes.$inferSelect;
 export type NewQuote = typeof quotes.$inferInsert;
+
+export enum QuoteStatus { DRAFT = 'DRAFT', CONFIRMED = 'CONFIRMED' }

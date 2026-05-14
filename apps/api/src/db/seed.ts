@@ -7,7 +7,8 @@ import { homes } from '../home/models/Home';
 import { userHomes } from '../home/models/UserHome';
 import { contractors } from '../contractor/models/Contractor';
 import { jobs } from '../job/models/Job';
-import { TradeCategory, JobIntent } from '@thms/shared';
+import { JobIntent } from '../job/models/Job';
+import { TradeCategory } from '../contractor/models/Contractor';
 
 async function seed() {
   console.log('Seeding database...');

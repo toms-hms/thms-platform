@@ -24,3 +24,6 @@ export const communications = pgTable('Communication', {
 
 export type Communication    = typeof communications.$inferSelect;
 export type NewCommunication = typeof communications.$inferInsert;
+
+export enum CommunicationChannel { EMAIL = 'EMAIL' }
+export enum CommunicationDirection { SENT = 'SENT', RECEIVED = 'RECEIVED' }

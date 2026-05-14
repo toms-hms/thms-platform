@@ -1,8 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
 import { QuoteManager } from './models/QuoteManager';
-import type { CreateQuoteInput, UpdateQuoteInput } from '@thms/shared';
+import type { z } from 'zod';
+import { CreateQuoteSchema, UpdateQuoteSchema } from './schema';
 
-export async function createQuote(jobId: string, data: CreateQuoteInput) {
+export async function createQuote(jobId: string, data: z.infer<typeof CreateQuoteSchema>) {
   return QuoteManager.create({
     id: createId(),
     jobId,
@@ -15,7 +16,7 @@ export async function createQuote(jobId: string, data: CreateQuoteInput) {
   });
 }
 
-export async function updateQuote(quoteId: string, data: UpdateQuoteInput) {
+export async function updateQuote(quoteId: string, data: z.infer<typeof UpdateQuoteSchema>) {
   return QuoteManager.update(quoteId, data);
 }
 

@@ -3,7 +3,8 @@ import { contractors } from '../models/Contractor';
 import { like } from 'drizzle-orm';
 import { contractorFactory } from '../factories/Contractor.factory';
 import { ContractorManager } from '../models/ContractorManager';
-import { TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
+import { UserRole } from '@/auth/models/User';
 
 const NAME_PREFIX = 'Test MgrContractor';
 

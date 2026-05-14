@@ -7,7 +7,9 @@ import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
 import { JobManager } from '../models/JobManager';
-import { UserRole, TradeCategory, JobStatus } from '@thms/shared';
+import { JobStatus } from '@/job/models/Job';
+import { UserRole } from '@/auth/models/User';
+import { TradeCategory } from '@/contractor/models/Contractor';
 
 const EMAIL_NS = 'test-job-manager';
 

@@ -10,7 +10,7 @@ import { contractorFactory } from '@/contractor/factories/Contractor.factory';
 import { quoteFactory } from '../factories/Quote.factory';
 import * as quoteService from '../service';
 import { QuoteManager } from '../models/QuoteManager';
-import { QuoteStatus } from '@thms/shared';
+import { QuoteStatus } from '@/quote/models/Quote';
 
 const EMAIL_NS = 'test-quote-service';
 

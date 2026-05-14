@@ -3,7 +3,7 @@ import { db } from '../../db';
 import { quotes, type Quote, type NewQuote } from './Quote';
 import { contractors } from '../../contractor/models/Contractor';
 import { NotFoundError } from '../../utils/errors';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '../../auth/models/User';
 
 export const QuoteManager = {
   async listForJob(jobId: string) {

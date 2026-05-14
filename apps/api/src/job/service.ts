@@ -2,15 +2,18 @@ import { createId } from '@paralleldrive/cuid2';
 import { NotFoundError } from '@/utils/errors';
 import { JobManager } from './models/JobManager';
 import { JobContractorManager } from './models/JobContractorManager';
-import type { CreateJobInput, UpdateJobInput } from '@thms/shared';
-import { JobContractorStatus, JobIntent, TradeCategory } from '@thms/shared';
+import type { z } from 'zod';
+import { CreateJobSchema, UpdateJobSchema } from './schema';
+import { JobContractorStatus } from './models/JobContractor';
+import { JobIntent } from './models/Job';
+import { TradeCategory } from '@/contractor/models/Contractor';
 
 export interface TradeCategorySuggestion {
   category: TradeCategory;
   reason: string;
 }
 
-type CreateJobData = CreateJobInput & {
+type CreateJobData = z.infer<typeof CreateJobSchema> & {
   categories?: TradeCategory[];
   aiSession?: {
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -20,7 +23,7 @@ type CreateJobData = CreateJobInput & {
   } | null;
 };
 
-type UpdateJobData = Omit<UpdateJobInput, 'aiSession'> & {
+type UpdateJobData = Omit<z.infer<typeof UpdateJobSchema>, 'aiSession'> & {
   categories?: TradeCategory[];
   aiSession?: CreateJobData['aiSession'];
 };

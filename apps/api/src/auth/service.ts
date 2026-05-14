@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { createId } from '@paralleldrive/cuid2';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.utils';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../utils/errors';
-import { UserRole } from '@thms/shared';
+import { UserRole } from './models/User';
 import { UserManager } from './models/UserManager';
 
 export async function register(data: { email: string; password: string; firstName: string; lastName: string }) {

@@ -5,7 +5,7 @@ import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { HomeManager } from '../../home/models/HomeManager';
 import { PermissionService } from '../PermissionService';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '@/auth/models/User';
 
 async function cleanup() {
   await db.delete(users).where(like(users.email, 'test-permsvc%'));

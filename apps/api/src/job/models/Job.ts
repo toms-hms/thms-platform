@@ -21,3 +21,13 @@ export const jobs = pgTable('Job', {
 
 export type Job    = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
+
+export enum JobStatus {
+  DRAFT = 'DRAFT', PLANNING = 'PLANNING', REACHING_OUT = 'REACHING_OUT',
+  COMPARING_QUOTES = 'COMPARING_QUOTES', SCHEDULED = 'SCHEDULED',
+  IN_PROGRESS = 'IN_PROGRESS', AWAITING_PAYMENT = 'AWAITING_PAYMENT',
+  COMPLETED = 'COMPLETED',
+}
+export enum JobIntent {
+  ISSUE = 'ISSUE', IMPROVEMENT = 'IMPROVEMENT', RECURRING_WORK = 'RECURRING_WORK',
+}

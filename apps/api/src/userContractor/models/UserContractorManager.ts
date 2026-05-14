@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { contractors } from '@/contractor/models/Contractor';
 import { attachZipCodes, type ContractorWithRelations } from '@/contractor/models/ContractorManager';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '@/auth/models/User';
 import { userContractors, type UserContractor, type NewUserContractor } from './UserContractor';
 
 export type UserContractorWithContractor = UserContractor & {

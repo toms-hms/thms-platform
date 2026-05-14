@@ -2,7 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { Factory } from 'fishery';
 import { jobFactory } from '@/job/factories/Job.factory';
 import { CommunicationManager } from '@/communication/models/CommunicationManager';
-import { CommunicationChannel, CommunicationDirection } from '@thms/shared';
+import { CommunicationChannel, CommunicationDirection } from '@/communication/models/Communication';
 import type { Communication } from '@/communication/models/Communication';
 
 export const communicationFactory = Factory.define<Communication>(({ onCreate, params }) => {

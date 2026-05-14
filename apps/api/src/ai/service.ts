@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { JobIntent, AiSession } from '@thms/shared';
+import type { AiSession } from '@thms/shared';
+import { JobIntent } from '../job/models/Job';
 import { getDownloadUrl } from '../upload/service';
 import { s3Client, BUCKET_NAME } from '../config/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';

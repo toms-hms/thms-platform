@@ -15,3 +15,5 @@ export const users = pgTable('User', {
 
 export type User    = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export enum UserRole { ADMIN = 'ADMIN', USER = 'USER' }

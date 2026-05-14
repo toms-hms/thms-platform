@@ -8,7 +8,8 @@ import { userHomes } from '@/home/models/UserHome';
 import { inArray, like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
-import { TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
+import { UserRole } from '@/auth/models/User';
 
 async function cleanup() {
   const testUsers = await db

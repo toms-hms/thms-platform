@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
 import type {
   TypedRequest,
   TypedParamsRequest,

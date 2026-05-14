@@ -8,7 +8,8 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { JobIntent, TradeCategory } from '@thms/shared';
+import { JobIntent } from '@/job/models/Job';
+import { TradeCategory } from '@/contractor/models/Contractor';
 
 async function cleanup() {
   const testUsers = await db.select().from(users).where(like(users.email, 'test-job-route%'));

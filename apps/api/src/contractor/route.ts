@@ -12,7 +12,8 @@ import {
   CreateContractorSchema,
   UpdateContractorSchema,
 } from './schema';
-import { TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
+import { UserRole } from '@/auth/models/User';
 import * as contractorService from './service';
 
 const router = Router();

@@ -3,7 +3,7 @@ import { Factory } from 'fishery';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
 import { QuoteManager } from '@/quote/models/QuoteManager';
-import { QuoteStatus } from '@thms/shared';
+import { QuoteStatus } from '@/quote/models/Quote';
 import type { Quote } from '@/quote/models/Quote';
 
 export const quoteFactory = Factory.define<Quote>(({ onCreate, params, sequence }) => {

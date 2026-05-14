@@ -3,7 +3,7 @@ import { Factory } from 'fishery';
 import { userFactory } from '@/auth/factories/User.factory';
 import { IntegrationManager } from '@/integration/models/IntegrationManager';
 import { encrypt } from '@/utils/crypto.utils';
-import { IntegrationProvider, IntegrationType } from '@thms/shared';
+import { IntegrationProvider, IntegrationType } from '@/integration/models/Integration';
 import type { Integration } from '@/integration/models/Integration';
 
 export const integrationFactory = Factory.define<Integration>(({ onCreate, params }) => {

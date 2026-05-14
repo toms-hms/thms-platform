@@ -3,7 +3,7 @@ import type { ParamsDictionary } from 'express-serve-static-core';
 import type { z, ZodTypeAny } from 'zod';
 import { verifyAccessToken } from '../utils/jwt.utils';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '@/auth/models/User';
 
 type AuthenticatedUser = {
   userId: string;

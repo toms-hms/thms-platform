@@ -2,10 +2,11 @@ import { createId } from '@paralleldrive/cuid2';
 import { NotFoundError, ConflictError } from '@/utils/errors';
 import { ContractorManager } from '@/contractor/models/ContractorManager';
 import { attachContractor, UserContractorManager } from './models/UserContractorManager';
-import type { CreateUserContractorInput } from '@thms/shared';
+import type { z } from 'zod';
+import { CreateUserContractorSchema } from './schema';
 
 /** Adds a contractor to the user's rolodex. Creates a private contractor first if no contractorId is given. */
-export async function createUserContractor(userId: string, data: CreateUserContractorInput) {
+export async function createUserContractor(userId: string, data: z.infer<typeof CreateUserContractorSchema>) {
   let contractorId = data.contractorId;
 
   if (!contractorId) {

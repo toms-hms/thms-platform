@@ -3,7 +3,7 @@ import { db } from '../../db';
 import { jobContractors, type JobContractor, type NewJobContractor } from './JobContractor';
 import { contractors } from '../../contractor/models/Contractor';
 import { NotFoundError } from '../../utils/errors';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '../../auth/models/User';
 
 export const JobContractorManager = {
   async listForJob(jobId: string) {

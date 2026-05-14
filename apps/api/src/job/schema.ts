@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { JobStatus, JobContractorStatus, JobIntent, TradeCategory } from '@thms/shared';
+import { JobStatus, JobIntent } from './models/Job';
+import { JobContractorStatus } from './models/JobContractor';
+import { TradeCategory } from '@/contractor/models/Contractor';
 import type {
   TypedParamsRequest,
   TypedQueryRequest,

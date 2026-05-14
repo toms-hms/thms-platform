@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { QuoteStatus } from '@thms/shared';
+import { QuoteStatus } from '@/quote/models/Quote';
 import type {
   TypedParamsRequest,
   TypedParamsBodyRequest,

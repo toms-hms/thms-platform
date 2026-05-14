@@ -1,9 +1,10 @@
 import { createId } from '@paralleldrive/cuid2';
 import { attachZipCodes, ContractorManager } from './models/ContractorManager';
-import type { CreateContractorInput } from '@thms/shared';
+import type { z } from 'zod';
+import { CreateContractorSchema } from './schema';
 
 /** Creates a global contractor (isGlobal: true). Admin only. Returns contractor with zip codes attached. */
-export async function createContractor(data: CreateContractorInput) {
+export async function createContractor(data: z.infer<typeof CreateContractorSchema>) {
   const contractor = await ContractorManager.create(
     {
       id:          createId(),
@@ -23,7 +24,7 @@ export async function createContractor(data: CreateContractorInput) {
 }
 
 /** Updates the contractor's fields and zip codes. Returns the updated record with zip codes attached. */
-export async function updateContractor(contractorId: string, data: Partial<CreateContractorInput>) {
+export async function updateContractor(contractorId: string, data: Partial<z.infer<typeof CreateContractorSchema>>) {
   await ContractorManager.get({ id: contractorId });
   const { zipCodes, ...rest } = data;
   const updated = await ContractorManager.update(contractorId, rest, zipCodes);

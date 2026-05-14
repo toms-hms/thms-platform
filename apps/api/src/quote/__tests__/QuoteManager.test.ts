@@ -9,7 +9,8 @@ import { jobFactory } from '@/job/factories/Job.factory';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
 import { quoteFactory } from '../factories/Quote.factory';
 import { QuoteManager } from '../models/QuoteManager';
-import { UserRole, QuoteStatus } from '@thms/shared';
+import { QuoteStatus } from '@/quote/models/Quote';
+import { UserRole } from '@/auth/models/User';
 
 const EMAIL_NS = 'test-quote-manager';
 

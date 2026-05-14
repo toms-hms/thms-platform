@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
+import type { z, ZodTypeAny } from 'zod';
 import { verifyAccessToken } from '../utils/jwt.utils';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { UserRole } from '@thms/shared';
@@ -28,6 +29,21 @@ export type TypedRequest<
   Q = Record<string, unknown>,
   B = any
 > = Request<P, unknown, B, Q> & AuthenticatedRequest;
+
+export type TypedParamsRequest<P extends ZodTypeAny> =
+  TypedRequest<z.infer<P>>;
+
+export type TypedQueryRequest<Q extends ZodTypeAny> =
+  TypedRequest<{}, z.infer<Q>>;
+
+export type TypedParamsQueryRequest<P extends ZodTypeAny, Q extends ZodTypeAny> =
+  TypedRequest<z.infer<P>, z.infer<Q>>;
+
+export type TypedBodyRequest<B extends ZodTypeAny> =
+  TypedRequest<{}, {}, z.infer<B>>;
+
+export type TypedParamsBodyRequest<P extends ZodTypeAny, B extends ZodTypeAny> =
+  TypedRequest<z.infer<P>, {}, z.infer<B>>;
 
 export function authenticateJWT(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;

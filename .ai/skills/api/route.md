@@ -34,7 +34,7 @@ import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import {
-  HomeJobsSchema, JobSchema, JobsSchema,
+  GetHomeJobsSchema, GetJobSchema, GetJobsSchema, DeleteJobSchema,
   GetHomeJobsRequest, GetJobsRequest, GetJobRequest,
   CreateHomeJobRequest, UpdateJobRequest, DeleteJobRequest,
   CreateJobSchema, UpdateJobSchema,
@@ -55,7 +55,8 @@ homeJobRouter.use(authenticateJWT);
 
 homeJobRouter.get('/',
   permit(HomeManager, (req) => req.params.homeId),
-  validate(JobsSchema, 'query'),
+  validate(GetHomeJobsSchema, 'params'),
+  validate(GetJobsSchema, 'query'),
   async (req: GetHomeJobsRequest, res: Response, next: NextFunction) => {
     try {
       const { userId, role } = req.user;
@@ -67,6 +68,7 @@ homeJobRouter.get('/',
 
 homeJobRouter.post('/',
   permit(HomeManager, (req) => req.params.homeId),
+  validate(GetHomeJobsSchema, 'params'),
   validate(CreateJobSchema),
   async (req: CreateHomeJobRequest, res: Response, next: NextFunction) => {
     try {
@@ -82,7 +84,7 @@ export const jobRouter = Router();
 jobRouter.use(authenticateJWT);
 
 jobRouter.get('/',
-  validate(JobsSchema, 'query'),
+  validate(GetJobsSchema, 'query'),
   async (req: GetJobsRequest, res: Response, next: NextFunction) => {
     try {
       const { userId, role } = req.user;
@@ -94,6 +96,7 @@ jobRouter.get('/',
 
 // GET with relation assembly — call managers directly, no service wrapper
 jobRouter.get('/:jobId',
+  validate(GetJobSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   async (req: GetJobRequest, res: Response, next: NextFunction) => {
     try {
@@ -111,6 +114,7 @@ jobRouter.get('/:jobId',
 );
 
 jobRouter.patch('/:jobId',
+  validate(GetJobSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   validate(UpdateJobSchema),
   async (req: UpdateJobRequest, res: Response, next: NextFunction) => {
@@ -122,6 +126,7 @@ jobRouter.patch('/:jobId',
 );
 
 jobRouter.delete('/:jobId',
+  validate(DeleteJobSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
   async (req: DeleteJobRequest, res: Response, next: NextFunction) => {
     try {
@@ -153,6 +158,7 @@ Request type names describe the HTTP route contract:
 - Update handlers use `Update...Request`: `UpdateJobRequest` for `PATCH /jobs/:jobId`.
 - Delete handlers use `Delete...Request`: `DeleteJobRequest` for `DELETE /jobs/:jobId`.
 - Action handlers use the action name: `AssignContractorRequest`, `StartDiagnoseRequest`, `SendEmailRequest`.
+- GET schemas also start with `Get`: `GetJobSchema`, `GetJobsSchema`, `GetHomeJobsSchema`.
 
 Map HTTP input sources consistently:
 
@@ -176,7 +182,7 @@ Do not use one broad type like `JobRequest` or `ContractorsRequest` for every ha
 ```typescript
 // Good
 router.get('/',
-  validate(ContractorsSchema, 'query'),
+  validate(GetContractorsSchema, 'query'),
   async (req: GetContractorsRequest, res: Response, next: NextFunction) => {
     const result = await ContractorManager.filter(req.query);
     res.json({ data: result });

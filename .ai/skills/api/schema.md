@@ -11,60 +11,83 @@ All request validation goes in `src/{module}/schema.ts`. The file exports Zod sc
 
 | Export | Pattern | Example |
 |--------|---------|---------|
-| Route params — single item | `XSchema` | `JobSchema` |
-| Route params — parent-scoped | `ParentXsSchema` | `HomeJobsSchema` |
-| Query params — list | `XsSchema` | `JobsSchema` |
+| GET route params — single item | `GetXSchema` | `GetJobSchema` |
+| GET route params — parent-scoped | `GetParentXsSchema` | `GetHomeJobsSchema` |
+| GET query params — list | `GetXsSchema` | `GetJobsSchema` |
 | Create body | `CreateXSchema` | `CreateJobSchema` |
 | Update body | `UpdateXSchema` | `UpdateJobSchema` |
+| Delete route params | `DeleteXSchema` | `DeleteJobSchema` |
 | Nested sub-object | descriptive name | `AiSessionSchema` |
 
-Request types are derived from schemas via `TypedRequest` and exported alongside them. Name request types after the route contract, not just the resource. **Every GET handler request type starts with `Get`** so reads are easy to distinguish from mutation contracts.
+Request types are derived from schemas via request helper aliases and exported alongside them. Name schemas and request types after the route contract, not just the resource. **Every GET handler schema and request type starts with `Get`** so reads are easy to distinguish from mutation contracts.
 
 | Route | Schema input | Request type |
 |-------|--------------|--------------|
-| `GET /jobs/:jobId` | `JobSchema` params | `GetJobRequest` |
-| `GET /homes/:homeId/jobs` | `HomeJobsSchema` params + `JobsSchema` query | `GetHomeJobsRequest` |
-| `GET /jobs` | `JobsSchema` query | `GetJobsRequest` |
-| `POST /homes/:homeId/jobs` | `HomeJobsSchema` params + `CreateJobSchema` body | `CreateHomeJobRequest` |
-| `PATCH /jobs/:jobId` | `JobSchema` params + `UpdateJobSchema` body | `UpdateJobRequest` |
-| `DELETE /jobs/:jobId` | `JobSchema` params | `DeleteJobRequest` |
+| `GET /jobs/:jobId` | `GetJobSchema` params | `GetJobRequest` |
+| `GET /homes/:homeId/jobs` | `GetHomeJobsSchema` params + `GetJobsSchema` query | `GetHomeJobsRequest` |
+| `GET /jobs` | `GetJobsSchema` query | `GetJobsRequest` |
+| `POST /homes/:homeId/jobs` | `GetHomeJobsSchema` params + `CreateJobSchema` body | `CreateHomeJobRequest` |
+| `PATCH /jobs/:jobId` | `GetJobSchema` params + `UpdateJobSchema` body | `UpdateJobRequest` |
+| `DELETE /jobs/:jobId` | `DeleteJobSchema` params | `DeleteJobRequest` |
 
-Use the same pattern for other modules: `GetContractorsRequest`, `GetContractorRequest`, `CreateContractorRequest`, `UpdateContractorRequest`, `DeleteContractorRequest`, and parent-scoped reads like `GetContractorJobsRequest`.
+Use the same pattern for other modules: `GetContractorsSchema`/`GetContractorsRequest`, `GetContractorSchema`/`GetContractorRequest`, `CreateContractorSchema`/`CreateContractorRequest`, `UpdateContractorSchema`/`UpdateContractorRequest`, `DeleteContractorSchema`/`DeleteContractorRequest`, and parent-scoped reads like `GetContractorJobsSchema`/`GetContractorJobsRequest`.
+
+## Request Helpers
+
+`TypedRequest` is the low-level Express request shape. Schema files should prefer these schema-aware aliases from `@/middleware/auth.middleware`:
+
+```typescript
+import type {
+  TypedParamsRequest,
+  TypedQueryRequest,
+  TypedParamsQueryRequest,
+  TypedBodyRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
+```
+
+| Helper | Use for | Example |
+|--------|---------|---------|
+| `TypedParamsRequest<P>` | path params only | `GET /jobs/:jobId` |
+| `TypedQueryRequest<Q>` | query only | `GET /jobs?status=DRAFT` |
+| `TypedParamsQueryRequest<P, Q>` | path params + query | `GET /homes/:homeId/jobs?status=DRAFT` |
+| `TypedBodyRequest<B>` | body only | `POST /contractors` |
+| `TypedParamsBodyRequest<P, B>` | path params + body | `PATCH /jobs/:jobId` |
 
 ## Params and query schemas
 
 ```typescript
-import { TypedRequest } from '@/middleware/auth.middleware';
+import {
+  TypedParamsRequest,
+  TypedQueryRequest,
+  TypedParamsQueryRequest,
+  TypedBodyRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
 
 // Route params — single item
-export const JobSchema = z.object({ jobId: z.string() });
+export const GetJobSchema = z.object({ jobId: z.string() });
 
 // Route params — parent-scoped collection
-export const HomeJobsSchema = z.object({ homeId: z.string() });
+export const GetHomeJobsSchema = z.object({ homeId: z.string() });
 
 // Query params — list (shared by both routers)
-export const JobsSchema = z.object({
+export const GetJobsSchema = z.object({
   status:   z.nativeEnum(JobStatus).optional(),
   category: z.nativeEnum(TradeCategory).optional(),
 });
 
+export const DeleteJobSchema = GetJobSchema;
+
 // GET request types
-export type GetJobRequest      = TypedRequest<z.infer<typeof JobSchema>>;
-export type GetHomeJobsRequest = TypedRequest<z.infer<typeof HomeJobsSchema>, z.infer<typeof JobsSchema>>;
-export type GetJobsRequest     = TypedRequest<{}, z.infer<typeof JobsSchema>>;
+export type GetJobRequest      = TypedParamsRequest<typeof GetJobSchema>;
+export type GetHomeJobsRequest = TypedParamsQueryRequest<typeof GetHomeJobsSchema, typeof GetJobsSchema>;
+export type GetJobsRequest     = TypedQueryRequest<typeof GetJobsSchema>;
 
 // Mutation request types
-export type CreateHomeJobRequest = TypedRequest<
-  z.infer<typeof HomeJobsSchema>,
-  {},
-  z.infer<typeof CreateJobSchema>
->;
-export type UpdateJobRequest = TypedRequest<
-  z.infer<typeof JobSchema>,
-  {},
-  z.infer<typeof UpdateJobSchema>
->;
-export type DeleteJobRequest = TypedRequest<z.infer<typeof JobSchema>>;
+export type CreateHomeJobRequest = TypedParamsBodyRequest<typeof GetHomeJobsSchema, typeof CreateJobSchema>;
+export type UpdateJobRequest     = TypedParamsBodyRequest<typeof GetJobSchema, typeof UpdateJobSchema>;
+export type DeleteJobRequest     = TypedParamsRequest<typeof DeleteJobSchema>;
 ```
 
 ## Using shared enums
@@ -177,5 +200,5 @@ Use `z.string().min(1)` — not `z.string().cuid()`. IDs are CUID2 format which 
 
 - Imported by `route.ts` into `validate(Schema)` and `validate(Schema, 'query')` middleware calls.
 - Types inferred with `z.infer<typeof Schema>` for service function signatures.
-- `TypedRequest` compositions exported for use as handler parameter types in `route.ts`.
+- Schema-aware request helper compositions exported for use as handler parameter types in `route.ts`.
 - Never imported from `service.ts` or `models/`.

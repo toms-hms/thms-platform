@@ -67,3 +67,6 @@ Shared test infra in `src/test/`. See `.ai/skills/testing.md` for the full patte
 
 ## Permissions
 See `.ai/skills/permissioning.md` for the full pattern before touching any route or manager.
+
+## Branching
+Never push directly to `main` or any default branch. Always create a feature branch and push there. Direct pushes to `main` are only permitted when the user explicitly instructs it.

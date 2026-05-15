@@ -1,10 +1,10 @@
 import { db } from '@/db';
 import { users } from '@/auth/models/User';
-import { integrations } from '../models/Integration';
+import { integrations } from '@/integration/models/Integration';
 import { like, eq } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
-import { integrationFactory } from '../factories/Integration.factory';
-import { IntegrationManager } from '../models/IntegrationManager';
+import { integrationFactory } from '@/integration/factories/Integration.factory';
+import { IntegrationManager } from '@/integration/models/IntegrationManager';
 
 const EMAIL_NS = 'test-integration-manager';
 

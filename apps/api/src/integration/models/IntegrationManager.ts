@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { integrations, type Integration, type NewIntegration } from './Integration';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@/utils/errors';
 
 export const IntegrationManager = {
   async listForUser(userId: string): Promise<Integration[]> {

@@ -1,17 +1,17 @@
 import OpenAI from 'openai';
 import type { AiSession } from '@thms/shared';
-import { JobIntent } from '../job/models/Job';
-import { getDownloadUrl } from '../upload/service';
-import { s3Client, BUCKET_NAME } from '../config/minio';
+import { JobIntent } from '@/job/models/Job';
+import { getDownloadUrl } from '@/upload/service';
+import { s3Client, BUCKET_NAME } from '@/config/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { createId } from '@paralleldrive/cuid2';
-import { env } from '../config/env';
+import { env } from '@/config/env';
 import { AIGenerationManager } from './models/AIGenerationManager';
 import { JobImageManager } from './models/JobImageManager';
-import { JobManager } from '../job/models/JobManager';
-import { ContractorManager } from '../contractor/models/ContractorManager';
-import { HomeManager } from '../home/models/HomeManager';
+import { JobManager } from '@/job/models/JobManager';
+import { ContractorManager } from '@/contractor/models/ContractorManager';
+import { HomeManager } from '@/home/models/HomeManager';
 
 function getOpenAI() {
   if (!env.OPENAI_API_KEY) throw new Error('OpenAI API key not configured');

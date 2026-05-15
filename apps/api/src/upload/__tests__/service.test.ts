@@ -6,7 +6,7 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { confirmUpload } from '../service';
+import { confirmUpload } from '@/upload/service';
 import { JobImageManager } from '@/ai/models/JobImageManager';
 
 const EMAIL_NS = 'test-upload-service';

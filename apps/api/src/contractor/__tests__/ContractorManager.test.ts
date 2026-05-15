@@ -1,8 +1,8 @@
 import { db } from '@/db';
-import { contractors } from '../models/Contractor';
+import { contractors } from '@/contractor/models/Contractor';
 import { like } from 'drizzle-orm';
-import { contractorFactory } from '../factories/Contractor.factory';
-import { ContractorManager } from '../models/ContractorManager';
+import { contractorFactory } from '@/contractor/factories/Contractor.factory';
+import { ContractorManager } from '@/contractor/models/ContractorManager';
 import { TradeCategory } from '@/contractor/models/Contractor';
 import { UserRole } from '@/auth/models/User';
 

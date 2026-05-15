@@ -1,9 +1,9 @@
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
 import { like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
-import { HomeManager } from '../models/HomeManager';
+import { HomeManager } from '@/home/models/HomeManager';
 import { UserRole } from '@/auth/models/User';
 
 async function cleanup() {

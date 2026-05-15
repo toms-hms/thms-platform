@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticateJWT } from '@/middleware/auth.middleware';
-import { RegisterSchema, LoginSchema, RefreshSchema, RegisterRequest, LoginRequest, RefreshRequest, AuthRequest } from './schema';
+import { RegisterSchema, LoginSchema, RefreshSchema, RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, GetMeRequest } from './schema';
 import * as authService from './service';
 
 const router = Router();
@@ -44,7 +44,7 @@ router.post('/refresh', validate(RefreshSchema), async (req: RefreshRequest, res
   }
 });
 
-router.post('/logout', authenticateJWT, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/logout', authenticateJWT, async (req: LogoutRequest, res: Response, next: NextFunction) => {
   try {
     await authService.logout(req.user.userId);
     res.json({ data: { success: true } });
@@ -53,7 +53,7 @@ router.post('/logout', authenticateJWT, async (req: AuthRequest, res: Response, 
   }
 });
 
-router.get('/me', authenticateJWT, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/me', authenticateJWT, async (req: GetMeRequest, res: Response, next: NextFunction) => {
   try {
     const user = await authService.getMe(req.user.userId);
     res.json({ data: user });

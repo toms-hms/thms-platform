@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
-import { integrationTypeEnum, integrationProviderEnum } from '../../db/enums';
-import { users } from '../../auth/models/User';
+import { integrationTypeEnum, integrationProviderEnum } from '@/db/enums';
+import { users } from '@/auth/models/User';
 
 export const integrations = pgTable('Integration', {
   id:              text('id').primaryKey(),

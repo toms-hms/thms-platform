@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { createId } from '@paralleldrive/cuid2';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.utils';
-import { ConflictError, UnauthorizedError, NotFoundError } from '../utils/errors';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/utils/jwt.utils';
+import { ConflictError, UnauthorizedError, NotFoundError } from '@/utils/errors';
 import { UserRole } from './models/User';
 import { UserManager } from './models/UserManager';
 

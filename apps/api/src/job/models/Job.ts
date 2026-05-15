@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
-import { jobStatusEnum, jobIntentEnum, tradeCategoryEnum } from '../../db/enums';
+import { jobStatusEnum, jobIntentEnum, tradeCategoryEnum } from '@/db/enums';
 import { homes } from '@/home/models/Home';
 import { users } from '@/auth/models/User';
 import type { AiSession } from '@thms/shared';

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { PermissionService, PermissionedManager } from './PermissionService';
-import { ForbiddenError } from '../utils/errors';
+import { ForbiddenError } from '@/utils/errors';
 
 export function permit(
   manager: PermissionedManager,

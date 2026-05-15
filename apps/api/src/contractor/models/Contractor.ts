@@ -1,5 +1,5 @@
 import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { tradeCategoryEnum } from '../../db/enums';
+import { tradeCategoryEnum } from '@/db/enums';
 
 export const contractors = pgTable('Contractor', {
   id:          text('id').primaryKey(),

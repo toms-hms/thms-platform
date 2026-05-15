@@ -1,9 +1,9 @@
 import request from 'supertest';
-import app from '../../app';
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
-import { homes } from '../../home/models/Home';
-import { userHomes } from '../../home/models/UserHome';
+import app from '@/app';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
+import { homes } from '@/home/models/Home';
+import { userHomes } from '@/home/models/UserHome';
 import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';

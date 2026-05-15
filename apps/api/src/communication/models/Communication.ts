@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
-import { communicationChannelEnum, communicationDirectionEnum } from '../../db/enums';
-import { jobs } from '../../job/models/Job';
-import { contractors } from '../../contractor/models/Contractor';
+import { communicationChannelEnum, communicationDirectionEnum } from '@/db/enums';
+import { jobs } from '@/job/models/Job';
+import { contractors } from '@/contractor/models/Contractor';
 
 export const communications = pgTable('Communication', {
   id:                text('id').primaryKey(),

@@ -1,7 +1,7 @@
 import request from 'supertest';
-import app from '../../app';
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
+import app from '@/app';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
 import { like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';

@@ -7,9 +7,9 @@ import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
-import { quoteFactory } from '../factories/Quote.factory';
-import * as quoteService from '../service';
-import { QuoteManager } from '../models/QuoteManager';
+import { quoteFactory } from '@/quote/factories/Quote.factory';
+import * as quoteService from '@/quote/service';
+import { QuoteManager } from '@/quote/models/QuoteManager';
 import { QuoteStatus } from '@/quote/models/Quote';
 
 const EMAIL_NS = 'test-quote-service';

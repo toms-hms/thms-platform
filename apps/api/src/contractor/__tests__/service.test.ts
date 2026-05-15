@@ -1,7 +1,7 @@
 import { db } from '@/db';
-import { contractors } from '../models/Contractor';
+import { contractors } from '@/contractor/models/Contractor';
 import { like } from 'drizzle-orm';
-import * as contractorService from '../service';
+import * as contractorService from '@/contractor/service';
 import { TradeCategory } from '@/contractor/models/Contractor';
 
 const NAME_PREFIX = 'Test SvcContractor';

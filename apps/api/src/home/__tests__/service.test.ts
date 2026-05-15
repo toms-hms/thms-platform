@@ -1,10 +1,10 @@
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
 import { like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
-import * as homeService from '../service';
-import { PermissionService } from '../../permissions/PermissionService';
+import * as homeService from '@/home/service';
+import { PermissionService } from '@/permissions/PermissionService';
 
 async function cleanup() {
   await db.delete(users).where(like(users.email, 'test-home-service%'));

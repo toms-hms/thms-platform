@@ -5,12 +5,12 @@ import { users } from '@/auth/models/User';
 import { homes } from '@/home/models/Home';
 import { userHomes } from '@/home/models/UserHome';
 import { jobs } from '@/job/models/Job';
-import { communications } from '../models/Communication';
+import { communications } from '@/communication/models/Communication';
 import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { communicationFactory } from '../factories/Communication.factory';
+import { communicationFactory } from '@/communication/factories/Communication.factory';
 
 const EMAIL_NS = 'test-comm-route';
 

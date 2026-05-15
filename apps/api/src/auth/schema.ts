@@ -20,4 +20,6 @@ export const RefreshSchema = z.object({
 export type RegisterRequest = TypedBodyRequest<typeof RegisterSchema>;
 export type LoginRequest    = TypedBodyRequest<typeof LoginSchema>;
 export type RefreshRequest  = TypedBodyRequest<typeof RefreshSchema>;
-export type AuthRequest     = TypedRequest; // authenticated routes with no params/body: /logout, /me
+export type LogoutRequest   = TypedRequest;
+export type GetMeRequest    = TypedRequest;
+export type AuthRequest     = TypedRequest; // kept as alias for backwards compat

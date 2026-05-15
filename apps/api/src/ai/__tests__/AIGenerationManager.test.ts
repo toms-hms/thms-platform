@@ -6,8 +6,8 @@ import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { aiGenerationFactory } from '../factories/AIGeneration.factory';
-import { AIGenerationManager } from '../models/AIGenerationManager';
+import { aiGenerationFactory } from '@/ai/factories/AIGeneration.factory';
+import { AIGenerationManager } from '@/ai/models/AIGenerationManager';
 
 const EMAIL_NS = 'test-ai-gen-manager';
 

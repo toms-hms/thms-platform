@@ -1,9 +1,9 @@
 import { eq, and, desc } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { jobs, type Job, type NewJob } from './Job';
-import { userHomes } from '../../home/models/UserHome';
-import { NotFoundError } from '../../utils/errors';
-import { UserRole } from '../../auth/models/User';
+import { userHomes } from '@/home/models/UserHome';
+import { NotFoundError } from '@/utils/errors';
+import { UserRole } from '@/auth/models/User';
 
 export const JobManager = {
   async listForUser(userId: string, role: UserRole, homeId: string, filters?: { status?: string; category?: string }): Promise<Job[]> {

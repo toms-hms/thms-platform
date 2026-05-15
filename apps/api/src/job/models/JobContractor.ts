@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
-import { jobContractorStatusEnum } from '../../db/enums';
+import { jobContractorStatusEnum } from '@/db/enums';
 import { jobs } from './Job';
-import { contractors } from '../../contractor/models/Contractor';
+import { contractors } from '@/contractor/models/Contractor';
 
 export const jobContractors = pgTable('JobContractor', {
   id:              text('id').primaryKey(),

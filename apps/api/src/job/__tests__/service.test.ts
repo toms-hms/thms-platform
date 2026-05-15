@@ -5,8 +5,8 @@ import { userHomes } from '@/home/models/UserHome';
 import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
-import * as jobService from '../service';
-import { JobManager } from '../models/JobManager';
+import * as jobService from '@/job/service';
+import { JobManager } from '@/job/models/JobManager';
 import { JobIntent, JobStatus } from '@/job/models/Job';
 import { TradeCategory } from '@/contractor/models/Contractor';
 

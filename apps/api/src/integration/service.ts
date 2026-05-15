@@ -1,9 +1,9 @@
 import { google } from 'googleapis';
-import { encrypt, decrypt } from '../utils/crypto.utils';
-import { env } from '../config/env';
-import { NotFoundError } from '../utils/errors';
+import { encrypt, decrypt } from '@/utils/crypto.utils';
+import { env } from '@/config/env';
+import { NotFoundError } from '@/utils/errors';
 import { IntegrationManager } from './models/IntegrationManager';
-import { CommunicationManager } from '../communication/models/CommunicationManager';
+import { CommunicationManager } from '@/communication/models/CommunicationManager';
 import { createId } from '@paralleldrive/cuid2';
 
 function getGoogleOAuth2Client() {

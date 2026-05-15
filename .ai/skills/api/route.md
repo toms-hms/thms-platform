@@ -82,17 +82,8 @@ homeJobRouter.get('/',
   },
 );
 
-homeJobRouter.post('/category-suggestions',
-  validate(HomeJobsParamsSchema, 'params'),
-  permit(HomeManager, (req) => req.params.homeId),
-  validate(SuggestTradeCategoriesSchema),
-  async (req: SuggestCategoriesRequest, res: Response, next: NextFunction) => {
-    try {
-      const suggestions = await aiService.suggestTradeCategories(req.body);
-      res.json({ data: suggestions });
-    } catch (err) { next(err); }
-  },
-);
+// NOTE: category-suggestions is an AI sub-route — see apps/api/src/ai/route.ts,
+// not homeJobRouter. AI-specific actions live in the AI module.
 
 homeJobRouter.post('/',
   validate(HomeJobsParamsSchema, 'params'),

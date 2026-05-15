@@ -1,8 +1,8 @@
 import { pgTable, text, timestamp, doublePrecision, unique } from 'drizzle-orm/pg-core';
-import { quoteStatusEnum } from '../../db/enums';
-import { jobs } from '../../job/models/Job';
-import { contractors } from '../../contractor/models/Contractor';
-import { communications } from '../../communication/models/Communication';
+import { quoteStatusEnum } from '@/db/enums';
+import { jobs } from '@/job/models/Job';
+import { contractors } from '@/contractor/models/Contractor';
+import { communications } from '@/communication/models/Communication';
 
 export const quotes = pgTable('Quote', {
   id:                    text('id').primaryKey(),

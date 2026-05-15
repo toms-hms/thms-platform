@@ -7,8 +7,9 @@ import { PermissionService } from '@/permissions/PermissionService';
 import { attachContractor, UserContractorManager } from './models/UserContractorManager';
 import {
   UserContractorParamsSchema,
+  GetUserContractorsRequest,
+  CreateUserContractorRequest,
   DeleteUserContractorRequest,
-  UserContractorsRequest,
   CreateUserContractorSchema,
 } from './schema';
 import * as userContractorService from './service';
@@ -16,7 +17,7 @@ import * as userContractorService from './service';
 const router = Router();
 router.use(authenticateJWT);
 
-router.get('/', async (req: UserContractorsRequest, res: Response, next: NextFunction) => {
+router.get('/', async (req: GetUserContractorsRequest, res: Response, next: NextFunction) => {
   try {
     const { userId, role } = req.user;
     const bare = await PermissionService.list(UserContractorManager, userId, role);
@@ -25,7 +26,7 @@ router.get('/', async (req: UserContractorsRequest, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
-router.post('/', validate(CreateUserContractorSchema), async (req: UserContractorsRequest, res: Response, next: NextFunction) => {
+router.post('/', validate(CreateUserContractorSchema), async (req: CreateUserContractorRequest, res: Response, next: NextFunction) => {
   try {
     const row = await userContractorService.createUserContractor(req.user.userId, req.body);
     res.status(201).json({ data: row });

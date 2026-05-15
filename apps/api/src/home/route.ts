@@ -1,9 +1,15 @@
 import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
-import type { TypedRequest } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { HomeParamsSchema, GetHomeRequest, CreateHomeRequest, CreateHomeSchema, UpdateHomeSchema } from './schema';
+import {
+  HomeParamsSchema, HomeUserParamsSchema,
+  GetHomesRequest, GetHomeRequest, CreateHomeRequest,
+  UpdateHomeRequest, DeleteHomeRequest,
+  AddHomeUserRequest, AddHomeUserSchema,
+  RemoveHomeUserRequest,
+  CreateHomeSchema, UpdateHomeSchema,
+} from './schema';
 import { UserHomeManager } from './models/UserHomeManager';
 import { HomeManager } from './models/HomeManager';
 import { permit } from '@/permissions/permit';
@@ -14,7 +20,7 @@ import { formatAddress } from './service';
 const router = Router();
 router.use(authenticateJWT);
 
-router.get('/', async (req: TypedRequest, res: Response, next: NextFunction) => {
+router.get('/', async (req: GetHomesRequest, res: Response, next: NextFunction) => {
   try {
     const { userId, role } = req.user;
     const homes = await PermissionService.list(HomeManager, userId, role);
@@ -44,7 +50,7 @@ router.patch('/:homeId',
   validate(HomeParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
   validate(UpdateHomeSchema),
-  async (req: GetHomeRequest, res: Response, next: NextFunction) => {
+  async (req: UpdateHomeRequest, res: Response, next: NextFunction) => {
     try {
       const home = await homeService.updateHome(req.params.homeId, req.body);
       res.json({ data: home });
@@ -55,7 +61,7 @@ router.patch('/:homeId',
 router.delete('/:homeId',
   validate(HomeParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
-  async (req: GetHomeRequest, res: Response, next: NextFunction) => {
+  async (req: DeleteHomeRequest, res: Response, next: NextFunction) => {
     try {
       await homeService.deleteHome(req.params.homeId, req.user.userId);
       res.json({ data: { success: true } });
@@ -77,18 +83,19 @@ router.get('/:homeId/users',
 router.post('/:homeId/users',
   validate(HomeParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
-  async (req: GetHomeRequest, res: Response, next: NextFunction) => {
+  validate(AddHomeUserSchema),
+  async (req: AddHomeUserRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await homeService.addUserToHome(req.params.homeId, req.body.email, req.body.role || 'MEMBER');
+      const result = await homeService.addUserToHome(req.params.homeId, req.body.email, req.body.role);
       res.status(201).json({ data: result });
     } catch (err) { next(err); }
   },
 );
 
 router.delete('/:homeId/users/:userId',
-  validate(HomeParamsSchema, 'params'),
+  validate(HomeUserParamsSchema, 'params'),
   permit(HomeManager, (req) => req.params.homeId),
-  async (req: GetHomeRequest, res: Response, next: NextFunction) => {
+  async (req: RemoveHomeUserRequest, res: Response, next: NextFunction) => {
     try {
       await homeService.removeUserFromHome(req.params.homeId, req.params.userId);
       res.json({ data: { success: true } });

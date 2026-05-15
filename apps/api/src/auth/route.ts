@@ -2,12 +2,12 @@ import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticateJWT } from '@/middleware/auth.middleware';
-import { RegisterSchema, LoginSchema, RefreshSchema, AuthRequest } from './schema';
+import { RegisterSchema, LoginSchema, RefreshSchema, RegisterRequest, LoginRequest, RefreshRequest, AuthRequest } from './schema';
 import * as authService from './service';
 
 const router = Router();
 
-router.post('/register', validate(RegisterSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/register', validate(RegisterSchema), async (req: RegisterRequest, res: Response, next: NextFunction) => {
   try {
     const { user, tokens } = await authService.register(req.body);
     res.status(201).json({
@@ -21,7 +21,7 @@ router.post('/register', validate(RegisterSchema), async (req: AuthRequest, res:
   }
 });
 
-router.post('/login', validate(LoginSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/login', validate(LoginSchema), async (req: LoginRequest, res: Response, next: NextFunction) => {
   try {
     const { user, tokens } = await authService.login(req.body.email, req.body.password);
     res.json({
@@ -35,7 +35,7 @@ router.post('/login', validate(LoginSchema), async (req: AuthRequest, res: Respo
   }
 });
 
-router.post('/refresh', validate(RefreshSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/refresh', validate(RefreshSchema), async (req: RefreshRequest, res: Response, next: NextFunction) => {
   try {
     const { tokens } = await authService.refreshTokens(req.body.refreshToken);
     res.json({ data: { tokens } });

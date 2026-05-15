@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { QuoteParamsSchema, GetQuoteRequest, UpdateQuoteSchema } from './schema';
+import { QuoteParamsSchema, UpdateQuoteRequest, DeleteQuoteRequest, UpdateQuoteSchema } from './schema';
 import * as quoteService from './service';
 
 const router = Router();
@@ -11,7 +11,7 @@ router.use(authenticateJWT);
 router.patch('/:quoteId',
   validate(QuoteParamsSchema, 'params'),
   validate(UpdateQuoteSchema),
-  async (req: GetQuoteRequest, res: Response, next: NextFunction) => {
+  async (req: UpdateQuoteRequest, res: Response, next: NextFunction) => {
     try {
       const quote = await quoteService.updateQuote(req.params.quoteId, req.body);
       res.json({ data: quote });
@@ -21,7 +21,7 @@ router.patch('/:quoteId',
 
 router.delete('/:quoteId',
   validate(QuoteParamsSchema, 'params'),
-  async (req: GetQuoteRequest, res: Response, next: NextFunction) => {
+  async (req: DeleteQuoteRequest, res: Response, next: NextFunction) => {
     try {
       await quoteService.deleteQuote(req.params.quoteId);
       res.json({ data: { success: true } });

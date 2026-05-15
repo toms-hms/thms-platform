@@ -2,7 +2,10 @@ import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { IntegrationParamsSchema, GetIntegrationsRequest, DeleteIntegrationRequest } from './schema';
+import {
+  IntegrationParamsSchema, OAuthCallbackQuerySchema, SaveAiIntegrationSchema,
+  GetIntegrationsRequest, OAuthCallbackRequest, SaveAiIntegrationRequest, DeleteIntegrationRequest,
+} from './schema';
 import { IntegrationManager } from './models/IntegrationManager';
 import * as integrationService from './service';
 
@@ -27,10 +30,11 @@ router.get('/email/google/start', async (req: GetIntegrationsRequest, res: Respo
   } catch (err) { next(err); }
 });
 
-router.get('/email/google/callback', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/email/google/callback',
+  validate(OAuthCallbackQuerySchema, 'query'),
+  async (req: OAuthCallbackRequest, res: Response, next: NextFunction) => {
   try {
-    const { code, state } = req.query as { code: string; state: string };
-    await integrationService.handleGmailCallback(code, state);
+    await integrationService.handleGmailCallback(req.query.code, req.query.state);
     res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3000'}/integrations?status=connected&provider=google`);
   } catch (err) { next(err); }
 });
@@ -42,15 +46,18 @@ router.get('/email/microsoft/start', async (req: GetIntegrationsRequest, res: Re
   } catch (err) { next(err); }
 });
 
-router.get('/email/microsoft/callback', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
+router.get('/email/microsoft/callback',
+  validate(OAuthCallbackQuerySchema, 'query'),
+  async (req: OAuthCallbackRequest, res: Response, next: NextFunction) => {
   try {
-    const { code, state } = req.query as { code: string; state: string };
-    await integrationService.handleMicrosoftCallback(code, state);
+    await integrationService.handleMicrosoftCallback(req.query.code, req.query.state);
     res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3000'}/integrations?status=connected&provider=microsoft`);
   } catch (err) { next(err); }
 });
 
-router.post('/ai', async (req: GetIntegrationsRequest, res: Response, next: NextFunction) => {
+router.post('/ai',
+  validate(SaveAiIntegrationSchema),
+  async (req: SaveAiIntegrationRequest, res: Response, next: NextFunction) => {
   try {
     const { provider, apiKey } = req.body;
     const integration = await integrationService.saveAIIntegration(req.user.userId, provider, apiKey);

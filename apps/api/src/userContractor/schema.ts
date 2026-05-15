@@ -11,7 +11,7 @@ export const UserContractorParamsSchema = z.object({ userContractorId: z.string(
 export type GetUserContractorRequest    = TypedParamsRequest<typeof UserContractorParamsSchema>;
 export type CreateUserContractorRequest = TypedBodyRequest<typeof CreateUserContractorSchema>;
 export type DeleteUserContractorRequest = TypedParamsRequest<typeof UserContractorParamsSchema>;
-export type UserContractorsRequest      = TypedRequest;
+export type GetUserContractorsRequest   = TypedRequest;
 
 export const CreateUserContractorSchema = z.object({
   contractorId: z.string().min(1).optional(),

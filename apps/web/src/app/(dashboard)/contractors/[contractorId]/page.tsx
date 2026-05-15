@@ -39,7 +39,7 @@ export default function ContractorDetailPage() {
     companyName: '',
     email: '',
     phone: '',
-    categories: [] as string[],
+    categories: [] as TradeCategory[],
     zipCodes: [] as string[],
     notes: '',
   });

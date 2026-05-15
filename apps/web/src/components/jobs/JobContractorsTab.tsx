@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
+import { JobContractorStatus } from '@thms/shared';
 import { listContractors, listIntegrations } from './queries';
 import { assignContractor, updateJobContractorStatus, removeJobContractor, draftEmail, sendEmail } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -53,7 +54,7 @@ export default function JobContractorsTab({ job }: Props) {
 
   async function handleStatusChange(jc: any, status: string) {
     try {
-      const res = await updateJobContractorStatus(jc.id, { status });
+      const res = await updateJobContractorStatus(jc.id, { status: status as JobContractorStatus });
       setJcs((prev) => prev.map((j) => (j.id === jc.id ? res.data : j)));
     } catch {}
   }

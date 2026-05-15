@@ -104,7 +104,7 @@ export default function ContractorsPage() {
       companyName: form.companyName || undefined,
       email: form.email || undefined,
       phone: form.phone || undefined,
-      categories: form.category ? [form.category] : [],
+      categories: form.category ? [form.category as TradeCategory] : [],
       zipCodes: form.zipCodes.split(',').map((zipCode) => zipCode.trim()).filter(Boolean),
       notes: form.notes || undefined,
     };

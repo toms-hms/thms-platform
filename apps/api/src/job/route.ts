@@ -17,7 +17,7 @@ import { AIGenerationManager } from '@/ai/models/AIGenerationManager';
 import { QuoteManager } from '@/quote/models/QuoteManager';
 import { CommunicationManager } from '@/communication/models/CommunicationManager';
 import { permit } from '@/permissions/permit';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { HomeManager } from '@/home/models/HomeManager';
 import { ForbiddenError } from '@/utils/errors';
 import * as jobService from './service';
@@ -35,10 +35,10 @@ jobRouter.get('/',
       const { userId, role } = req.user;
       const { homeId, ...filters } = req.query;
       if (homeId) {
-        const allowed = await PermissionService.check(HomeManager, userId, homeId);
+        const allowed = await permissionService.check(HomeManager, userId, homeId);
         if (!allowed) return next(new ForbiddenError());
       }
-      const jobs = await PermissionService.list(JobManager, userId, role, homeId, filters);
+      const jobs = await permissionService.list(JobManager, userId, role, homeId, filters);
       res.json({ data: jobs });
     } catch (err) { next(err); }
   },
@@ -50,7 +50,7 @@ jobRouter.post('/',
   async (req: CreateJobRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const allowed = await PermissionService.check(HomeManager, userId, req.body.homeId);
+      const allowed = await permissionService.check(HomeManager, userId, req.body.homeId);
       if (!allowed) return next(new ForbiddenError());
       const job = await jobService.createJob(req.body.homeId, userId, req.body);
       res.status(201).json({ data: job });

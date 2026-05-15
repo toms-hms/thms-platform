@@ -3,7 +3,7 @@ import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import { permit } from '@/permissions/permit';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { attachContractor, UserContractorManager } from './models/UserContractorManager';
 import {
   UserContractorParamsSchema,
@@ -20,7 +20,7 @@ router.use(authenticateJWT);
 router.get('/', async (req: GetUserContractorsRequest, res: Response, next: NextFunction) => {
   try {
     const { userId, role } = req.user;
-    const bare = await PermissionService.list(UserContractorManager, userId, role);
+    const bare = await permissionService.list(UserContractorManager, userId, role);
     const rows = await attachContractor(bare);
     res.json({ data: rows });
   } catch (err) { next(err); }

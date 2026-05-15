@@ -13,7 +13,7 @@ import {
 import { UserHomeManager } from './models/UserHomeManager';
 import { HomeManager } from './models/HomeManager';
 import { permit } from '@/permissions/permit';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import * as homeService from './service';
 import { formatAddress } from './service';
 
@@ -23,7 +23,7 @@ router.use(authenticateJWT);
 router.get('/', async (req: GetHomesRequest, res: Response, next: NextFunction) => {
   try {
     const { userId, role } = req.user;
-    const homes = await PermissionService.list(HomeManager, userId, role);
+    const homes = await permissionService.list(HomeManager, userId, role);
     res.json({ data: homes });
   } catch (err) { next(err); }
 });

@@ -9,7 +9,7 @@ import {
 } from './schema';
 import { QuoteManager } from './models/QuoteManager';
 import { JobManager } from '@/job/models/JobManager';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { ForbiddenError } from '@/utils/errors';
 import * as quoteService from './service';
 
@@ -24,7 +24,7 @@ router.get('/',
       const { userId } = req.user;
       const { jobId } = req.query;
       if (!jobId) return res.json({ data: [] });
-      const allowed = await PermissionService.check(JobManager, userId, jobId);
+      const allowed = await permissionService.check(JobManager, userId, jobId);
       if (!allowed) return next(new ForbiddenError());
       const quotes = await QuoteManager.listForJob(jobId);
       res.json({ data: quotes });
@@ -38,7 +38,7 @@ router.post('/',
   async (req: CreateQuoteRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const allowed = await PermissionService.check(JobManager, userId, req.body.jobId);
+      const allowed = await permissionService.check(JobManager, userId, req.body.jobId);
       if (!allowed) return next(new ForbiddenError());
       const { jobId, ...data } = req.body;
       const quote = await quoteService.createQuote(jobId, data);

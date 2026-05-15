@@ -4,7 +4,7 @@ import { like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import * as homeService from '@/home/service';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 
 async function cleanup() {
   await db.delete(users).where(like(users.email, 'test-home-service%'));
@@ -33,7 +33,7 @@ describe('home/service', () => {
       expect(home.fullAddress).toContain('Austin');
       // Cache should be warm — hasPermission should return true without a DB hit
       const spy = jest.spyOn(require('../models/UserHomeManager').UserHomeManager, 'findMembership');
-      await PermissionService.check(require('../models/HomeManager').HomeManager, userId, home.id);
+      await permissionService.check(require('../models/HomeManager').HomeManager, userId, home.id);
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
@@ -43,11 +43,11 @@ describe('home/service', () => {
     it('invalidates the permission cache on delete', async () => {
       const home = await homeFactory.create({}, { transient: { userId } });
       // Warm cache first
-      PermissionService.set(userId, home.id);
+      permissionService.set(userId, home.id);
       await homeService.deleteHome(home.id, userId);
       // Cache should be cleared — next check goes to DB
       const spy = jest.spyOn(require('../models/UserHomeManager').UserHomeManager, 'findMembership');
-      await PermissionService.check(require('../models/HomeManager').HomeManager, userId, home.id);
+      await permissionService.check(require('../models/HomeManager').HomeManager, userId, home.id);
       expect(spy).toHaveBeenCalled();
       spy.mockRestore();
     });
@@ -63,7 +63,7 @@ describe('home/service', () => {
       const home = await homeFactory.create({}, { transient: { userId } });
       await homeService.addUserToHome(home.id, 'test-home-service-other@example.com', 'MEMBER');
       const spy = jest.spyOn(require('../models/UserHomeManager').UserHomeManager, 'findMembership');
-      await PermissionService.check(require('../models/HomeManager').HomeManager, otherUserId, home.id);
+      await permissionService.check(require('../models/HomeManager').HomeManager, otherUserId, home.id);
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });

@@ -8,7 +8,7 @@ import {
 } from './schema';
 import { AIGenerationManager } from './models/AIGenerationManager';
 import { JobManager } from '@/job/models/JobManager';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { ForbiddenError } from '@/utils/errors';
 import * as aiService from './service';
 
@@ -23,7 +23,7 @@ aiGenerationRouter.get('/',
       const { userId } = req.user;
       const { jobId } = req.query;
       if (!jobId) return res.json({ data: [] });
-      const allowed = await PermissionService.check(JobManager, userId, jobId);
+      const allowed = await permissionService.check(JobManager, userId, jobId);
       if (!allowed) return next(new ForbiddenError());
       const gens = await AIGenerationManager.listForJob(jobId);
       res.json({ data: gens });
@@ -37,7 +37,7 @@ aiGenerationRouter.post('/',
   async (req: CreateAIGenerationRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const allowed = await PermissionService.check(JobManager, userId, req.body.jobId);
+      const allowed = await permissionService.check(JobManager, userId, req.body.jobId);
       if (!allowed) return next(new ForbiddenError());
       const gen = await aiService.generateImage({
         jobId:         req.body.jobId,

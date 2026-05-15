@@ -9,7 +9,7 @@ import {
 } from './schema';
 import { CommunicationManager } from './models/CommunicationManager';
 import { JobManager } from '@/job/models/JobManager';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { ForbiddenError } from '@/utils/errors';
 import * as communicationService from './service';
 
@@ -24,7 +24,7 @@ router.get('/',
       const { userId } = req.user;
       const { jobId, contractorId, needsReview, direction } = req.query;
       if (!jobId) return res.json({ data: [] });
-      const allowed = await PermissionService.check(JobManager, userId, jobId);
+      const allowed = await permissionService.check(JobManager, userId, jobId);
       if (!allowed) return next(new ForbiddenError());
       const comms = await CommunicationManager.listForJob(jobId, {
         contractorId,

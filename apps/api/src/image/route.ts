@@ -11,7 +11,7 @@ import {
 import { JobImageManager } from '@/ai/models/JobImageManager';
 import { JobManager } from '@/job/models/JobManager';
 import { permit } from '@/permissions/permit';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { ForbiddenError } from '@/utils/errors';
 import * as uploadService from '@/upload/service';
 
@@ -26,7 +26,7 @@ imageRouter.get('/',
       const { userId } = req.user;
       const { jobId } = req.query;
       if (!jobId) return res.json({ data: [] });
-      const allowed = await PermissionService.check(JobManager, userId, jobId);
+      const allowed = await permissionService.check(JobManager, userId, jobId);
       if (!allowed) return next(new ForbiddenError());
       const images = await JobImageManager.listForJob(jobId);
       const withUrls = await Promise.all(
@@ -43,7 +43,7 @@ imageRouter.post('/upload-url',
   async (req: GetUploadUrlRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const allowed = await PermissionService.check(JobManager, userId, req.body.jobId);
+      const allowed = await permissionService.check(JobManager, userId, req.body.jobId);
       if (!allowed) return next(new ForbiddenError());
       const result = await uploadService.getUploadUrl(req.body.jobId, userId, req.body.fileName, req.body.contentType, req.body.kind);
       res.json({ data: result });
@@ -57,7 +57,7 @@ imageRouter.post('/confirm',
   async (req: ConfirmUploadRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const allowed = await PermissionService.check(JobManager, userId, req.body.jobId);
+      const allowed = await permissionService.check(JobManager, userId, req.body.jobId);
       if (!allowed) return next(new ForbiddenError());
       const image = await uploadService.confirmUpload({
         jobId:  req.body.jobId,

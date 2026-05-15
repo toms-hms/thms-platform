@@ -11,7 +11,7 @@ import {
 import { JobContractorManager } from '@/job/models/JobContractorManager';
 import { JobManager } from '@/job/models/JobManager';
 import { permit } from '@/permissions/permit';
-import { PermissionService } from '@/permissions/PermissionService';
+import * as permissionService from '@/permissions/PermissionService';
 import { ForbiddenError } from '@/utils/errors';
 import * as jobService from '@/job/service';
 
@@ -26,7 +26,7 @@ jobContractorRouter.get('/',
       const { userId } = req.user;
       const { jobId } = req.query;
       if (!jobId) return res.json({ data: [] });
-      const allowed = await PermissionService.check(JobManager, userId, jobId);
+      const allowed = await permissionService.check(JobManager, userId, jobId);
       if (!allowed) return next(new ForbiddenError());
       const jcs = await JobContractorManager.listForJob(jobId);
       res.json({ data: jcs });
@@ -40,7 +40,7 @@ jobContractorRouter.post('/',
   async (req: AssignContractorRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const allowed = await PermissionService.check(JobManager, userId, req.body.jobId);
+      const allowed = await permissionService.check(JobManager, userId, req.body.jobId);
       if (!allowed) return next(new ForbiddenError());
       const jc = await jobService.assignContractor(req.body.jobId, req.body.contractorId, req.body.notes);
       res.status(201).json({ data: jc });

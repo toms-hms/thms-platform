@@ -2,12 +2,13 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { createId } from '@paralleldrive/cuid2';
 import { db } from './index';
-import { users } from '../auth/models/User';
-import { homes } from '../home/models/Home';
-import { userHomes } from '../home/models/UserHome';
-import { contractors } from '../contractor/models/Contractor';
-import { jobs } from '../job/models/Job';
-import { TradeCategory, JobIntent } from '@thms/shared';
+import { users } from '@/auth/models/User';
+import { homes } from '@/home/models/Home';
+import { userHomes } from '@/home/models/UserHome';
+import { contractors } from '@/contractor/models/Contractor';
+import { jobs } from '@/job/models/Job';
+import { JobIntent } from '@/job/models/Job';
+import { TradeCategory } from '@/contractor/models/Contractor';
 
 async function seed() {
   console.log('Seeding database...');

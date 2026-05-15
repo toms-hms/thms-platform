@@ -1,6 +1,6 @@
 import { arrayOverlaps, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory } from './Contractor';
 import { contractors } from './Contractor';
 import { contractorZipCodes } from './ContractorZipCode';
 

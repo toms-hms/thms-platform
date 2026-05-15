@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { userRoleEnum } from '../../db/enums';
+import { userRoleEnum } from '@/db/enums';
 
 export const users = pgTable('User', {
   id:               text('id').primaryKey(),
@@ -15,3 +15,5 @@ export const users = pgTable('User', {
 
 export type User    = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export enum UserRole { ADMIN = 'ADMIN', USER = 'USER' }

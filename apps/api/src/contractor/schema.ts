@@ -1,5 +1,26 @@
 import { z } from 'zod';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
+import type {
+  TypedParamsRequest,
+  TypedQueryRequest,
+  TypedBodyRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
+
+export const ContractorParamsSchema = z.object({ contractorId: z.string().min(1) });
+export const ContractorsQuerySchema = z.object({
+  search:          z.string().optional(),
+  tradeCategories: z.array(z.nativeEnum(TradeCategory)).optional(),
+  zipCodes:        z.array(z.string()).optional(),
+});
+
+export type GetContractorsRequest      = TypedQueryRequest<typeof ContractorsQuerySchema>;
+export type GetContractorRequest       = TypedParamsRequest<typeof ContractorParamsSchema>;
+export type GetContractorJobsRequest   = TypedParamsRequest<typeof ContractorParamsSchema>;
+export type CreateContractorRequest    = TypedBodyRequest<typeof CreateContractorSchema>;
+export type UpdateContractorRequest    = TypedParamsBodyRequest<typeof ContractorParamsSchema, typeof UpdateContractorSchema>;
+export type DeleteContractorRequest    = TypedParamsRequest<typeof ContractorParamsSchema>;
+export type PromoteContractorRequest   = TypedParamsRequest<typeof ContractorParamsSchema>;
 
 export const CreateContractorSchema = z.object({
   name:        z.string().min(1),

@@ -15,8 +15,23 @@ Services own business logic for mutations: orchestration, multi-step operations,
 ## File
 
 ```
-src/{module}/service.ts   — async functions only. No req/res. No Express imports.
+src/{module}/service.ts   — named async function exports only. No req/res. No Express imports.
 ```
+
+## Import pattern
+
+Service modules export named functions. Always import with `* as`:
+
+```typescript
+import * as homeService from '@/home/service';
+import * as jobService from './service';
+
+// Call as:
+homeService.createHome(userId, data);
+jobService.updateJob(jobId, data);
+```
+
+Never import service functions individually (`import { createHome }`) — the namespace import makes the module boundary explicit at call sites.
 
 ## Function naming
 

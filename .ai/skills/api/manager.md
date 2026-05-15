@@ -9,6 +9,17 @@ Managers own all DB queries for their module. Routes call managers directly for 
 
 ## Class structure
 
+Every manager is a **class instance exported as a singleton constant** — not a function module. Import managers by name, never with `* as`:
+
+```typescript
+// Good — named import of the singleton
+import { ContractorManager } from '@/contractor/models/ContractorManager';
+import { HomeManager } from '@/home/models/HomeManager';
+
+// Bad — namespace import is wrong for singletons
+import * as contractorManager from '@/contractor/models/ContractorManager';
+```
+
 Every manager extends `BaseManager<TTable>`, exported as a singleton. **Always annotate `readonly table` explicitly** — without it TS infers an internal Drizzle type that breaks `declaration: true` builds.
 
 ```typescript

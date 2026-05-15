@@ -1,11 +1,11 @@
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { s3Client, BUCKET_NAME } from '../config/minio';
+import { s3Client, BUCKET_NAME } from '@/config/minio';
 import { randomUUID } from 'crypto';
 import { createId } from '@paralleldrive/cuid2';
-import { JobImageManager } from '../ai/models/JobImageManager';
-import { JobManager } from '../job/models/JobManager';
-import { NotFoundError } from '../utils/errors';
+import { JobImageManager } from '@/ai/models/JobImageManager';
+import { JobManager } from '@/job/models/JobManager';
+import { NotFoundError } from '@/utils/errors';
 
 export async function getUploadUrl(jobId: string, userId: string, fileName: string, contentType: string, kind = 'SOURCE') {
   const ext = fileName.split('.').pop() || 'bin';
@@ -34,13 +34,6 @@ export async function getDownloadUrl(key: string): Promise<string> {
 
 export async function deleteObject(key: string) {
   await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
-}
-
-export async function listJobImages(jobId: string, userId: string) {
-  const allowed = await JobManager.hasPermission(userId, jobId);
-  if (!allowed) throw new NotFoundError('Job');
-  const images = await JobImageManager.listForJob(jobId);
-  return Promise.all(images.map(async (img) => ({ ...img, url: await getDownloadUrl(img.storageKey) })));
 }
 
 export async function deleteJobImage(imageId: string, userId: string) {

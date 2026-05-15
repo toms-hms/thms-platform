@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { integrations, type Integration, type NewIntegration } from './Integration';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@/utils/errors';
 
 export const IntegrationManager = {
   async listForUser(userId: string): Promise<Integration[]> {
@@ -28,7 +28,15 @@ export const IntegrationManager = {
       .values({ userId, provider, ...data })
       .onConflictDoUpdate({
         target: [integrations.userId, integrations.provider],
-        set: { ...data, updatedAt: new Date() },
+        set: {
+          type: data.type,
+          accessTokenEnc: data.accessTokenEnc,
+          refreshTokenEnc: data.refreshTokenEnc,
+          tokenExpiresAt: data.tokenExpiresAt,
+          email: data.email,
+          scopes: data.scopes,
+          updatedAt: new Date(),
+        },
       })
       .returning();
     return integration;

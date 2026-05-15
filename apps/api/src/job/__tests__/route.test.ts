@@ -1,14 +1,15 @@
 import request from 'supertest';
-import app from '../../app';
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
-import { homes } from '../../home/models/Home';
-import { userHomes } from '../../home/models/UserHome';
+import app from '@/app';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
+import { homes } from '@/home/models/Home';
+import { userHomes } from '@/home/models/UserHome';
 import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { jobFactory } from '@/job/factories/Job.factory';
-import { JobIntent, TradeCategory } from '@thms/shared';
+import { JobIntent } from '@/job/models/Job';
+import { TradeCategory } from '@/contractor/models/Contractor';
 
 async function cleanup() {
   const testUsers = await db.select().from(users).where(like(users.email, 'test-job-route%'));
@@ -93,38 +94,6 @@ describe('Jobs API', () => {
       const res = await request(app).post(`/api/v1/homes/${homeId}/jobs`)
         .set('Authorization', `Bearer ${otherToken}`)
         .send({ title: 'Hack', category: TradeCategory.PLUMBING });
-      expect(res.status).toBe(403);
-    });
-  });
-
-  describe('POST /api/v1/homes/:homeId/jobs/category-suggestions', () => {
-    it('suggests categories with reasons', async () => {
-      const res = await request(app).post(`/api/v1/homes/${homeId}/jobs/category-suggestions`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          intent: 'IMPROVEMENT',
-          title: 'Bathroom remodel',
-          description: 'Replace shower tile, vanity, outlets, and lighting.',
-          selectedCategories: [TradeCategory.GENERAL_CONTRACTING],
-        });
-      expect(res.status).toBe(200);
-      expect(res.body.data.suggestions).toEqual(expect.arrayContaining([
-        expect.objectContaining({ category: TradeCategory.PLUMBING, reason: expect.any(String) }),
-        expect.objectContaining({ category: TradeCategory.ELECTRICAL, reason: expect.any(String) }),
-        expect.objectContaining({ category: TradeCategory.GENERAL_CONTRACTING, reason: expect.any(String) }),
-      ]));
-    });
-
-    it('401 without token', async () => {
-      const res = await request(app).post(`/api/v1/homes/${homeId}/jobs/category-suggestions`)
-        .send({ intent: 'ISSUE', title: 'Leak', description: 'Water under sink' });
-      expect(res.status).toBe(401);
-    });
-
-    it('403 for non-member', async () => {
-      const res = await request(app).post(`/api/v1/homes/${homeId}/jobs/category-suggestions`)
-        .set('Authorization', `Bearer ${otherToken}`)
-        .send({ intent: 'ISSUE', title: 'Leak', description: 'Water under sink' });
       expect(res.status).toBe(403);
     });
   });
@@ -232,7 +201,7 @@ describe('Jobs API', () => {
   describe('DELETE /api/v1/jobs/:jobId', () => {
     it('deletes a job', async () => {
       const user = await db.select().from(users).where(like(users.email, 'test-job-route@example.com')).limit(1);
-      const extraJob = await jobFactory.create({}, { transient: { homeId, userId: user[0].id } });
+      const extraJob = await jobFactory.create({ homeId, createdByUserId: user[0].id });
       const res = await request(app).delete(`/api/v1/jobs/${extraJob.id}`).set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
     });

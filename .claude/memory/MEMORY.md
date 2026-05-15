@@ -1,6 +1,7 @@
 # Memory Index
 
 - [THM-20 Skill Audit](thm-20_skill-audit.md) — Patterns established during skill review: TypedRequest, homeJobRouter, schema naming, service=mutations only, buildUrl; two pending code changes
+- [API pattern refactor](thm-21_2026-05-14.md) — THM-20 patterns applied globally across API modules: TypedRequest, homeJobRouter, route/schema naming, service mutations only, direct manager reads, and backend test coverage
 
 - [Job Diagnosis & Management Tool](job_diagnosis_management.md) — Full product spec for the guided maintenance workflow — wizard, AI diagnostic, contractor outreach, job detail dashboard
 - [Manager Architecture — patterns and tradeoffs](manager_architecture.md) — Settled decisions on manager method design — predicate-helper composition, filter vs search distinction, attach pattern for relations, cross-module imports, JOIN vs separate queries, optional-arg pattern, in-memory filtering prohibition

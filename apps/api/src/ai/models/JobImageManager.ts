@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { jobImages, type JobImage, type NewJobImage } from './JobImage';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@/utils/errors';
 
 export const JobImageManager = {
   async listForJob(jobId: string): Promise<JobImage[]> {

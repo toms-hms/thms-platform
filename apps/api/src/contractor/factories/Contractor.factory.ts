@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { Factory } from 'fishery';
 import { ContractorManager, ContractorWithRelations, attachZipCodes } from '@/contractor/models/ContractorManager';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
 
 export const contractorFactory = Factory.define<ContractorWithRelations>(({ onCreate, sequence }) => {
   onCreate(async (contractor) => {

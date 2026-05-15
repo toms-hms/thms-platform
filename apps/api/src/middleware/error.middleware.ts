@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
-import { AppError } from '../utils/errors';
+import { AppError } from '@/utils/errors';
 
 // postgres (Porsager) driver error — has a numeric PG error code
 interface PostgresError extends Error {

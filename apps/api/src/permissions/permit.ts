@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
-import { PermissionService, PermissionedManager } from './PermissionService';
-import { ForbiddenError } from '../utils/errors';
+import { AuthenticatedRequest } from '@/middleware/auth.middleware';
+import * as permissionService from './PermissionService';
+import type { PermissionedManager } from './PermissionService';
+import { ForbiddenError } from '@/utils/errors';
 
 export function permit(
   manager: PermissionedManager,
@@ -12,7 +13,7 @@ export function permit(
       const { userId } = (req as unknown as AuthenticatedRequest).user;
       const resourceId = getResourceId(req);
       if (!resourceId) return next(new ForbiddenError());
-      const allowed = await PermissionService.check(manager, userId, resourceId);
+      const allowed = await permissionService.check(manager, userId, resourceId);
       if (!allowed) return next(new ForbiddenError());
       next();
     } catch (err) {

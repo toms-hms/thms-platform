@@ -1,14 +1,15 @@
 import request from 'supertest';
-import app from '../../app';
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
-import { contractors } from '../models/Contractor';
+import app from '@/app';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
+import { contractors } from '@/contractor/models/Contractor';
 import { homes } from '@/home/models/Home';
 import { userHomes } from '@/home/models/UserHome';
 import { inArray, like } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { contractorFactory } from '@/contractor/factories/Contractor.factory';
-import { TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory } from '@/contractor/models/Contractor';
+import { UserRole } from '@/auth/models/User';
 
 async function cleanup() {
   const testUsers = await db

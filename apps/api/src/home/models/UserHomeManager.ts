@@ -1,9 +1,9 @@
 import { eq, and, desc } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { userHomes, type UserHome, type NewUserHome } from './UserHome';
 import { homes } from './Home';
-import { users } from '../../auth/models/User';
-import { NotFoundError, ForbiddenError } from '../../utils/errors';
+import { users } from '@/auth/models/User';
+import { NotFoundError, ForbiddenError } from '@/utils/errors';
 
 export const UserHomeManager = {
   async findMembership(userId: string, homeId: string): Promise<UserHome | undefined> {

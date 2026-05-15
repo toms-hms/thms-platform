@@ -1,13 +1,13 @@
 import { Router } from 'express';
-import { validate } from '../middleware/validate.middleware';
-import { authenticateJWT } from '../middleware/auth.middleware';
-import { RegisterSchema, LoginSchema, RefreshSchema } from './schema';
+import type { Response, NextFunction } from 'express';
+import { validate } from '@/middleware/validate.middleware';
+import { authenticateJWT } from '@/middleware/auth.middleware';
+import { RegisterSchema, LoginSchema, RefreshSchema, RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, GetMeRequest } from './schema';
 import * as authService from './service';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.post('/register', validate(RegisterSchema), async (req, res, next) => {
+router.post('/register', validate(RegisterSchema), async (req: RegisterRequest, res: Response, next: NextFunction) => {
   try {
     const { user, tokens } = await authService.register(req.body);
     res.status(201).json({
@@ -21,7 +21,7 @@ router.post('/register', validate(RegisterSchema), async (req, res, next) => {
   }
 });
 
-router.post('/login', validate(LoginSchema), async (req, res, next) => {
+router.post('/login', validate(LoginSchema), async (req: LoginRequest, res: Response, next: NextFunction) => {
   try {
     const { user, tokens } = await authService.login(req.body.email, req.body.password);
     res.json({
@@ -35,27 +35,27 @@ router.post('/login', validate(LoginSchema), async (req, res, next) => {
   }
 });
 
-router.post('/refresh', validate(RefreshSchema), async (req, res, next) => {
+router.post('/refresh', validate(RefreshSchema), async (req: RefreshRequest, res: Response, next: NextFunction) => {
   try {
-    const { user, tokens } = await authService.refreshTokens(req.body.refreshToken);
+    const { tokens } = await authService.refreshTokens(req.body.refreshToken);
     res.json({ data: { tokens } });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/logout', authenticateJWT, async (req, res, next) => {
+router.post('/logout', authenticateJWT, async (req: LogoutRequest, res: Response, next: NextFunction) => {
   try {
-    await authService.logout((req as unknown as AuthenticatedRequest).user.userId);
+    await authService.logout(req.user.userId);
     res.json({ data: { success: true } });
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/me', authenticateJWT, async (req, res, next) => {
+router.get('/me', authenticateJWT, async (req: GetMeRequest, res: Response, next: NextFunction) => {
   try {
-    const user = await authService.getMe((req as unknown as AuthenticatedRequest).user.userId);
+    const user = await authService.getMe(req.user.userId);
     res.json({ data: user });
   } catch (err) {
     next(err);

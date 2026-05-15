@@ -1,7 +1,7 @@
 import request from 'supertest';
-import app from '../../app';
-import { db } from '../../db';
-import { users } from '../models/User';
+import app from '@/app';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
 import { like } from 'drizzle-orm';
 
 async function cleanup() {

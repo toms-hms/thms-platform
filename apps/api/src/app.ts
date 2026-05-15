@@ -11,9 +11,12 @@ import authRouter from './auth/route';
 import homeRouter from './home/route';
 import contractorRouter from './contractor/route';
 import userContractorRouter from './userContractor/route';
-import { jobCollectionRouter, jobRouter } from './job/route';
+import { jobRouter } from './job/route';
+import { jobContractorRouter } from './jobContractor/route';
+import imageRouter from './image/route';
 import quoteRouter from './quote/route';
 import communicationRouter from './communication/route';
+import aiGenerationRouter from './ai/route';
 import integrationRouter from './integration/route';
 
 const app = express();
@@ -47,12 +50,14 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/homes', homeRouter);
-app.use('/api/v1/homes/:homeId/jobs', jobCollectionRouter);
 app.use('/api/v1/contractors', contractorRouter);
 app.use('/api/v1/user-contractors', userContractorRouter);
 app.use('/api/v1/jobs', jobRouter);
+app.use('/api/v1/job-contractors', jobContractorRouter);
+app.use('/api/v1/images', imageRouter);
 app.use('/api/v1/quotes', quoteRouter);
 app.use('/api/v1/communications', communicationRouter);
+app.use('/api/v1/ai-generations', aiGenerationRouter);
 app.use('/api/v1/integrations', integrationRouter);
 
 app.use(errorHandler);

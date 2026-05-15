@@ -1,9 +1,9 @@
 import request from 'supertest';
-import app from '../../app';
-import { db } from '../../db';
-import { users } from '../../auth/models/User';
-import { homes } from '../../home/models/Home';
-import { userHomes } from '../../home/models/UserHome';
+import app from '@/app';
+import { db } from '@/db';
+import { users } from '@/auth/models/User';
+import { homes } from '@/home/models/Home';
+import { userHomes } from '@/home/models/UserHome';
 import { like, eq, inArray } from 'drizzle-orm';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
@@ -40,9 +40,9 @@ describe('Quotes API', () => {
     token = await loginAs('test-quote-route@example.com');
     otherToken = await loginAs('test-quote-route-other@example.com');
     const home = await homeFactory.create({}, { transient: { userId: user.id } });
-    const job = await jobFactory.create({}, { transient: { homeId: home.id, userId: user.id } });
+    const job = await jobFactory.create({ homeId: home.id, createdByUserId: user.id });
     const contractor = await contractorFactory.create();
-    await jobContractorFactory.create({}, { transient: { jobId: job.id, contractorId: contractor.id } });
+    await jobContractorFactory.create({ jobId: job.id, contractorId: contractor.id });
     jobId = job.id;
     contractorId = contractor.id;
   });
@@ -90,7 +90,7 @@ describe('Quotes API', () => {
 
   describe('PATCH /api/v1/quotes/:quoteId', () => {
     it('confirms a draft quote', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       const res = await request(app).patch(`/api/v1/quotes/${quote.id}`)
         .set('Authorization', `Bearer ${token}`)
         .send({ status: 'CONFIRMED' });
@@ -101,7 +101,7 @@ describe('Quotes API', () => {
 
   describe('DELETE /api/v1/quotes/:quoteId', () => {
     it('deletes a quote', async () => {
-      const quote = await quoteFactory.create({}, { transient: { jobId, contractorId } });
+      const quote = await quoteFactory.create({ jobId, contractorId });
       const res = await request(app).delete(`/api/v1/quotes/${quote.id}`)
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);

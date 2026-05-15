@@ -1,19 +1,19 @@
-import { request } from '@/lib/api';
+import { request, buildUrl } from '@/lib/api';
 
-export function listJobContractors(jobId: string) {
-  return request<{ data: any[] }>(`/api/v1/jobs/${jobId}/contractors`);
+export function listJobContractors(params: { jobId?: string }) {
+  return request<{ data: any[] }>(buildUrl('/api/v1/job-contractors', params));
 }
 
-export function listQuotes(jobId: string) {
-  return request<{ data: any[] }>(`/api/v1/jobs/${jobId}/quotes`);
+export function listQuotes(params: { jobId?: string }) {
+  return request<{ data: any[] }>(buildUrl('/api/v1/quotes', params));
 }
 
-export function listImages(jobId: string) {
-  return request<{ data: any[] }>(`/api/v1/jobs/${jobId}/images`);
+export function listImages(params: { jobId?: string }) {
+  return request<{ data: any[] }>(buildUrl('/api/v1/images', params));
 }
 
-export function listAIGenerations(jobId: string) {
-  return request<{ data: any[] }>(`/api/v1/jobs/${jobId}/ai-generations`);
+export function listAIGenerations(params: { jobId?: string }) {
+  return request<{ data: any[] }>(buildUrl('/api/v1/ai-generations', params));
 }
 
 export function listContractors(params?: {

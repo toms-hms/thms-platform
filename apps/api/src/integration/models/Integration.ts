@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core';
-import { integrationTypeEnum, integrationProviderEnum } from '../../db/enums';
-import { users } from '../../auth/models/User';
+import { integrationTypeEnum, integrationProviderEnum } from '@/db/enums';
+import { users } from '@/auth/models/User';
 
 export const integrations = pgTable('Integration', {
   id:              text('id').primaryKey(),
@@ -18,3 +18,6 @@ export const integrations = pgTable('Integration', {
 
 export type Integration    = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
+
+export enum IntegrationType { EMAIL = 'EMAIL', AI = 'AI' }
+export enum IntegrationProvider { GOOGLE = 'GOOGLE', MICROSOFT = 'MICROSOFT', OPENAI = 'OPENAI' }

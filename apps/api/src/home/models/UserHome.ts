@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, primaryKey } from 'drizzle-orm/pg-core';
-import { homeRoleEnum } from '../../db/enums';
-import { users } from '../../auth/models/User';
+import { homeRoleEnum } from '@/db/enums';
+import { users } from '@/auth/models/User';
 import { homes } from './Home';
 
 export const userHomes = pgTable('UserHome', {

@@ -1,4 +1,24 @@
 import { z } from 'zod';
+import type {
+  TypedRequest,
+  TypedParamsRequest,
+  TypedBodyRequest,
+  TypedParamsBodyRequest,
+} from '@/middleware/auth.middleware';
+
+export const HomeParamsSchema = z.object({ homeId: z.string().min(1) });
+export const HomeUserParamsSchema = z.object({
+  homeId: z.string().min(1),
+  userId: z.string().min(1),
+});
+
+export type GetHomesRequest      = TypedRequest;
+export type GetHomeRequest       = TypedParamsRequest<typeof HomeParamsSchema>;
+export type CreateHomeRequest    = TypedBodyRequest<typeof CreateHomeSchema>;
+export type UpdateHomeRequest    = TypedParamsBodyRequest<typeof HomeParamsSchema, typeof UpdateHomeSchema>;
+export type DeleteHomeRequest    = TypedParamsRequest<typeof HomeParamsSchema>;
+export type AddHomeUserRequest   = TypedParamsBodyRequest<typeof HomeParamsSchema, typeof AddHomeUserSchema>;
+export type RemoveHomeUserRequest = TypedParamsRequest<typeof HomeUserParamsSchema>;
 
 export const CreateHomeSchema = z.object({
   name: z.string().min(1),
@@ -9,6 +29,11 @@ export const CreateHomeSchema = z.object({
   zipCode: z.string().min(5),
   country: z.string().default('US'),
   notes: z.string().optional(),
+});
+
+export const AddHomeUserSchema = z.object({
+  email: z.string().email(),
+  role:  z.string().default('MEMBER'),
 });
 
 export const UpdateHomeSchema = z.object({

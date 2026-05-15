@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, json } from 'drizzle-orm/pg-core';
-import { aiGenerationStatusEnum } from '../../db/enums';
-import { jobs } from '../../job/models/Job';
-import { users } from '../../auth/models/User';
+import { aiGenerationStatusEnum } from '@/db/enums';
+import { jobs } from '@/job/models/Job';
+import { users } from '@/auth/models/User';
 
 export const aiGenerations = pgTable('AIGeneration', {
   id:               text('id').primaryKey(),

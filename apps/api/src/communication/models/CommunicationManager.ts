@@ -1,9 +1,9 @@
 import { eq, and } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { communications, type Communication, type NewCommunication } from './Communication';
-import { contractors } from '../../contractor/models/Contractor';
-import { NotFoundError } from '../../utils/errors';
-import { UserRole } from '@thms/shared';
+import { contractors } from '@/contractor/models/Contractor';
+import { NotFoundError } from '@/utils/errors';
+import { UserRole } from '@/auth/models/User';
 
 export const CommunicationManager = {
   async listForJob(jobId: string, filters?: { contractorId?: string; needsReview?: boolean; direction?: string }) {

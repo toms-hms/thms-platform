@@ -27,11 +27,12 @@ export default function QuotesTab({ job }: Props) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await createQuote(job.id, {
+      const res = await createQuote({
+        jobId:        job.id,
         contractorId: form.contractorId,
-        amount: parseFloat(form.amount),
-        description: form.description,
-        status: form.status,
+        amount:       parseFloat(form.amount),
+        description:  form.description,
+        status:       form.status,
       });
       setQuotesList((prev) => [res.data, ...prev]);
       setShowAdd(false);

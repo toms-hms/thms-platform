@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { jobs } from '../../job/models/Job';
-import { users } from '../../auth/models/User';
+import { jobs } from '@/job/models/Job';
+import { users } from '@/auth/models/User';
 import { aiGenerations } from './AIGeneration';
 
 export const jobImages = pgTable('JobImage', {

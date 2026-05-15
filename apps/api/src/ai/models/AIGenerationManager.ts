@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { aiGenerations, type AIGeneration, type NewAIGeneration } from './AIGeneration';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@/utils/errors';
 
 export const AIGenerationManager = {
   async listForJob(jobId: string): Promise<AIGeneration[]> {

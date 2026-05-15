@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db } from '@/db';
 import { users, type User, type NewUser } from './User';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@/utils/errors';
 
 export const UserManager = {
   async findById(id: string): Promise<User | undefined> {

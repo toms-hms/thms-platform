@@ -1,16 +1,17 @@
 import OpenAI from 'openai';
-import { JobIntent, AiSession } from '@thms/shared';
-import { getDownloadUrl } from '../upload/service';
-import { s3Client, BUCKET_NAME } from '../config/minio';
+import type { AiSession } from '@thms/shared';
+import { JobIntent } from '@/job/models/Job';
+import { getDownloadUrl } from '@/upload/service';
+import { s3Client, BUCKET_NAME } from '@/config/minio';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { createId } from '@paralleldrive/cuid2';
-import { env } from '../config/env';
+import { env } from '@/config/env';
 import { AIGenerationManager } from './models/AIGenerationManager';
 import { JobImageManager } from './models/JobImageManager';
-import { JobManager } from '../job/models/JobManager';
-import { ContractorManager } from '../contractor/models/ContractorManager';
-import { HomeManager } from '../home/models/HomeManager';
+import { JobManager } from '@/job/models/JobManager';
+import { ContractorManager } from '@/contractor/models/ContractorManager';
+import { HomeManager } from '@/home/models/HomeManager';
 
 function getOpenAI() {
   if (!env.OPENAI_API_KEY) throw new Error('OpenAI API key not configured');
@@ -369,10 +370,6 @@ export async function startDiagnose(jobId: string) {
   });
 
   return { question, options, summary: null, suggestedCategories, messages: [{ role: 'assistant', content: question ?? '' }] };
-}
-
-export async function listAIGenerations(jobId: string) {
-  return AIGenerationManager.listForJob(jobId);
 }
 
 export async function retryGeneration(generationId: string, userId: string) {

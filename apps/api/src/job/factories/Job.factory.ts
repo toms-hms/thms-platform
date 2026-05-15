@@ -3,7 +3,8 @@ import { Factory } from 'fishery';
 import { userFactory } from '@/auth/factories/User.factory';
 import { homeFactory } from '@/home/factories/Home.factory';
 import { JobManager } from '@/job/models/JobManager';
-import { TradeCategory, JobIntent, JobStatus } from '@thms/shared';
+import { JobIntent, JobStatus } from '@/job/models/Job';
+import { TradeCategory } from '@/contractor/models/Contractor';
 import type { Job } from '@/job/models/Job';
 
 export const jobFactory = Factory.define<Job>(({ onCreate, params, sequence }) => {

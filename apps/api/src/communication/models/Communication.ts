@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
-import { communicationChannelEnum, communicationDirectionEnum } from '../../db/enums';
-import { jobs } from '../../job/models/Job';
-import { contractors } from '../../contractor/models/Contractor';
+import { communicationChannelEnum, communicationDirectionEnum } from '@/db/enums';
+import { jobs } from '@/job/models/Job';
+import { contractors } from '@/contractor/models/Contractor';
 
 export const communications = pgTable('Communication', {
   id:                text('id').primaryKey(),
@@ -24,3 +24,6 @@ export const communications = pgTable('Communication', {
 
 export type Communication    = typeof communications.$inferSelect;
 export type NewCommunication = typeof communications.$inferInsert;
+
+export enum CommunicationChannel { EMAIL = 'EMAIL' }
+export enum CommunicationDirection { SENT = 'SENT', RECEIVED = 'RECEIVED' }

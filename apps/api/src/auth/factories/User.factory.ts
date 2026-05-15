@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { Factory } from 'fishery';
 import { db } from '@/db';
 import { users } from '@/auth/models/User';
-import { UserRole } from '@thms/shared';
+import { UserRole } from '@/auth/models/User';
 import type { User } from '@/auth/models/User';
 
 const TEST_PASSWORD = 'password123';

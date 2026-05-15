@@ -13,7 +13,7 @@ export interface TradeCategorySuggestion {
   reason: string;
 }
 
-type CreateJobData = z.infer<typeof CreateJobSchema> & {
+type CreateJobData = Omit<z.infer<typeof CreateJobSchema>, 'homeId'> & {
   categories?: TradeCategory[];
   aiSession?: {
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;

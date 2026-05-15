@@ -9,17 +9,18 @@ All request validation goes in `src/{module}/schema.ts`. The file exports Zod sc
 
 ## Naming conventions
 
-Three sources, three rules:
+Two sources, two rules:
 
 | Source | Schema pattern | Example |
 |--------|---------------|---------|
-| Path params — single item | `XParamsSchema` | `JobParamsSchema` |
-| Path params — parent-scoped | `ParentXsParamsSchema` | `HomeJobsParamsSchema` |
+| Path params | `XParamsSchema` | `JobParamsSchema` |
 | Query params (list filters) | `XsQuerySchema` | `JobsQuerySchema` |
 | Create body | `CreateXSchema` | `CreateJobSchema` |
 | Update body | `UpdateXSchema` | `UpdateJobSchema` |
 | Action body (sub-route) | descriptive name | `AssignContractorSchema`, `DiagnoseSchema` |
 | Nested sub-object | descriptive name | `AiSessionSchema` |
+
+**No parent-scoped param schemas.** There is no `ParentXsParamsSchema` pattern. Parent IDs belong in the body (POST) or query (GET), not in a separate URL segment. See the route skill for the flat resource design.
 
 **Why no `Body` suffix on create/update?** `Create` and `Update` unambiguously mean request body — adding `Body` is redundant. `Params` and `Query` earn their suffixes because the name alone doesn't tell you the source.
 
@@ -27,17 +28,14 @@ Request types are named after the HTTP operation, not the schema:
 
 | Route | Schemas used | Request type |
 |-------|-------------|--------------|
-| `GET /jobs` | `JobsQuerySchema` query | `GetJobsRequest` |
+| `GET /jobs` | `JobsQuerySchema` query (includes optional `homeId`) | `GetJobsRequest` |
 | `GET /jobs/:jobId` | `JobParamsSchema` params | `GetJobRequest` |
-| `GET /homes/:homeId/jobs` | `HomeJobsParamsSchema` params + `JobsQuerySchema` query | `GetHomeJobsRequest` |
-| `POST /jobs` | `CreateJobSchema` body | `CreateJobRequest` |
-| `POST /homes/:homeId/jobs` | `HomeJobsParamsSchema` params + `CreateJobSchema` body | `CreateHomeJobRequest` |
+| `POST /jobs` | `CreateJobSchema` body (includes `homeId`) | `CreateJobRequest` |
 | `PATCH /jobs/:jobId` | `JobParamsSchema` params + `UpdateJobSchema` body | `UpdateJobRequest` |
 | `DELETE /jobs/:jobId` | `JobParamsSchema` params | `DeleteJobRequest` |
 | `POST /jobs/:jobId/contractors` | `JobParamsSchema` params + `AssignContractorSchema` body | `AssignContractorRequest` |
 | `GET /contractors` | `ContractorsQuerySchema` query | `GetContractorsRequest` |
 | `GET /contractors/:contractorId` | `ContractorParamsSchema` params | `GetContractorRequest` |
-| `GET /jobs/:jobId/quotes` | `JobQuotesParamsSchema` params | `GetJobQuotesRequest` |
 | `GET /quotes/:quoteId` | `QuoteParamsSchema` params | `GetQuoteRequest` |
 | `GET /homes/:homeId` | `HomeParamsSchema` params | `GetHomeRequest` |
 | `PATCH /homes/:homeId` | `HomeParamsSchema` params + `UpdateHomeSchema` body | `UpdateHomeRequest` |
@@ -80,16 +78,15 @@ import type {
 // ─── Path param schemas ───────────────────────────────────────────────────────
 
 export const JobParamsSchema = z.object({ jobId: z.string().min(1) });
-export const HomeJobsParamsSchema = z.object({ homeId: z.string().min(1) });
-// Nested resource — carries both parent and child IDs
 export const JobContractorParamsSchema = z.object({
-  jobId:          z.string().min(1),
+  jobId:           z.string().min(1),
   jobContractorId: z.string().min(1),
 });
 
 // ─── Query schemas (list filters) ─────────────────────────────────────────────
 
 export const JobsQuerySchema = z.object({
+  homeId:   z.string().optional(),           // filter by home; permission checked inline
   status:   z.nativeEnum(JobStatus).optional(),
   category: z.nativeEnum(TradeCategory).optional(),
 });
@@ -141,26 +138,21 @@ export const UpdateJobContractorSchema = z.object({
 // ─── Request types ────────────────────────────────────────────────────────────
 
 // GET /jobs
-export type GetJobsRequest        = TypedQueryRequest<typeof JobsQuerySchema>;
+export type GetJobsRequest             = TypedQueryRequest<typeof JobsQuerySchema>;
 // GET /jobs/:jobId
-export type GetJobRequest         = TypedParamsRequest<typeof JobParamsSchema>;
-// GET /homes/:homeId/jobs
-export type GetHomeJobsRequest    = TypedParamsQueryRequest<typeof HomeJobsParamsSchema, typeof JobsQuerySchema>;
-
-// POST /homes/:homeId/jobs
-export type CreateHomeJobRequest  = TypedParamsBodyRequest<typeof HomeJobsParamsSchema, typeof CreateJobSchema>;
-// POST /homes/:homeId/jobs/category-suggestions
-export type SuggestCategoriesRequest = TypedParamsBodyRequest<typeof HomeJobsParamsSchema, typeof SuggestTradeCategoriesSchema>;
-
+export type GetJobRequest              = TypedParamsRequest<typeof JobParamsSchema>;
+// POST /jobs  (homeId in body)
+export type CreateJobRequest           = TypedBodyRequest<typeof CreateJobSchema>;
+// POST /jobs/category-suggestions
+export type SuggestCategoriesRequest   = TypedBodyRequest<typeof SuggestTradeCategoriesSchema>;
 // PATCH /jobs/:jobId
-export type UpdateJobRequest      = TypedParamsBodyRequest<typeof JobParamsSchema, typeof UpdateJobSchema>;
+export type UpdateJobRequest           = TypedParamsBodyRequest<typeof JobParamsSchema, typeof UpdateJobSchema>;
 // DELETE /jobs/:jobId
-export type DeleteJobRequest      = TypedParamsRequest<typeof JobParamsSchema>;
-
+export type DeleteJobRequest           = TypedParamsRequest<typeof JobParamsSchema>;
 // POST /jobs/:jobId/diagnose
-export type DiagnoseRequest       = TypedParamsBodyRequest<typeof JobParamsSchema, typeof DiagnoseSchema>;
+export type DiagnoseRequest            = TypedParamsBodyRequest<typeof JobParamsSchema, typeof DiagnoseSchema>;
 // POST /jobs/:jobId/contractors
-export type AssignContractorRequest = TypedParamsBodyRequest<typeof JobParamsSchema, typeof AssignContractorSchema>;
+export type AssignContractorRequest    = TypedParamsBodyRequest<typeof JobParamsSchema, typeof AssignContractorSchema>;
 // PATCH /jobs/:jobId/contractors/:jobContractorId
 export type UpdateJobContractorRequest = TypedParamsBodyRequest<typeof JobContractorParamsSchema, typeof UpdateJobContractorSchema>;
 ```
@@ -238,6 +230,7 @@ Use `.partial().extend()` to build an update schema from a create schema.
 
 ```typescript
 export const CreateJobSchema = z.object({
+  homeId:      z.string().min(1),            // parent context in body, not URL
   title:       z.string().min(1),
   intent:      z.nativeEnum(JobIntent).default(JobIntent.ISSUE),
   category:    z.nativeEnum(TradeCategory),

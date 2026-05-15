@@ -11,7 +11,7 @@ import authRouter from './auth/route';
 import homeRouter from './home/route';
 import contractorRouter from './contractor/route';
 import userContractorRouter from './userContractor/route';
-import { homeJobRouter, jobRouter } from './job/route';
+import { jobRouter } from './job/route';
 import quoteRouter from './quote/route';
 import communicationRouter from './communication/route';
 import integrationRouter from './integration/route';
@@ -47,7 +47,6 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/homes', homeRouter);
-app.use('/api/v1/homes/:homeId/jobs', homeJobRouter);
 app.use('/api/v1/contractors', contractorRouter);
 app.use('/api/v1/user-contractors', userContractorRouter);
 app.use('/api/v1/jobs', jobRouter);

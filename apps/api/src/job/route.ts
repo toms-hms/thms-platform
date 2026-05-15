@@ -3,14 +3,12 @@ import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import {
-  HomeJobsParamsSchema, JobParamsSchema, JobContractorParamsSchema, JobsQuerySchema,
-  GetJobRequest, GetHomeJobsRequest,
-  CreateHomeJobRequest, UpdateJobRequest, DeleteJobRequest,
-  AssignContractorRequest, UpdateJobContractorRequest,
-  DiagnoseRequest,
-  CreateJobSchema, UpdateJobSchema,
-  AssignContractorSchema, UpdateJobContractorSchema,
-  DiagnoseSchema,
+  JobParamsSchema, JobContractorParamsSchema, JobsQuerySchema,
+  GetJobRequest, GetJobsRequest, CreateJobRequest,
+  UpdateJobRequest, DeleteJobRequest,
+  AssignContractorRequest, UpdateJobContractorRequest, DiagnoseRequest,
+  CreateJobSchema, UpdateJobSchema, AssignContractorSchema,
+  UpdateJobContractorSchema, DiagnoseSchema,
 } from './schema';
 import { CreateQuoteSchema } from '@/quote/schema';
 import { CreateAIGenerationSchema, EmailDraftSchema } from '@/ai/schema';
@@ -23,46 +21,49 @@ import { CommunicationManager } from '@/communication/models/CommunicationManage
 import { permit } from '@/permissions/permit';
 import { PermissionService } from '@/permissions/PermissionService';
 import { HomeManager } from '@/home/models/HomeManager';
+import { ForbiddenError } from '@/utils/errors';
 import * as jobService from './service';
 import * as uploadService from '@/upload/service';
 import * as quoteService from '@/quote/service';
 import * as aiService from '@/ai/service';
 import * as integrationService from '@/integration/service';
 
-// Mounted at /homes/:homeId/jobs — mergeParams: true so :homeId is visible
-export const homeJobRouter = Router({ mergeParams: true });
-homeJobRouter.use(authenticateJWT);
+export const jobRouter = Router();
+jobRouter.use(authenticateJWT);
 
-homeJobRouter.get('/',
-  validate(HomeJobsParamsSchema, 'params'),
-  permit(HomeManager, (req) => req.params.homeId),
+// List — homeId is an optional filter; permission checked inline when provided
+jobRouter.get('/',
   validate(JobsQuerySchema, 'query'),
-  async (req: GetHomeJobsRequest, res: Response, next: NextFunction) => {
+  async (req: GetJobsRequest, res: Response, next: NextFunction) => {
     try {
       const { userId, role } = req.user;
-      const jobs = await PermissionService.list(JobManager, userId, role, req.params.homeId, req.query);
+      const { homeId, ...filters } = req.query;
+      if (homeId) {
+        const allowed = await PermissionService.check(HomeManager, userId, homeId);
+        if (!allowed) return next(new ForbiddenError());
+      }
+      const jobs = await PermissionService.list(JobManager, userId, role, homeId, filters);
       res.json({ data: jobs });
     } catch (err) { next(err); }
   },
 );
 
-homeJobRouter.post('/',
-  validate(HomeJobsParamsSchema, 'params'),
-  permit(HomeManager, (req) => req.params.homeId),
+// Create — homeId in body; permission checked inline before service call
+jobRouter.post('/',
   validate(CreateJobSchema),
-  async (req: CreateHomeJobRequest, res: Response, next: NextFunction) => {
+  async (req: CreateJobRequest, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.user;
-      const job = await jobService.createJob(req.params.homeId, userId, req.body);
+      const allowed = await PermissionService.check(HomeManager, userId, req.body.homeId);
+      if (!allowed) return next(new ForbiddenError());
+      const job = await jobService.createJob(req.body.homeId, userId, req.body);
       res.status(201).json({ data: job });
     } catch (err) { next(err); }
   },
 );
 
-// Mounted at /jobs
-export const jobRouter = Router();
-jobRouter.use(authenticateJWT);
 
+// Single job — relation assembly via Promise.all, no service wrapper
 jobRouter.get('/:jobId',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -105,7 +106,8 @@ jobRouter.delete('/:jobId',
   },
 );
 
-// Contractors
+// ─── Contractors ──────────────────────────────────────────────────────────────
+
 jobRouter.get('/:jobId/contractors',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -152,7 +154,8 @@ jobRouter.delete('/:jobId/contractors/:jobContractorId',
   },
 );
 
-// Images
+// ─── Images ───────────────────────────────────────────────────────────────────
+
 jobRouter.get('/:jobId/images',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -205,7 +208,8 @@ jobRouter.delete('/:jobId/images/:imageId',
   },
 );
 
-// Quotes
+// ─── Quotes ───────────────────────────────────────────────────────────────────
+
 jobRouter.get('/:jobId/quotes',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -229,7 +233,8 @@ jobRouter.post('/:jobId/quotes',
   },
 );
 
-// Communications
+// ─── Communications ───────────────────────────────────────────────────────────
+
 jobRouter.get('/:jobId/communications',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -245,7 +250,8 @@ jobRouter.get('/:jobId/communications',
   },
 );
 
-// AI generations
+// ─── AI generations ───────────────────────────────────────────────────────────
+
 jobRouter.post('/:jobId/ai-generations',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -276,7 +282,8 @@ jobRouter.get('/:jobId/ai-generations',
   },
 );
 
-// AI diagnostic Q&A
+// ─── AI diagnostic ────────────────────────────────────────────────────────────
+
 jobRouter.post('/:jobId/diagnose/start',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),
@@ -300,7 +307,8 @@ jobRouter.post('/:jobId/diagnose',
   },
 );
 
-// Email drafting + sending
+// ─── Email ────────────────────────────────────────────────────────────────────
+
 jobRouter.post('/:jobId/email-drafts',
   validate(JobParamsSchema, 'params'),
   permit(JobManager, (req) => req.params.jobId),

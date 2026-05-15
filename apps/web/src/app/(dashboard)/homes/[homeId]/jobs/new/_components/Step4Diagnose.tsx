@@ -250,7 +250,7 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
                     <span className="font-medium">Est. cost:</span>{' '}
                     ${summary.priceRange[0].toLocaleString()} – ${summary.priceRange[1].toLocaleString()}
                   </div>
-                  {summary.constraints && summary.constraints.length > 0 && (
+                  {'constraints' in summary && summary.constraints && summary.constraints.length > 0 && (
                     <div><span className="font-medium">Constraints:</span> {summary.constraints.join(', ')}</div>
                   )}
                 </div>

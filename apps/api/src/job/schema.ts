@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { JobStatus, JobIntent } from './models/Job';
-import { JobContractorStatus } from './models/JobContractor';
 import { TradeCategory } from '@/contractor/models/Contractor';
 import type {
   TypedParamsRequest,
@@ -12,10 +11,6 @@ import type {
 // ─── Path param schemas ───────────────────────────────────────────────────────
 
 export const JobParamsSchema = z.object({ jobId: z.string().min(1) });
-export const JobContractorParamsSchema = z.object({
-  jobId:           z.string().min(1),
-  jobContractorId: z.string().min(1),
-});
 
 // ─── Query schemas (list filters) ─────────────────────────────────────────────
 
@@ -97,16 +92,6 @@ export const SuggestTradeCategoriesSchema = z.object({
   selectedCategories: z.array(z.nativeEnum(TradeCategory)).optional(),
 });
 
-export const AssignContractorSchema = z.object({
-  contractorId: z.string().min(1),
-  notes:        z.string().optional(),
-});
-
-export const UpdateJobContractorSchema = z.object({
-  status: z.nativeEnum(JobContractorStatus),
-  notes:  z.string().optional(),
-});
-
 // ─── Request types ────────────────────────────────────────────────────────────
 
 // GET /jobs
@@ -123,7 +108,3 @@ export type UpdateJobRequest           = TypedParamsBodyRequest<typeof JobParams
 export type DeleteJobRequest           = TypedParamsRequest<typeof JobParamsSchema>;
 // POST /jobs/:jobId/diagnose
 export type DiagnoseRequest            = TypedParamsBodyRequest<typeof JobParamsSchema, typeof DiagnoseSchema>;
-// POST /jobs/:jobId/contractors
-export type AssignContractorRequest    = TypedParamsBodyRequest<typeof JobParamsSchema, typeof AssignContractorSchema>;
-// PATCH /jobs/:jobId/contractors/:jobContractorId
-export type UpdateJobContractorRequest = TypedParamsBodyRequest<typeof JobContractorParamsSchema, typeof UpdateJobContractorSchema>;

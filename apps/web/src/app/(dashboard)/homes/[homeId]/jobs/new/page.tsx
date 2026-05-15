@@ -34,10 +34,10 @@ interface WizardData {
 
 async function uploadPhoto(jobId: string, file: File) {
   const urlRes = await request<{ data: { uploadUrl: string; key: string } }>(
-    `/api/v1/jobs/${jobId}/images/upload-url`,
+    '/api/v1/images/upload-url',
     {
       method: 'POST',
-      body: JSON.stringify({ fileName: file.name, contentType: file.type, kind: 'SOURCE' }),
+      body: JSON.stringify({ jobId, fileName: file.name, contentType: file.type, kind: 'SOURCE' }),
     }
   );
   await fetch(urlRes.data.uploadUrl, {
@@ -45,9 +45,9 @@ async function uploadPhoto(jobId: string, file: File) {
     body: file,
     headers: { 'Content-Type': file.type },
   });
-  await request(`/api/v1/jobs/${jobId}/images/confirm`, {
+  await request('/api/v1/images/confirm', {
     method: 'POST',
-    body: JSON.stringify({ key: urlRes.data.key, kind: 'SOURCE', label: file.name }),
+    body: JSON.stringify({ jobId, key: urlRes.data.key, kind: 'SOURCE', label: file.name }),
   });
 }
 
@@ -100,9 +100,10 @@ export default function NewJobWizardPage() {
     setError('');
     try {
       const effectiveCategory = data.category ?? data.categories[0];
-      const res = await request<{ data: any }>(`/api/v1/homes/${homeId}/jobs`, {
+      const res = await request<{ data: any }>('/api/v1/jobs', {
         method: 'POST',
         body: JSON.stringify({
+          homeId,
           title: data.title,
           intent: data.intent,
           category: effectiveCategory,
@@ -162,9 +163,9 @@ export default function NewJobWizardPage() {
       // Assign each selected contractor
       await Promise.all(
         data.selectedContractorIds.map((contractorId) =>
-          request(`/api/v1/jobs/${data.jobId}/contractors`, {
+          request('/api/v1/job-contractors', {
             method: 'POST',
-            body: JSON.stringify({ contractorId }),
+            body: JSON.stringify({ jobId: data.jobId, contractorId }),
           })
         )
       );

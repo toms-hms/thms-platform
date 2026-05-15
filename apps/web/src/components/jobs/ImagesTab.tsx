@@ -26,7 +26,7 @@ export default function ImagesTab({ jobId }: Props) {
   async function load() {
     setLoading(true);
     try {
-      const res = await listImages(jobId);
+      const res = await listImages({ jobId });
       setImagesList(res.data);
     } catch {}
     setLoading(false);
@@ -37,10 +37,11 @@ export default function ImagesTab({ jobId }: Props) {
     if (!file) return;
     setUploading(true);
     try {
-      const urlRes = await getUploadUrl(jobId, {
-        fileName: file.name,
+      const urlRes = await getUploadUrl({
+        jobId,
+        fileName:    file.name,
         contentType: file.type,
-        kind: 'SOURCE',
+        kind:        'SOURCE',
       });
       const { uploadUrl, key } = urlRes.data;
 
@@ -50,9 +51,10 @@ export default function ImagesTab({ jobId }: Props) {
         headers: { 'Content-Type': file.type },
       });
 
-      const confirmRes = await confirmUpload(jobId, {
+      const confirmRes = await confirmUpload({
+        jobId,
         key,
-        kind: 'SOURCE',
+        kind:  'SOURCE',
         label: file.name,
       });
       setImagesList((prev) => [confirmRes.data, ...prev]);
@@ -67,10 +69,11 @@ export default function ImagesTab({ jobId }: Props) {
     e.preventDefault();
     setGenLoading(true);
     try {
-      const res = await createAIGeneration(jobId, {
+      const res = await createAIGeneration({
+        jobId,
         sourceImageId: genForm.sourceImageId,
-        prompt: genForm.prompt,
-        provider: 'openai',
+        prompt:        genForm.prompt,
+        provider:      'openai',
       });
       alert('AI generation started! Refresh in a moment to see the result.');
       setShowAIGen(false);
@@ -84,7 +87,7 @@ export default function ImagesTab({ jobId }: Props) {
   async function handleDelete(imageId: string) {
     if (!confirm('Delete this image?')) return;
     try {
-      await deleteImage(jobId, imageId);
+      await deleteImage(imageId);
       setImagesList((prev) => prev.filter((i) => i.id !== imageId));
     } catch {}
   }

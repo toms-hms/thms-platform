@@ -3,7 +3,9 @@ import { QuoteManager } from './models/QuoteManager';
 import type { z } from 'zod';
 import { CreateQuoteSchema, UpdateQuoteSchema } from './schema';
 
-export async function createQuote(jobId: string, data: z.infer<typeof CreateQuoteSchema>) {
+type CreateQuoteData = Omit<z.infer<typeof CreateQuoteSchema>, 'jobId'>;
+
+export async function createQuote(jobId: string, data: CreateQuoteData) {
   return QuoteManager.create({
     id: createId(),
     jobId,

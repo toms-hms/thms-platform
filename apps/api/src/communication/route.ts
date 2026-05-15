@@ -2,12 +2,39 @@ import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { authenticateJWT } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { CommunicationParamsSchema, GetCommunicationRequest, UpdateCommunicationRequest, UpdateCommunicationSchema } from './schema';
+import {
+  CommunicationParamsSchema, CommunicationsQuerySchema,
+  GetCommunicationsRequest, GetCommunicationRequest,
+  UpdateCommunicationRequest, UpdateCommunicationSchema,
+} from './schema';
 import { CommunicationManager } from './models/CommunicationManager';
+import { JobManager } from '@/job/models/JobManager';
+import { PermissionService } from '@/permissions/PermissionService';
+import { ForbiddenError } from '@/utils/errors';
 import * as communicationService from './service';
 
 const router = Router();
 router.use(authenticateJWT);
+
+// GET /communications?jobId=X — list communications for a job
+router.get('/',
+  validate(CommunicationsQuerySchema, 'query'),
+  async (req: GetCommunicationsRequest, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.user;
+      const { jobId, contractorId, needsReview, direction } = req.query;
+      if (!jobId) return res.json({ data: [] });
+      const allowed = await PermissionService.check(JobManager, userId, jobId);
+      if (!allowed) return next(new ForbiddenError());
+      const comms = await CommunicationManager.listForJob(jobId, {
+        contractorId,
+        needsReview: needsReview === 'true' ? true : needsReview === 'false' ? false : undefined,
+        direction,
+      });
+      res.json({ data: comms });
+    } catch (err) { next(err); }
+  },
+);
 
 router.get('/:communicationId',
   validate(CommunicationParamsSchema, 'params'),

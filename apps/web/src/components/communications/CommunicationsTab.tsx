@@ -23,9 +23,9 @@ export default function CommunicationsTab({ jobId }: Props) {
     try {
       const params =
         filter === 'needsReview'
-          ? { needsReview: true }
-          : undefined;
-      const res = await listCommunications(jobId, params);
+          ? { jobId, needsReview: true }
+          : { jobId };
+      const res = await listCommunications(params);
       setComms(res.data);
     } catch {}
     setLoading(false);

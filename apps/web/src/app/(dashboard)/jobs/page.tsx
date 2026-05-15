@@ -47,7 +47,7 @@ export default function JobsPage() {
       setHomes(loadedHomes);
       const jobsPerHome = await Promise.all(
         loadedHomes.map((home) =>
-          listJobs(home.id)
+          listJobs({ homeId: home.id })
             .then((r) => r.data.map((job) => ({ ...job, homeId: home.id, homeName: home.name })))
             .catch(() => [] as JobWithHome[])
         )

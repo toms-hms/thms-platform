@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import { listContractors, listIntegrations } from './queries';
-import { assignContractor, updateContractorStatus, removeContractor, draftEmail, sendEmail } from './mutations';
+import { assignContractor, updateJobContractorStatus, removeJobContractor, draftEmail, sendEmail } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
@@ -43,7 +43,7 @@ export default function JobContractorsTab({ job }: Props) {
     if (!selectedContractorId) return;
     setSaving(true);
     try {
-      const res = await assignContractor(job.id, { contractorId: selectedContractorId });
+      const res = await assignContractor({ jobId: job.id, contractorId: selectedContractorId });
       setJcs((prev) => [...prev, res.data]);
       setShowAdd(false);
       setSelectedContractorId('');
@@ -53,7 +53,7 @@ export default function JobContractorsTab({ job }: Props) {
 
   async function handleStatusChange(jc: any, status: string) {
     try {
-      const res = await updateContractorStatus(job.id, jc.id, { status });
+      const res = await updateJobContractorStatus(jc.id, { status });
       setJcs((prev) => prev.map((j) => (j.id === jc.id ? res.data : j)));
     } catch {}
   }
@@ -61,7 +61,7 @@ export default function JobContractorsTab({ job }: Props) {
   async function handleRemove(jcId: string) {
     if (!confirm('Remove contractor from this job?')) return;
     try {
-      await removeContractor(job.id, jcId);
+      await removeJobContractor(jcId);
       setJcs((prev) => prev.filter((j) => j.id !== jcId));
     } catch {}
   }

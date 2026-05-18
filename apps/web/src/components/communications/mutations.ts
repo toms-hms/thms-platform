@@ -1,5 +1,12 @@
 import { request } from '@/lib/api';
+import type { CommunicationDto } from '@thms/shared';
 
-export function updateCommunication(communicationId: string, data: any) {
-  return request<{ data: any }>(`/api/v1/communications/${communicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
+interface UpdateCommunicationInput {
+  needsReview?: boolean;
+  parsedSummary?: string;
+}
+
+/** Updates review status or parsed summary on a communication. */
+export function updateCommunication(communicationId: string, data: UpdateCommunicationInput) {
+  return request<{ data: CommunicationDto }>(`/communications/${communicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
 }

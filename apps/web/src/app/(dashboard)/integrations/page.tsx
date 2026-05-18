@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import { listIntegrations } from './queries';
-import { startGoogleAuth, startMicrosoftAuth, saveAI, disconnectIntegration } from './mutations';
+import { listIntegrations, startGoogleAuth, startMicrosoftAuth } from './queries';
+import { saveAI, disconnectIntegration } from './mutations';
 
 export default function IntegrationsPage() {
   const [list, setList] = useState<any[]>([]);

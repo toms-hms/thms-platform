@@ -1,5 +1,7 @@
 import { request, buildUrl } from '@/lib/api';
+import type { CommunicationDto } from '@thms/shared';
 
+/** Lists communications filtered by job, contractor, review status, or direction. */
 export function listCommunications(params?: {
   jobId?:        string;
   contractorId?: string;
@@ -12,5 +14,5 @@ export function listCommunications(params?: {
     needsReview:  params?.needsReview !== undefined ? String(params.needsReview) : undefined,
     direction:    params?.direction,
   };
-  return request<{ data: any[] }>(buildUrl('/api/v1/communications', queryParams));
+  return request<{ data: CommunicationDto[] }>(buildUrl('/communications', queryParams));
 }

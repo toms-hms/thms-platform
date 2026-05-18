@@ -34,7 +34,7 @@ interface WizardData {
 
 async function uploadPhoto(jobId: string, file: File) {
   const urlRes = await request<{ data: { uploadUrl: string; key: string } }>(
-    '/api/v1/images/upload-url',
+    '/images/upload-url',
     {
       method: 'POST',
       body: JSON.stringify({ jobId, fileName: file.name, contentType: file.type, kind: 'SOURCE' }),
@@ -45,7 +45,7 @@ async function uploadPhoto(jobId: string, file: File) {
     body: file,
     headers: { 'Content-Type': file.type },
   });
-  await request('/api/v1/images/confirm', {
+  await request('/images/confirm', {
     method: 'POST',
     body: JSON.stringify({ jobId, key: urlRes.data.key, kind: 'SOURCE', label: file.name }),
   });
@@ -67,7 +67,7 @@ export default function NewJobWizardPage() {
   const [homeZipCodes, setHomeZipCodes] = useState<string[]>([]);
 
   useEffect(() => {
-    request<{ data: { zipCode: string } }>(`/api/v1/homes/${homeId}`)
+    request<{ data: { zipCode: string } }>(`/homes/${homeId}`)
       .then((res) => setHomeZipCodes(res.data.zipCode ? [res.data.zipCode] : []))
       .catch(() => setHomeZipCodes([]));
   }, [homeId]);
@@ -100,7 +100,7 @@ export default function NewJobWizardPage() {
     setError('');
     try {
       const effectiveCategory = data.category ?? data.categories[0];
-      const res = await request<{ data: any }>('/api/v1/jobs', {
+      const res = await request<{ data: any }>('/jobs', {
         method: 'POST',
         body: JSON.stringify({
           homeId,
@@ -135,7 +135,7 @@ export default function NewJobWizardPage() {
       setSubmitting(true);
       setError('');
       try {
-        await request(`/api/v1/jobs/${data.jobId}`, {
+        await request(`/jobs/${data.jobId}`, {
           method: 'PATCH',
           body: JSON.stringify({
             category: categoryValues[0],
@@ -163,7 +163,7 @@ export default function NewJobWizardPage() {
       // Assign each selected contractor
       await Promise.all(
         data.selectedContractorIds.map((contractorId) =>
-          request('/api/v1/job-contractors', {
+          request('/job-contractors', {
             method: 'POST',
             body: JSON.stringify({ jobId: data.jobId, contractorId }),
           })
@@ -171,7 +171,7 @@ export default function NewJobWizardPage() {
       );
 
       // Transition job to REACHING_OUT
-      await request(`/api/v1/jobs/${data.jobId}`, {
+      await request(`/jobs/${data.jobId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'REACHING_OUT' }),
       });

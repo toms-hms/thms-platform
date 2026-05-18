@@ -1,5 +1,9 @@
 import { request } from '@/lib/api';
+import type { JobDto, CreateJobInput } from '@thms/shared';
 
-export function createJob(data: any) {
-  return request<{ data: any }>('/api/v1/jobs', { method: 'POST', body: JSON.stringify(data) });
+type CreateJobData = CreateJobInput & { homeId: string };
+
+/** Creates a new job under the given home. */
+export function createJob(data: CreateJobData) {
+  return request<{ data: JobDto }>('/jobs', { method: 'POST', body: JSON.stringify(data) });
 }

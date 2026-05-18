@@ -71,7 +71,7 @@ export default function JobsPage() {
     setAddSaving(true);
     setAddError('');
     try {
-      const res = await request<{ data: any }>('/api/v1/homes', {
+      const res = await request<{ data: any }>('/homes', {
         method: 'POST',
         body: JSON.stringify({ ...addForm, country: 'US' }),
       });

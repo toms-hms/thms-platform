@@ -1,5 +1,6 @@
 'use client';
 import { useState, FormEvent } from 'react';
+import { QuoteStatus } from '@thms/shared';
 import { createQuote, updateQuote, deleteQuote } from './mutations';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
@@ -32,7 +33,7 @@ export default function QuotesTab({ job }: Props) {
         contractorId: form.contractorId,
         amount:       parseFloat(form.amount),
         description:  form.description,
-        status:       form.status,
+        status:       form.status as QuoteStatus,
       });
       setQuotesList((prev) => [res.data, ...prev]);
       setShowAdd(false);
@@ -43,7 +44,7 @@ export default function QuotesTab({ job }: Props) {
 
   async function handleConfirm(quote: any) {
     try {
-      const res = await updateQuote(quote.id, { status: 'CONFIRMED' });
+      const res = await updateQuote(quote.id, { status: QuoteStatus.CONFIRMED });
       setQuotesList((prev) => prev.map((q) => (q.id === quote.id ? res.data : q)));
     } catch {}
   }

@@ -70,3 +70,10 @@ See `.ai/skills/permissioning.md` for the full pattern before touching any route
 
 ## Branching
 Never push directly to `main` or any default branch. Always create a feature branch and push there. Direct pushes to `main` are only permitted when the user explicitly instructs it.
+
+## App boundaries
+Code inside `apps/web` may only import from `apps/web` (via `@/`) and node_modules. Code inside `apps/api` may only import from `apps/api` (via `@/`) and node_modules.
+
+**No imports from `@thms/shared`.** No imports from one app into another. The web and api are deployed to separate servers — they cannot share runtime code. Types that need to cross the boundary must come from the generated API client in `apps/web/src/types/api.gen.ts` (see the type generation workflow in `.ai/skills/api-client.md`).
+
+This is a hard rule. Cross-app imports break independent deployment.

@@ -53,7 +53,7 @@ export default function Step5Contractors({
       qs.append('tradeCategories', tradeCategory)
     );
     zipCodesForRequest.forEach((zipCode) => qs.append('zipCodes', zipCode));
-    fetch(`/api/v1/contractors?${qs}`, {
+    fetch(`/contractors?${qs}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
     })
       .then(r => r.json())

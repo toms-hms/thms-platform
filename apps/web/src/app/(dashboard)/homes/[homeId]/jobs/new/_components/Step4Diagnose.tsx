@@ -58,7 +58,7 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await request<{ data: TurnResult }>(`/api/v1/jobs/${jobId}/diagnose/start`, { method: 'POST' });
+      const res = await request<{ data: TurnResult }>(`/jobs/${jobId}/diagnose/start`, { method: 'POST' });
       applyTurnResult(res.data);
     } catch (err: any) {
       setError(err.message || 'Failed to start. Please try again.');
@@ -87,7 +87,7 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await request<{ data: TurnResult }>(`/api/v1/jobs/${jobId}/diagnose`, {
+      const res = await request<{ data: TurnResult }>(`/jobs/${jobId}/diagnose`, {
         method: 'POST',
         body: JSON.stringify({ message: answer }),
       });

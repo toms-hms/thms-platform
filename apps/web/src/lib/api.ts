@@ -1,8 +1,14 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_PREFIX = '/api/v1';
 
-/** Builds a URL with query params, handling arrays as repeated keys (e.g. foo[]=1&foo[]=2 → foo=1&foo=2). */
+/**
+ * Builds an API URL with query params. The `/api/v1` prefix is added automatically —
+ * callers pass resource paths like `/contractors`, not `/api/v1/contractors`.
+ * Handles array params as repeated keys (tradeCategories=A&tradeCategories=B).
+ */
 export function buildUrl(path: string, params?: Record<string, string | string[] | undefined>): string {
-  if (!params) return path;
+  const prefixedPath = `${API_PREFIX}${path}`;
+  if (!params) return prefixedPath;
   const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined) continue;
@@ -13,7 +19,7 @@ export function buildUrl(path: string, params?: Record<string, string | string[]
     }
   }
   const queryString = qs.toString();
-  return queryString ? `${path}?${queryString}` : path;
+  return queryString ? `${prefixedPath}?${queryString}` : prefixedPath;
 }
 
 function getToken(): string | null {
@@ -32,7 +38,9 @@ export async function request<T>(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  // Prepend /api/v1 unless the path already starts with it (for paths from buildUrl)
+  const fullPath = path.startsWith(API_PREFIX) ? path : `${API_PREFIX}${path}`;
+  const res = await fetch(`${API_BASE}${fullPath}`, { ...options, headers });
 
   if (!res.ok) {
     if (res.status === 401 && typeof window !== 'undefined' && localStorage.getItem('accessToken')) {
@@ -64,14 +72,14 @@ export class ApiError extends Error {
 export const auth = {
   register: (data: { email: string; password: string; firstName: string; lastName: string }) =>
     request<{ data: { user: any; tokens: { accessToken: string; refreshToken: string } } }>(
-      '/api/v1/auth/register',
+      '/auth/register',
       { method: 'POST', body: JSON.stringify(data) }
     ),
   login: (data: { email: string; password: string }) =>
     request<{ data: { user: any; tokens: { accessToken: string; refreshToken: string } } }>(
-      '/api/v1/auth/login',
+      '/auth/login',
       { method: 'POST', body: JSON.stringify(data) }
     ),
-  logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
-  me: () => request<{ data: any }>('/api/v1/auth/me'),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  me: () => request<{ data: any }>('/auth/me'),
 };

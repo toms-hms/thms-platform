@@ -14,5 +14,5 @@ export function listCommunications(params?: {
     needsReview:  params?.needsReview !== undefined ? String(params.needsReview) : undefined,
     direction:    params?.direction,
   };
-  return request<{ data: CommunicationDto[] }>(buildUrl('/api/v1/communications', queryParams));
+  return request<{ data: CommunicationDto[] }>(buildUrl('/communications', queryParams));
 }

@@ -21,22 +21,22 @@ interface JobImageDto {
 
 /** Lists job-contractor assignments for a given job. */
 export function listJobContractors(params: { jobId?: string }) {
-  return request<{ data: JobContractorDto[] }>(buildUrl('/api/v1/job-contractors', params));
+  return request<{ data: JobContractorDto[] }>(buildUrl('/job-contractors', params));
 }
 
 /** Lists quotes for a given job. */
 export function listQuotes(params: { jobId?: string }) {
-  return request<{ data: QuoteDto[] }>(buildUrl('/api/v1/quotes', params));
+  return request<{ data: QuoteDto[] }>(buildUrl('/quotes', params));
 }
 
 /** Lists uploaded images for a given job. */
 export function listImages(params: { jobId?: string }) {
-  return request<{ data: JobImageDto[] }>(buildUrl('/api/v1/images', params));
+  return request<{ data: JobImageDto[] }>(buildUrl('/images', params));
 }
 
 /** Lists AI generations for a given job. */
 export function listAIGenerations(params: { jobId?: string }) {
-  return request<{ data: AIGenerationDto[] }>(buildUrl('/api/v1/ai-generations', params));
+  return request<{ data: AIGenerationDto[] }>(buildUrl('/ai-generations', params));
 }
 
 /** Lists contractors filtered by search, trade categories, and/or ZIP codes. */
@@ -45,10 +45,10 @@ export function listContractors(params?: {
   tradeCategories?: string[];
   zipCodes?: string[];
 }) {
-  return request<{ data: ContractorDto[] }>(buildUrl('/api/v1/contractors', params));
+  return request<{ data: ContractorDto[] }>(buildUrl('/contractors', params));
 }
 
 /** Returns all integrations for the current user. */
 export function listIntegrations() {
-  return request<{ data: IntegrationDto[] }>('/api/v1/integrations');
+  return request<{ data: IntegrationDto[] }>('/integrations');
 }

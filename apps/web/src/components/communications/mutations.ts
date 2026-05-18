@@ -8,5 +8,5 @@ interface UpdateCommunicationInput {
 
 /** Updates review status or parsed summary on a communication. */
 export function updateCommunication(communicationId: string, data: UpdateCommunicationInput) {
-  return request<{ data: CommunicationDto }>(`/api/v1/communications/${communicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
+  return request<{ data: CommunicationDto }>(`/communications/${communicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
 }

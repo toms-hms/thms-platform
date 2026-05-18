@@ -7,15 +7,15 @@ export function listContractors(params?: {
   tradeCategories?: string[];
   zipCodes?: string[];
 }) {
-  return request<{ data: ContractorDto[] }>(buildUrl('/api/v1/contractors', params));
+  return request<{ data: ContractorDto[] }>(buildUrl('/contractors', params));
 }
 
 /** Returns a single contractor by ID. */
 export function getContractor(contractorId: string) {
-  return request<{ data: ContractorDto }>(`/api/v1/contractors/${contractorId}`);
+  return request<{ data: ContractorDto }>(`/contractors/${contractorId}`);
 }
 
 /** Returns the job history for a contractor. */
 export function getContractorJobs(contractorId: string) {
-  return request<{ data: JobDto[] }>(`/api/v1/contractors/${contractorId}/jobs`);
+  return request<{ data: JobDto[] }>(`/contractors/${contractorId}/jobs`);
 }

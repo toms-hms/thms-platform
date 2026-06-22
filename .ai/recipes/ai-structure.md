@@ -18,6 +18,7 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
     web.md                    ← frontend codebase snapshot. Load for web work.
   recipes/
     ai-structure.md           ← this file.
+    recipe.md                 ← how to write a recipe (the meta-recipe).
     shared-types.md           ← how to add types to @thms/shared.
     api/
       file-structure.md       ← where files go in the API (module layout, naming).
@@ -59,7 +60,7 @@ AGENTS.md                     ← same structure. Codex reads this automatically
 **Recipes** — procedural guides for specific task types. Read when the task matches. Organized by scope:
 - `api/` for backend (Express, Drizzle, Zod, testing, permissions)
 - `web/` for frontend (Next.js, React, Tailwind)
-- root for cross-cutting concerns (`shared-types.md`, this file)
+- root for cross-cutting concerns (`recipe.md` — how to write a recipe, `shared-types.md`, this file)
 
 **Commands** — Claude slash commands invoked by typing `/name`. Thin wrappers that load context. Not read by Codex.
 

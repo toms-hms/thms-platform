@@ -25,6 +25,7 @@ Detailed how-to guides for common task types. Load only what the task requires.
 
 **Shared / cross-cutting**
 - AI file structure: `.ai/recipes/ai-structure.md`
+- How to write a recipe (meta): `.ai/recipes/recipe.md`
 - Shared package types (`@thms/shared`): `.ai/recipes/shared-types.md`
 
 **Backend (API)**

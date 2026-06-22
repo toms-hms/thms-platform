@@ -200,7 +200,7 @@ describe('HomeManager', () => {
 
 ## Factories
 
-See `.ai/skills/api/factory.md` for the full factory pattern.
+See `.ai/recipes/api/factory.md` for the full factory pattern.
 
 - **Persisted columns** (including FKs on the model row) → direct params: `jobFactory.create({ homeId: home.id })`
 - **`transient`** → only for values that create related rows not owned by this model: `homeFactory.create({}, { transient: { userId } })`

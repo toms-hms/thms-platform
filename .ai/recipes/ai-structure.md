@@ -1,6 +1,6 @@
 ---
 name: ai-structure
-description: Map of all AI-readable files in this repo — rules, context, skills, commands, and memory.
+description: Map of all AI-readable files in this repo — rules, context, recipes, commands, and memory.
 ---
 
 # AI File Structure
@@ -16,7 +16,7 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
   context/
     api.md                    ← backend codebase snapshot. Load for API work.
     web.md                    ← frontend codebase snapshot. Load for web work.
-  skills/
+  recipes/
     ai-structure.md           ← this file.
     shared-types.md           ← how to add types to @thms/shared.
     api/
@@ -56,7 +56,7 @@ AGENTS.md                     ← same structure. Codex reads this automatically
 
 **Context** — descriptions of what currently exists. Loaded on demand. Keep up to date as the codebase evolves.
 
-**Skills** — procedural guides for specific task types. Read when the task matches. Organized by scope:
+**Recipes** — procedural guides for specific task types. Read when the task matches. Organized by scope:
 - `api/` for backend (Express, Drizzle, Zod, testing, permissions)
 - `web/` for frontend (Next.js, React, Tailwind)
 - root for cross-cutting concerns (`shared-types.md`, this file)

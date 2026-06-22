@@ -1,6 +1,6 @@
-# THM-20 Skill Audit — API & Web Skills
+# THM-20 Recipe Audit — API & Web Recipes
 
-Skills reviewed and updated as part of THM-20. No production code was changed — all changes are in `.ai/skills/`. Two pending code changes must be applied globally in the follow-up ticket.
+Recipes reviewed and updated as part of THM-20. No production code was changed — all changes are in `.ai/recipes/`. Two pending code changes must be applied globally in the follow-up ticket.
 
 ## Pending code changes (follow-up ticket)
 

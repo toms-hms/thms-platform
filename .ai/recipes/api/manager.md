@@ -221,7 +221,7 @@ export function filterUser(_userId: string): SQL | undefined {
 }
 ```
 
-See `.ai/skills/api/permissioning.md` for the full ownership-chain pattern.
+See `.ai/recipes/api/permissioning.md` for the full ownership-chain pattern.
 
 ## Core rules
 

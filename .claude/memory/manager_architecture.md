@@ -24,7 +24,7 @@ async filter(opts: FilterOpts = {}): Promise<Contractor[]> {
 }
 ```
 
-**Why not a chainable QuerySet class:** A `<Model>Query` accumulator (Django/Rails style) requires `as SQL` casts, throws away Drizzle's per-step type narrowing, adds per-Manager boilerplate, and solves a problem TypeScript + Drizzle don't have. See `.ai/skills/manager.md` for the full rationale.
+**Why not a chainable QuerySet class:** A `<Model>Query` accumulator (Django/Rails style) requires `as SQL` casts, throws away Drizzle's per-step type narrowing, adds per-Manager boilerplate, and solves a problem TypeScript + Drizzle don't have. See `.ai/recipes/manager.md` for the full rationale.
 
 **File organization:** Predicate helpers live in a sibling file `<Name>Manager.where.ts`, imported into the Manager as `import * as where from './ContractorManager.where'`. Always extract — even at 1–3 helpers. The convention beats the threshold judgment call: every Manager with predicates has a paired `.where.ts` file, so finding them is mechanical.
 

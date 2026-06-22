@@ -20,7 +20,7 @@ Two sources, two rules:
 | Action body (sub-route) | descriptive name | `AssignContractorSchema`, `DiagnoseSchema` |
 | Nested sub-object | descriptive name | `AiSessionSchema` |
 
-**No parent-scoped param schemas.** There is no `ParentXsParamsSchema` pattern. Parent IDs belong in the body (POST) or query (GET), not in a separate URL segment. See the route skill for the flat resource design.
+**No parent-scoped param schemas.** There is no `ParentXsParamsSchema` pattern. Parent IDs belong in the body (POST) or query (GET), not in a separate URL segment. See the route recipe for the flat resource design.
 
 **Why no `Body` suffix on create/update?** `Create` and `Update` unambiguously mean request body — adding `Body` is redundant. `Params` and `Query` earn their suffixes because the name alone doesn't tell you the source.
 

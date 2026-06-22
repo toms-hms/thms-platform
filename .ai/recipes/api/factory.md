@@ -109,6 +109,6 @@ export const jobContractorFactory = Factory.define<JobContractor>(({ onCreate, p
 ## What factories do NOT do
 
 - No inline DB calls other than via the manager — factories don't import `db` directly.
-- No cleanup — the test file owns cleanup (see `.ai/skills/api/testing.md`).
+- No cleanup — the test file owns cleanup (see `.ai/recipes/api/testing.md`).
 - No business logic — factories insert a record as-is; they don't fire service functions.
 - No extra relationships — if a test needs a `UserHome`, create that row explicitly in the test.

@@ -1,3 +1,9 @@
+---
+name: THM-20 Recipe Audit — API & Web patterns
+description: Patterns established when recipes were reorganized in THM-20 — route handler / schema-naming / service-mutations-only / testing / web api-client conventions, plus the TypedRequest + buildUrl follow-ups (applied in THM-21/THM-22).
+type: reference
+---
+
 # THM-20 Recipe Audit — API & Web Recipes
 
 Recipes reviewed and updated as part of THM-20. No production code was changed — all changes are in `.ai/recipes/`. Two pending code changes must be applied globally in the follow-up ticket.

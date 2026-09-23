@@ -3,7 +3,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { listHomes, listJobs } from './queries';
-import { request } from '@/lib/api';
+import { createHome } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
@@ -71,10 +71,7 @@ export default function JobsPage() {
     setAddSaving(true);
     setAddError('');
     try {
-      const res = await request<{ data: any }>('/homes', {
-        method: 'POST',
-        body: JSON.stringify({ ...addForm, country: 'US' }),
-      });
+      const res = await createHome({ ...addForm, country: 'US' });
       setShowModal(false);
       router.push(`/homes/${res.data.id}/jobs/new`);
     } catch (err: any) {

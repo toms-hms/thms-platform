@@ -1,55 +1,55 @@
 ---
 name: api-migrations
-description: Guide for generating and applying Drizzle migrations — when to generate vs hand-write, and workflow steps.
+description: Guide for schema changes — generating migrations, adopting the pre-existing database, and adding Postgres enum types or values.
 ---
 
-# API Migrations
-
-## Always generate schema migrations with drizzle-kit
-
-When adding, removing, or renaming a column or table, never write the SQL by hand. Run:
+# Migrations
 
 ```bash
-cd apps/api
-npm run db:generate
+make migrate         # makemigrations + migrate inside the container
+make migrate-deploy  # apply only — what runs in a deployed environment
+make migrate-adopt   # first run against a database the previous API created
 ```
 
-This diffs `src/db/schema.ts` against the last snapshot in `drizzle/` and produces a timestamped SQL file. Commit that file alongside the schema change.
+Never hand-write a migration for a schema change. Edit the model, then generate.
 
-## When to write a custom migration instead
+## Adopting the existing database
 
-Only write raw SQL when the change cannot be expressed as a schema diff:
+The tables predate Django, so the initial migrations describe tables that are already there. On such a database run `make migrate-adopt` once — `--fake-initial` records the initial migrations without re-creating anything. Everything after that is an ordinary `make migrate`.
 
-- Data backfills (populating a new column from existing rows)
-- Multi-step renames that need to preserve data mid-flight
-- Index creation with non-default options
-- Triggers, functions, or other DB objects Drizzle doesn't model
+A fresh database (a test run, a new environment) builds the whole schema from the same migrations, so the two stay identical.
 
-Custom migrations still go in `drizzle/` with a sequential prefix so they run in order.
+## Postgres enum types
 
-## Workflow
+The schema uses native enum types, which Django does not manage. They are created by `core/migrations/0001_enum_types.py`, and **every app's initial migration depends on it**.
 
-1. Edit the Drizzle model in `src/{module}/models/<Model>.ts`
-2. Add the table export to `src/db/schema.ts` if it's a new table
-3. Run `npm run db:generate` — review the generated SQL before committing
-4. Commit both the model change and the generated migration file together
-5. To apply: `npm run db:migrate` (or `make migrate` from project root)
+To add a **new** enum type:
 
-## Example: adding a nullable column
+1. Add it to `ENUMS` in `core/migrations/0001_enum_types.py` — the migration is written to skip types that already exist, so it stays safe to re-run.
+2. Declare the field with `PGEnumField(enum_type="YourType", choices=YourChoices.choices)`.
+3. Make sure the app's migration depends on `("core", "0001_enum_types")`.
 
-```typescript
-// 1. Edit the model
-export const contractors = pgTable('Contractor', {
-  // ... existing fields
-  website: text('website'),   // new nullable column
-});
+To add a **value** to an existing enum, write a new migration with `ALTER TYPE`, because Postgres cannot do it implicitly:
 
-// 2. Generate
-// cd apps/api && npm run db:generate
-// → drizzle/0012_add_contractor_website.sql
-
-// 3. Review the generated SQL — should look like:
-// ALTER TABLE "Contractor" ADD COLUMN "website" text;
+```python
+operations = [
+    migrations.RunSQL(
+        sql='ALTER TYPE "JobStatus" ADD VALUE IF NOT EXISTS \'ON_HOLD\';',
+        reverse_sql=migrations.RunSQL.noop,  # Postgres cannot drop an enum value
+    )
+]
 ```
 
-Never add `.notNull()` to a new column without a migration-time default — Postgres will reject the migration on a populated table.
+Then add the member to the `TextChoices` class in the same change.
+
+## Hand-written SQL is for data, not structure
+
+A data migration (backfilling a column, repairing rows) is legitimately hand-written. A structural change is not — generate it.
+
+## Checking before you commit
+
+```bash
+DJANGO_ENV=test uv run python manage.py makemigrations --check --dry-run
+```
+
+This fails when a model change has no migration, which is exactly what CI should catch.

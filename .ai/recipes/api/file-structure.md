@@ -1,83 +1,47 @@
 ---
 name: api-file-structure
-description: Guide for where files go in the API — module layout, what belongs in each file, and naming conventions.
+description: Where each kind of backend file lives, and what belongs in it. Read before adding a new module or a new file to an existing one.
 ---
 
 # API File Structure
 
-## Module pattern (enforced)
-
-Every resource **must** follow this structure:
+One Django app per domain. One concern per file.
 
 ```
-src/{module}/
-  models/
-    ModelName.ts              — Drizzle table definition + inferred types
-    ModelNameManager.ts       — Query methods (extends BaseManager)
-    ModelNameManager.where.ts — Predicate helpers (when the manager has filters)
-  factories/
-    ModelName.factory.ts      — One factory per model (test use only)
-  __tests__/
-    ModelNameManager.test.ts  — Unit tests: CRUD, hasPermission, where.filterUser
-    service.test.ts           — Service layer: orchestration, cache invalidation
-    route.test.ts             — Integration tests: HTTP via supertest
-  route.ts    — Router only. No business logic.
-  schema.ts   — Zod schemas only.
-  service.ts  — Business logic only. No Express types.
+apps/api/<app>/
+  models.py       Table definitions and TextChoices enums
+  managers.py     Query methods and permission predicates
+  services.py     Write orchestration
+  schema.py       GraphQL types, queries and mutations
+  factories.py    Test factories, one per model
+  apps.py         AppConfig, including audit-log registration
+  migrations/
+  tests/
+    test_managers.py
+    test_services.py
+    test_schema.py
 ```
-
-## Modules
-
-`auth`, `home`, `job`, `contractor`, `quote`, `communication`, `integration`, `ai`, `upload`
-
-## Rules
-
-1. **`route.ts`** — only Express Router handlers. Each handler: validate input → call service or manager → `res.json({ data })` or `next(err)`.
-2. **`schema.ts`** — only Zod schemas and derived `TypedRequest` types. See `.ai/recipes/api/schema.md` for naming conventions. No imports from `route.ts` or `service.ts`.
-3. **`service.ts`** — mutations only. No GET logic — reads call managers directly from the route. Takes plain args (no `req`/`res`). Returns data or throws from `@/utils/errors`.
-4. **`models/ModelName.ts`** — Drizzle `pgTable` definition + `type X = typeof x.$inferSelect` + `type NewX = typeof x.$inferInsert`.
-5. **`models/ModelNameManager.ts`** — class extending `BaseManager<typeof table>`, exported as a singleton.
-6. **No barrel files** — import directly from `./schema`, `./service`, `./models/ModelName`, etc.
-7. **No cross-module service imports in routes** — if module A's route needs module B's logic, import B's manager or service directly.
 
 ## What goes where
 
-| Code | File |
-|------|------|
-| Zod schema | `schema.ts` |
-| DB query (Drizzle) | `models/ModelNameManager.ts` |
-| HTTP status code | `route.ts` |
-| Error throw | `service.ts` (use `@/utils/errors`) |
-| Business logic | `service.ts` |
-| JWT decode | `middleware/auth.middleware.ts` |
-| Env var | `config/env.ts` |
-| Drizzle enum definition | Owning `models/ModelName.ts` or module-local model enum file |
-| Table re-export (for drizzle-kit) | `src/db/schema.ts` |
+| File | Contains | Never contains |
+| --- | --- | --- |
+| `models.py` | Fields, `Meta`, `TextChoices`, cheap derived properties | Queries, business rules |
+| `managers.py` | Every query the app makes; `has_permission`; `list_for_user` | Orchestration across apps |
+| `services.py` | Multi-step writes, cross-app coordination, cache invalidation | Raw ORM filtering that belongs in a manager |
+| `schema.py` | Types, arguments, auth gates, calls into services and managers | Business logic |
 
-## Naming conventions
+## Adding a new app
 
-- Module directories: singular noun — `job`, `home`, `contractor`
-- Files: `route.ts`, `schema.ts`, `service.ts` — always these exact names
-- Service functions: `createX`, `updateX`, `deleteX`
-- Schema exports: `CreateXSchema`, `UpdateXSchema`
-- Manager class: `XManagerClass` → singleton export `XManager`
-- Factory export: `xFactory` (lowercase, camelCase noun)
+1. `apps/api/<app>/` with the files above, and `__init__.py` in the app and its `tests/`.
+2. An `AppConfig` in `apps.py` whose `ready()` registers the models with the audit log.
+3. Add the app to `INSTALLED_APPS` in `config/settings.py`.
+4. Add its `Query` and `Mutation` mixins to `config/schema.py`.
+5. If the models need a new Postgres enum type, add it to `core/migrations/0001_enum_types.py` and depend on that migration.
 
-## Non-obvious patterns
+## Reads and writes take different paths
 
-- **Request typing**: type handler params as `TypedRequest<Params, Query>` derived from schemas in `schema.ts` — see `.ai/recipes/api/schema.md`.
-- **`job/route.ts` exports two routers**: `homeJobRouter` (mounted at `/homes/:homeId/jobs`) and `jobRouter` (mounted at `/jobs`).
-- **IDs**: generated with `createId()` from `@paralleldrive/cuid2` — not auto-generated by DB. Always pass `id` and `updatedAt: new Date()` on insert.
-- **Tests mock `openai` and `googleapis`** via `src/test/__mocks__/`.
+- **Reads** — a resolver calls a manager directly. No service in between.
+- **Writes** — a mutation calls a service, which calls managers.
 
-## DB schema re-export
-
-Every new table must be added to `src/db/schema.ts`:
-
-```typescript
-// src/db/schema.ts — re-exports all tables for drizzle-kit
-export { jobs } from '../job/models/Job';
-export { contractors } from '../contractor/models/Contractor';
-export { contractorZipCodes } from '../contractor/models/ContractorZipCode';
-// ...
-```
+A resolver that needs several related collections lets GraphQL do the work: expose them as fields on the type (see `JobType`) rather than assembling a composite payload by hand.

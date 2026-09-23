@@ -1,7 +1,12 @@
-import { request } from '@/lib/api';
-import type { HomeDto } from '@thms/shared';
+import { gqlRequest } from '@/lib/graphql';
+import type { HomeDto } from '@/types/api';
+
+export const HOME_FIELDS = `
+  id name address1 address2 city state zipCode country notes fullAddress createdAt updatedAt
+`;
 
 /** Returns all homes the current user has access to. */
-export function listHomes() {
-  return request<{ data: HomeDto[] }>('/homes');
+export async function listHomes(): Promise<{ data: HomeDto[] }> {
+  const data = await gqlRequest<{ homes: HomeDto[] }>(`query { homes { ${HOME_FIELDS} } }`);
+  return { data: data.homes };
 }

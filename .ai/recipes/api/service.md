@@ -1,95 +1,50 @@
 ---
 name: api-service
-description: Guide for writing service layer functions — orchestration, business logic, and when NOT to use a service.
+description: Guide for the service layer — what belongs in a service, and what belongs in a manager or a resolver.
 ---
 
 # API Service
 
-Services own business logic for mutations: orchestration, multi-step operations, and error handling. They have no Express types — inputs are plain values, outputs are entities or throw.
+Services orchestrate writes. They are plain module-level functions, not classes.
 
-## When to use a service vs calling the manager directly
-
-- **GET routes → managers directly from the route handler. Always.** No service wrapper needed for reads, even when assembling relations.
-- **Mutation routes → service → manager.** Use a service when the write involves more than one step, cache warming, or non-trivial business rules.
-
-## File
-
-```
-src/{module}/service.ts   — named async function exports only. No req/res. No Express imports.
-```
-
-## Import pattern
-
-Service modules export named functions. Always import with `* as`:
-
-```typescript
-import * as homeService from '@/home/service';
-import * as jobService from './service';
-
-// Call as:
-homeService.createHome(userId, data);
-jobService.updateJob(jobId, data);
+```python
+def create_home(user_id: str, data: dict[str, Any]) -> Home:
+    """Creates a home owned by the user and grants them access."""
+    home = Home.objects.create(
+        name=data["name"],
+        address1=data["address1"],
+        address2=data.get("address2"),
+        ...
+    )
+    UserHome.objects.create(user_id=user_id, home=home, role=HomeRole.OWNER)
+    permissions.grant(user_id, home.pk)
+    return home
 ```
 
-Never import service functions individually (`import { createHome }`) — the namespace import makes the module boundary explicit at call sites.
+## What belongs here
 
-## Function naming
+- A write that touches more than one table or more than one app.
+- Rules the database cannot express — "only an owner may delete a home".
+- Permission-cache maintenance after a membership change.
+- Calls to a third party (OpenAI, Gmail) and whatever they imply for our own tables.
 
-`createX`, `updateX`, `deleteX`. Throw from `@/utils/errors` — never return error objects.
+## What does not
 
-## Realistic example — createJob
+- **Reads.** A resolver calls the manager directly. There is no `get_job` service.
+- **Query construction.** If a function is mostly `.filter(...)`, it belongs in the manager.
+- **Auth checks.** The resolver gates access before calling the service. A service may re-check ownership where it is part of the rule itself (`delete_home` checks OWNER, not access).
 
-```typescript
-// apps/api/src/job/service.ts (condensed)
-import { createId } from '@paralleldrive/cuid2';
-import { JobManager } from './models/JobManager';
-import { JobContractorManager } from './models/JobContractorManager';
-import { JobContractorStatus, JobIntent } from '@thms/shared';
-import type { CreateJobData, UpdateJobData } from './schema';
+## Conventions
 
-export async function createJob(
-  homeId: string,
-  userId: string,
-  data: CreateJobData,
-): Promise<Job> {
-  return JobManager.create({
-    id: createId(),
-    homeId,
-    createdByUserId: userId,
-    title: data.title,
-    intent: data.intent ?? JobIntent.ISSUE,
-    category: data.category,
-    description: data.description ?? null,
-    notes: data.notes ?? null,
-    status: data.status ?? 'DRAFT',
-    aiSession: {
-      messages: [],
-      summary: null,
-      categorySuggestions: [],
-    },
-    updatedAt: new Date(),
-  });
-}
+- Keyword-only arguments for anything with more than one parameter of the same type.
+- Raise domain errors from `core.errors` — never return an error value, never raise bare `Exception`.
+- Update only the fields the caller supplied:
 
-export async function updateJob(jobId: string, data: UpdateJobData): Promise<Job> {
-  return JobManager.update(jobId, { ...data, updatedAt: new Date() });
-}
-
-export async function assignContractor(jobId: string, contractorId: string, notes?: string): Promise<JobContractor> {
-  return JobContractorManager.create({
-    id: createId(),
-    jobId,
-    contractorId,
-    status: JobContractorStatus.NOT_CONTACTED,
-    notes: notes ?? null,
-    updatedAt: new Date(),
-  });
-}
+```python
+for field in ("amount", "description", "status"):
+    if data.get(field) is not None:
+        setattr(quote, field, data[field])
+quote.save()
 ```
 
-## What does NOT belong in a service
-
-- Read / GET logic — always call managers directly from the route, even when assembling relations via `Promise.all`
-- Express `req`, `res`, `next` — service functions are pure TypeScript
-- HTTP status codes — belong in the route
-- Direct DB queries — call a manager method instead
+- **Never auto-transition a job or contractor status.** The user owns every state change; a service only applies the transition it was asked for.

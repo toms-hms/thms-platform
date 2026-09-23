@@ -19,25 +19,25 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
   recipes/
     ai-structure.md           ← this file.
     recipe.md                 ← how to write a recipe (the meta-recipe).
-    shared-types.md           ← how to add types to @thms/shared.
     api/
-      file-structure.md       ← where files go in the API (module layout, naming).
-      model.md                ← Drizzle table definitions (columns, enums, FKs, JSONB).
-      schema.md               ← Zod validation schemas (naming, discriminated unions).
+      file-structure.md       ← where files go in the API (app layout, what each file holds).
+      model.md                ← Django models mapped onto the pre-existing schema.
+      manager.md              ← managers (filters, permission predicates, query rules).
       service.md              ← service layer (orchestration, when NOT to use services).
-      route.md                ← Express route handlers (auth, permit, validate, responses).
-      manager.md              ← Manager classes (filter predicates, attach helpers, CRUD).
-      permissioning.md        ← hasPermission, listForUser, permit middleware, cache.
-      testing.md              ← test structure, factories, cleanup, what each layer covers.
-      factory.md              ← fishery factories (transient params, onCreate, sequence).
-      migrations.md           ← Drizzle migration workflow (generate vs hand-write).
+      graphql.md              ← GraphQL types, queries, mutations, enums, error codes.
+      permissioning.md        ← has_permission, list_for_user, the permission cache.
+      auth.md                 ← JWT contract, raw-bcrypt passwords, request.user.
+      audit.md                ← django-auditlog registration, exclusions, reading the log.
+      testing.md              ← test structure, GraphQLTestCase, what each layer covers.
+      factory.md              ← factory_boy factories (SubFactory, post_generation).
+      migrations.md           ← migration workflow, adopting the existing DB, PG enums.
       ai-service.md           ← OpenAI tool calling, JSON mode, multi-turn conversations.
     web/
       page.md                 ← Next.js App Router dashboard pages (useEffect, queries/mutations).
       component.md            ← React components (shared vs page-local, Tailwind classes).
       hook.md                 ← custom React hooks (placement, useRequireAuth pattern).
       form.md                 ← form handling (Modal + useState, FormEvent, error display).
-      query.md                ← frontend query helpers and API parameter contracts.
+      api-client.md           ← GraphQL client, queries/mutations, filter contracts.
 
 .claude/
   commands/
@@ -58,9 +58,9 @@ AGENTS.md                     ← same structure. Codex reads this automatically
 **Context** — descriptions of what currently exists. Loaded on demand. Keep up to date as the codebase evolves.
 
 **Recipes** — procedural guides for specific task types. Read when the task matches. Organized by scope:
-- `api/` for backend (Express, Drizzle, Zod, testing, permissions)
+- `api/` for backend (Django, Graphene, managers, testing, permissions)
 - `web/` for frontend (Next.js, React, Tailwind)
-- root for cross-cutting concerns (`recipe.md` — how to write a recipe, `shared-types.md`, this file)
+- root for cross-cutting concerns (`recipe.md` — how to write a recipe, this file)
 
 **Commands** — Claude slash commands invoked by typing `/name`. Thin wrappers that load context. Not read by Codex.
 

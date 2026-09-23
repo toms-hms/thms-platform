@@ -1,4 +1,4 @@
-import { JobIntent } from '@thms/shared';
+import { JobIntent } from '@/types/api';
 
 const INTENTS = [
   {

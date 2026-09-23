@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import { JobContractorStatus } from '@thms/shared';
+import { JobContractorStatus } from '@/types/api';
 import { listContractors, listIntegrations } from './queries';
 import { assignContractor, updateJobContractorStatus, removeJobContractor, draftEmail, sendEmail } from './mutations';
 import StatusBadge from '@/components/ui/StatusBadge';

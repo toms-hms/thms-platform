@@ -1,6 +1,6 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import { QuoteStatus } from '@thms/shared';
+import { QuoteStatus } from '@/types/api';
 import { createQuote, updateQuote, deleteQuote } from './mutations';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';

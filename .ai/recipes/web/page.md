@@ -33,7 +33,7 @@ src/app/(dashboard)/{route}/
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
-import { TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory, UserRole } from '@/types/api';
 import { useRouter } from 'next/navigation';
 import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';
@@ -170,22 +170,26 @@ export default function ContractorsPage() {
 
 ```typescript
 // apps/web/src/app/(dashboard)/contractors/queries.ts
-import { request } from '@/lib/api';
+import { gqlRequest } from '@/lib/graphql';
+import type { ContractorDto } from '@/types/api';
 
-export function listContractors(params?: {
+export const CONTRACTOR_FIELDS = `id name companyName email phone categories zipCodes isGlobal`;
+
+/** Lists contractors filtered by search, trade categories, and/or ZIP codes. */
+export async function listContractors(params?: {
   search?: string;
   tradeCategories?: string[];
   zipCodes?: string[];
-}) {
-  const qs = new URLSearchParams();
-  if (params?.search) qs.set('search', params.search);
-  params?.tradeCategories?.forEach((v) => qs.append('tradeCategories', v));
-  params?.zipCodes?.forEach((v) => qs.append('zipCodes', v));
-  return request<{ data: any[] }>(`/api/v1/contractors${qs.toString() ? `?${qs}` : ''}`);
-}
-
-export function getContractor(id: string) {
-  return request<{ data: any }>(`/api/v1/contractors/${id}`);
+}): Promise<{ data: ContractorDto[] }> {
+  const data = await gqlRequest<{ contractors: ContractorDto[] }>(
+    `query Contractors($search: String, $tradeCategories: [TradeCategory!], $zipCodes: [String!]) {
+       contractors(search: $search, tradeCategories: $tradeCategories, zipCodes: $zipCodes) {
+         ${CONTRACTOR_FIELDS}
+       }
+     }`,
+    { search: params?.search, tradeCategories: params?.tradeCategories, zipCodes: params?.zipCodes }
+  );
+  return { data: data.contractors };
 }
 ```
 
@@ -193,20 +197,26 @@ export function getContractor(id: string) {
 
 ```typescript
 // apps/web/src/app/(dashboard)/contractors/mutations.ts
-import { request } from '@/lib/api';
+import { gqlRequest } from '@/lib/graphql';
+import type { ContractorDto, CreateContractorInput } from '@/types/api';
+import { CONTRACTOR_FIELDS } from './queries';
 
-export function createContractor(data: any) {
-  return request<{ data: any }>('/api/v1/contractors', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export function updateContractor(id: string, data: any) {
-  return request<{ data: any }>(`/api/v1/contractors/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-export function deleteContractor(id: string) {
-  return request(`/api/v1/contractors/${id}`, { method: 'DELETE' });
+/** Creates a new global contractor. */
+export async function createContractor(input: CreateContractorInput): Promise<{ data: ContractorDto }> {
+  const data = await gqlRequest<{ createContractor: { contractor: ContractorDto } }>(
+    `mutation CreateContractor($name: String!, $categories: [TradeCategory!]!, $zipCodes: [String!]) {
+       createContractor(name: $name, categories: $categories, zipCodes: $zipCodes) {
+         contractor { ${CONTRACTOR_FIELDS} }
+       }
+     }`,
+    input as unknown as Record<string, unknown>
+  );
+  return { data: data.createContractor.contractor };
 }
 ```
+
+Helpers always return `{ data }`, so pages read `res.data` whatever the operation was.
+See `.ai/recipes/web/api-client.md` for the full client pattern.
 
 ## Tailwind utility classes
 
@@ -225,5 +235,5 @@ Use these globals from `globals.css` (do not write your own base button/input st
 
 - All dashboard pages are `'use client'` — no server components in `(dashboard)/`.
 - Import across directory boundaries with `@/`, same-directory with `./`.
-- Enums come from `@thms/shared` — never import from `apps/api`.
+- Enums come from `@/types/api` — never import from `apps/api`.
 - Token is in `localStorage` — see `src/lib/auth.ts` for `getStoredUser()`.

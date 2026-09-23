@@ -1,4 +1,4 @@
-import { JobIntent, TradeCategory } from '@thms/shared';
+import { JobIntent, TradeCategory } from '@/types/api';
 
 export interface CategoryTile {
   label: string;

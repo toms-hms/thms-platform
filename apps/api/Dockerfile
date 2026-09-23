@@ -1,42 +1,27 @@
-FROM node:20-slim AS builder
+# Production image: gunicorn, no dev dependencies, no source mount.
+FROM python:3.12-slim
 
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_ENV=production \
+    UV_PROJECT_ENVIRONMENT=/usr/local
 
-WORKDIR /app
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
-COPY turbo.json ./
-COPY tsconfig.base.json ./
-
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/shared/src ./packages/shared/src
-COPY packages/shared/tsconfig.json ./packages/shared/
-
-COPY apps/api/package.json ./apps/api/
-
-RUN npm install --workspace=apps/api --workspace=packages/shared
-
-COPY apps/api/ ./apps/api/
-
-WORKDIR /app/apps/api
-
-RUN npm run build
-
-FROM node:20-slim AS runner
-
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 apiuser
+COPY apps/api/pyproject.toml apps/api/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY apps/api/ ./
 
-USER apiuser
+RUN useradd --create-home --uid 1001 thms && chown -R thms:thms /app
+USER thms
 
 EXPOSE 3001
 
-CMD ["node", "dist/src/index.js"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:3001", "--workers", "4", "--timeout", "120"]

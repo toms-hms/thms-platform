@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
-import { TradeCategory, UserRole } from '@thms/shared';
+import { TradeCategory, UserRole } from '@/types/api';
 import { useRouter } from 'next/navigation';
 import { listContractors } from './queries';
 import { createContractor, updateContractor, deleteContractor } from './mutations';

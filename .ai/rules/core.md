@@ -1,79 +1,91 @@
 # THMS Rules
 
+The backend is Python (Django + Graphene); the frontend is TypeScript (Next.js). Where a rule is language-specific it says so.
+
 ## Function signatures
-Destructure options-bag parameters at the function signature, not in the body. The exception: when a destructured name would shadow a function or import in scope (e.g. a `search` field colliding with a `search` helper), introduce a namespace import to disambiguate rather than renaming the destructure.
 
-```typescript
-// good
-async filter({ zipCode, category, search }: FilterOpts = {}) { /* ... */ }
+**Python.** Keyword-only arguments for anything with more than one parameter of the same type, and for every filter. Callers name what they pass.
 
-// bad — needless indirection
-async filter(opts: FilterOpts = {}) { const { zipCode, category, search } = opts; /* ... */ }
+```python
+# good
+def filter_contractors(self, *, zip_codes=None, trade_categories=None, search=None): ...
+
+# bad — positional soup at the call site
+def filter_contractors(self, zip_codes=None, trade_categories=None, search=None): ...
 ```
+
+**TypeScript.** Destructure options-bag parameters at the signature, not in the body. The exception: when a destructured name would shadow something in scope, use a namespace import to disambiguate rather than renaming the destructure.
 
 ## Imports
-- Use `@/` for any import that crosses a directory boundary. Use `./` only for same-directory imports.
-- Cross-app shared types: `@thms/shared` only. Never import from one app into the other.
+
+- **Python.** Absolute imports from the app root (`from jobs.models import Job`). Import inside a function only to break a genuine cycle — managers and services do this deliberately.
+- **TypeScript.** `@/` for any import that crosses a directory boundary; `./` only for same-directory imports.
 
 ## API responses
-Always `{ data: {} }` or `{ error: { code, message } }`. No other shape.
+
+The API is GraphQL. Errors carry a stable `extensions.code` — `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `BAD_REQUEST`, `VALIDATION_ERROR`, `RATE_LIMITED`, `INTERNAL_ERROR`. Raise the matching error from `core.errors`; never invent a code, and never return a database message, stack trace or provider response to a client.
 
 ## API and client contracts
-Use explicit domain names and plural arrays for list filters whenever a field can
-hold multiple values. Do not add singular aliases for convenience. A client that
-filters contractors by one category still sends `tradeCategories=[value]`, not
-`category=value`; one ZIP still uses `zipCodes=[value]`, not `zipCode=value`.
-Prefer `tradeCategories` over generic `categories` at API/client boundaries.
+
+Use explicit domain names and plural arrays for list filters whenever a field can hold multiple values. Do not add singular aliases for convenience. A client filtering contractors by one category still sends `tradeCategories: [value]`, not `category: value`; one ZIP still uses `zipCodes: [value]`. Prefer `tradeCategories` over generic `categories` at API and client boundaries.
 
 ## Enums and model constants
-Always use the defined enum or constant instead of a raw string for model values.
-- `JobIntent.ISSUE` not `'ISSUE'`
-- `TradeCategory.HVAC` not `'HVAC'`
-- `JobStatus.DRAFT` not `'DRAFT'`
-- `UserRole.ADMIN` not `'ADMIN'`
 
-Use them as `Record` keys too: `Record<JobIntent, string>` not `Record<string, string>`.
-All enums are exported from `@thms/shared`.
+Always use the defined enum member instead of a raw string.
+
+- Python: `JobIntent.ISSUE`, `TradeCategory.HVAC`, `JobStatus.DRAFT`, `UserRole.ADMIN` — defined as `TextChoices` in the owning app's `models.py`, exposed to GraphQL through `core/enums.py`.
+- TypeScript: the same names from `@/types/api`.
 
 ## State transitions
+
 Never auto-transition job or contractor status. The user controls all state.
 
-## Auth
-JWT Bearer token required on all routes except `/auth/register` and `/auth/login`.
+## Models
+
+The database predates Django. Map it; do not regenerate it. Always set `db_table` and `db_column`, keep CUID2 string primary keys, declare Postgres enums with `PGEnumField`, and use `TimestampField` for `timestamp(3)` columns. See `.ai/recipes/api/model.md`.
 
 ## Managers
-Every permissioned manager implements:
-- `hasPermission(userId, resourceId)` — pure data check, no role logic
-- `models/ModelNameManager.where.ts` exports `filterUser(userId)` — SQL visibility predicate for list routes
 
-Routes use `permit()` middleware for individual object access.
+Every manager guarding user-visible rows extends `PermissionedManager` and implements:
+
+- `has_permission(user_id, resource_id)` — a pure data check for one row, with no role logic
+- `list_for_user(user_id, role, **filters)` — the collection visibility query, where ADMIN is handled explicitly
+
+Resolvers gate single objects with `permissions.require(...)`. See `.ai/recipes/api/permissioning.md`, and `.ai/recipes/api/manager.md` before writing any manager method.
+
+## Queries
+
+Filter in the database, never in Python or JavaScript. No N+1: use `select_related` / `prefetch_related`, or one `__in` query for related rows. A multi-table write is wrapped in `@transaction.atomic`.
+
+## Auth
+
+Every query and mutation requires a bearer token except `login`, `register` and `refreshTokens`.
 
 ## Comments
-Every exported function must have a one-line JSDoc comment describing what it does, its key parameter assumptions, and what it returns. No commenting the obvious.
-```ts
-/** Returns contractors whose email matches any of the given addresses (case-insensitive). */
-export function filterEmails(emails?: string[]): SQL | undefined
+
+Every public function, method, class and module has a docstring (Python) or one-line JSDoc (TypeScript) describing what it does, its key assumptions, and what it returns. No commenting the obvious.
+
+```python
+def filter_existing(self, user_id: str, contractor_id: str):
+    """Returns the user's existing entry for this contractor, or None."""
 ```
 
-## Manager methods
-See `.ai/recipes/manager.md` for naming conventions and principles before writing any manager method.
-
 ## Migrations
-Never write migration SQL by hand for schema changes. Run `npm run db:generate` in `apps/api/` to generate from the Drizzle model. See `.ai/recipes/migrations.md` for when custom SQL is acceptable.
+
+Never hand-write a migration for a schema change — edit the model and run `make migrate`. Hand-written SQL is for data migrations and for Postgres enum changes, which Django cannot express. See `.ai/recipes/api/migrations.md`.
 
 ## Tests
-Each module has `factories/` (one per model) and `__tests__/` (Manager, service, route).
-Shared test infra in `src/test/`. See `.ai/recipes/testing.md` for the full pattern.
 
-## Permissions
-See `.ai/recipes/permissioning.md` for the full pattern before touching any route or manager.
+Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one per model in the app's `factories.py`. Each app has `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py`. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
 
 ## Branching
+
 Never push directly to `main` or any default branch. Always create a feature branch and push there. Direct pushes to `main` are only permitted when the user explicitly instructs it.
 
 ## App boundaries
-Code inside `apps/web` may only import from `apps/web` (via `@/`) and node_modules. Code inside `apps/api` may only import from `apps/api` (via `@/`) and node_modules.
 
-**No imports from `@thms/shared`.** No imports from one app into another. The web and api are deployed to separate servers — they cannot share runtime code. Types that need to cross the boundary must come from the generated API client in `apps/web/src/types/api.gen.ts` (see the type generation workflow in `.ai/recipes/api-client.md`).
+Code inside `apps/web` may only import from `apps/web` (via `@/`) and node_modules. Code inside `apps/api` may only import from `apps/api`.
+
+The web and api deploy to separate servers — they cannot share runtime code. Types that cross the boundary are declared in `apps/web/src/types/api.ts`, which mirrors the GraphQL schema and is updated in the same change as the schema.
 
 This is a hard rule. Cross-app imports break independent deployment.

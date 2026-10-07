@@ -1,27 +1,10 @@
 """GraphQL surface for accounts: registration, login, token refresh and `me`."""
 
 import graphene
-from graphene_django import DjangoObjectType
 
 from accounts import services
-from accounts.models import User
+from accounts.types import AuthTokensType, UserType
 from core.graphql import current_user, login_required
-
-
-class UserType(DjangoObjectType):
-    """A user account. Password and refresh-token hashes are never exposed."""
-
-    class Meta:
-        model = User
-        fields = ("id", "email", "first_name", "last_name", "role", "created_at", "updated_at")
-        convert_choices_to_enum = False
-
-
-class AuthTokensType(graphene.ObjectType):
-    """The token pair issued on login, registration and refresh."""
-
-    access_token = graphene.String(required=True)
-    refresh_token = graphene.String(required=True)
 
 
 class Register(graphene.Mutation):

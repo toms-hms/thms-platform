@@ -1,29 +1,12 @@
 """GraphQL surface for the user's contractor rolodex."""
 
 import graphene
-from graphene_django import DjangoObjectType
 
-from contractors.schema import ContractorType
-from core import permissions
 from core.enums import TradeCategoryEnum
-from core.graphql import current_user, login_required
+from core.graphql import current_user, login_required, owner_required
 from user_contractors import services
 from user_contractors.models import UserContractor
-
-
-class UserContractorType(DjangoObjectType):
-    """A contractor saved to a user's rolodex, with the contractor attached."""
-
-    contractor = graphene.Field(ContractorType, required=True)
-
-    class Meta:
-        model = UserContractor
-        fields = ("id", "note", "created_at", "updated_at")
-        convert_choices_to_enum = False
-
-    def resolve_contractor(self, info):
-        """Returns the saved contractor."""
-        return self.contractor
+from user_contractors.types import UserContractorType
 
 
 class CreateUserContractor(graphene.Mutation):
@@ -61,12 +44,10 @@ class DeleteUserContractor(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @login_required
+    @owner_required(resource=UserContractor, arg="user_contractor_id")
     def mutate(self, info, user_contractor_id: str):
-        """Deletes the rolodex entry after checking the caller owns it."""
-        user = current_user(info)
-        permissions.require(UserContractor.objects, user.pk, user_contractor_id)
-        services.delete_user_contractor(user.pk, user_contractor_id)
+        """Deletes the rolodex entry."""
+        services.delete_user_contractor(user_contractor_id)
         return DeleteUserContractor(success=True)
 
 
@@ -80,8 +61,7 @@ class UserContractorsQuery(graphene.ObjectType):
     @login_required
     def resolve_user_contractors(self, info):
         """Returns the caller's rolodex entries."""
-        user = current_user(info)
-        return permissions.list_for_user(UserContractor.objects, user.pk, user.role)
+        return UserContractor.objects.list_owned_by(current_user(info))
 
 
 class UserContractorsMutation(graphene.ObjectType):

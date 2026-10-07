@@ -1,119 +1,14 @@
-"""GraphQL surface for jobs and contractor assignments.
-
-A job exposes its related images, quotes, communications and generations as
-nested fields — the composite payload the REST endpoint used to assemble by hand.
-"""
+"""GraphQL surface for jobs and contractor assignments."""
 
 import graphene
-from graphene_django import DjangoObjectType
 
-from contractors.schema import ContractorType
-from core import permissions
 from core.enums import JobContractorStatusEnum, JobIntentEnum, JobStatusEnum, TradeCategoryEnum
-from core.graphql import current_user, login_required
+from core.graphql import authorize, current_user
+from core.permissions import Permission
 from homes.models import Home
 from jobs import services
 from jobs.models import Job, JobContractor
-
-
-class JobContractorType(DjangoObjectType):
-    """A contractor's involvement in a job."""
-
-    contractor = graphene.Field(ContractorType, required=True)
-    job_id = graphene.ID(required=True)
-    contractor_id = graphene.ID(required=True)
-
-    class Meta:
-        model = JobContractor
-        fields = (
-            "id",
-            "job",
-            "status",
-            "last_contacted_at",
-            "last_response_at",
-            "notes",
-            "created_at",
-            "updated_at",
-        )
-        convert_choices_to_enum = False
-
-    def resolve_contractor(self, info):
-        """Returns the assigned contractor."""
-        return self.contractor
-
-    def resolve_job_id(self, info) -> str:
-        """Returns the id of the job, without requiring the client to select the job itself."""
-        return self.job_id
-
-    def resolve_contractor_id(self, info) -> str:
-        """Returns the id of the contractor, without requiring a nested selection."""
-        return self.contractor_id
-
-
-class JobType(DjangoObjectType):
-    """A piece of work on a home, with everything hanging off it."""
-
-    ai_session = graphene.JSONString()
-    home_id = graphene.ID(required=True)
-    created_by_user_id = graphene.ID(required=True)
-    contractors = graphene.List(graphene.NonNull(JobContractorType), required=True)
-    images = graphene.List(graphene.NonNull("ai.schema.JobImageType"), required=True)
-    quotes = graphene.List(graphene.NonNull("quotes.schema.QuoteType"), required=True)
-    communications = graphene.List(graphene.NonNull("communications.schema.CommunicationType"), required=True)
-    ai_generations = graphene.List(graphene.NonNull("ai.schema.AIGenerationType"), required=True)
-
-    class Meta:
-        model = Job
-        fields = (
-            "id",
-            "home",
-            "title",
-            "intent",
-            "category",
-            "description",
-            "notes",
-            "status",
-            "created_by",
-            "created_at",
-            "updated_at",
-        )
-        convert_choices_to_enum = False
-
-    def resolve_home_id(self, info) -> str:
-        """Returns the id of the home this job belongs to."""
-        return self.home_id
-
-    def resolve_created_by_user_id(self, info) -> str:
-        """Returns the id of the user who created this job."""
-        return self.created_by_id
-
-    def resolve_contractors(self, info):
-        """Returns the contractors assigned to this job."""
-        return JobContractor.objects.list_for_job(self.pk)
-
-    def resolve_images(self, info):
-        """Returns the images attached to this job."""
-        from ai.models import JobImage
-
-        return JobImage.objects.list_for_job(self.pk)
-
-    def resolve_quotes(self, info):
-        """Returns the quotes recorded against this job."""
-        from quotes.models import Quote
-
-        return Quote.objects.list_for_job(self.pk)
-
-    def resolve_communications(self, info):
-        """Returns the messages exchanged about this job."""
-        from communications.models import Communication
-
-        return Communication.objects.list_for_job(self.pk)
-
-    def resolve_ai_generations(self, info):
-        """Returns the AI generations recorded against this job."""
-        from ai.models import AIGeneration
-
-        return AIGeneration.objects.list_for_job(self.pk)
+from jobs.types import JobContractorType, JobType
 
 
 class CreateJob(graphene.Mutation):
@@ -132,12 +27,10 @@ class CreateJob(graphene.Mutation):
 
     job = graphene.Field(JobType)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, **data):
-        """Creates the job after checking the caller's access to the home."""
-        user = current_user(info)
-        permissions.require(Home.objects, user.pk, home_id)
-        return CreateJob(job=services.create_job(home_id, user.pk, data))
+        """Creates the job on the home."""
+        return CreateJob(job=services.create_job(home_id, current_user(info).pk, data))
 
 
 class UpdateJob(graphene.Mutation):
@@ -156,10 +49,9 @@ class UpdateJob(graphene.Mutation):
 
     job = graphene.Field(JobType)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, **data):
-        """Applies the update after checking the caller's access to the job."""
-        permissions.require(Job.objects, current_user(info).pk, job_id)
+        """Applies the update to the job."""
         return UpdateJob(job=services.update_job(job_id, data))
 
 
@@ -171,10 +63,9 @@ class DeleteJob(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str):
-        """Deletes the job after checking the caller's access."""
-        permissions.require(Job.objects, current_user(info).pk, job_id)
+        """Deletes the job."""
         services.delete_job(job_id)
         return DeleteJob(success=True)
 
@@ -189,10 +80,9 @@ class AssignContractor(graphene.Mutation):
 
     job_contractor = graphene.Field(JobContractorType)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, contractor_id: str, notes: str | None = None):
-        """Creates or updates the assignment after checking the caller's access to the job."""
-        permissions.require(Job.objects, current_user(info).pk, job_id)
+        """Creates or updates the assignment."""
         return AssignContractor(job_contractor=services.assign_contractor(job_id, contractor_id, notes))
 
 
@@ -206,10 +96,9 @@ class UpdateJobContractor(graphene.Mutation):
 
     job_contractor = graphene.Field(JobContractorType)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=JobContractor, arg="job_contractor_id")
     def mutate(self, info, job_contractor_id: str, status: str, notes: str | None = None):
-        """Applies the status change after checking the caller's access."""
-        permissions.require(JobContractor.objects, current_user(info).pk, job_contractor_id)
+        """Applies the status change."""
         return UpdateJobContractor(
             job_contractor=services.update_job_contractor_status(job_contractor_id, status, notes)
         )
@@ -223,10 +112,9 @@ class RemoveJobContractor(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=JobContractor, arg="job_contractor_id")
     def mutate(self, info, job_contractor_id: str):
-        """Removes the assignment after checking the caller's access."""
-        permissions.require(JobContractor.objects, current_user(info).pk, job_contractor_id)
+        """Removes the assignment."""
         services.remove_contractor_from_job(job_contractor_id)
         return RemoveJobContractor(success=True)
 
@@ -246,26 +134,24 @@ class JobsQuery(graphene.ObjectType):
         graphene.NonNull(JobContractorType), job_id=graphene.ID(required=True), required=True
     )
 
-    @login_required
+    @authorize(Permission.JOBS_VIEW, resource=Home, arg="home_id", optional=True)
     def resolve_jobs(self, info, home_id=None, status=None, category=None):
         """Returns the jobs the caller can see, narrowed by home, status and category."""
-        user = current_user(info)
-        if home_id:
-            permissions.require(Home.objects, user.pk, home_id)
-        return permissions.list_for_user(
-            Job.objects, user.pk, user.role, home_id=home_id, status=status, category=category
+        return (
+            Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
+            .filter_home_ids([home_id] if home_id else None)
+            .filter_statuses([status] if status else None)
+            .filter_trade_categories([category] if category else None)
         )
 
-    @login_required
+    @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
     def resolve_job(self, info, job_id: str):
-        """Returns one job after checking the caller's access."""
-        permissions.require(Job.objects, current_user(info).pk, job_id)
+        """Returns one job."""
         return Job.objects.get_or_404(pk=job_id)
 
-    @login_required
+    @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
     def resolve_job_contractors(self, info, job_id: str):
-        """Returns the contractor assignments on a job the caller can access."""
-        permissions.require(Job.objects, current_user(info).pk, job_id)
+        """Returns the contractor assignments on a job."""
         return JobContractor.objects.list_for_job(job_id)
 
 

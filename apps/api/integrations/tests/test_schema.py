@@ -49,8 +49,8 @@ class IntegrationsTests(GraphQLTestCase):
         self.assertEqual(integration["provider"], "OPENAI")
 
     def test_cannot_disconnect_another_users_connection(self):
-        """Disconnecting a connection the caller does not own is NOT_FOUND."""
+        """Disconnecting a connection the caller does not own is FORBIDDEN."""
         body = self.execute(
             DISCONNECT, {"integrationId": self.integration.pk}, token=self.token_for(UserFactory())
         )
-        self.assert_error_code(body, "NOT_FOUND")
+        self.assert_error_code(body, "FORBIDDEN")

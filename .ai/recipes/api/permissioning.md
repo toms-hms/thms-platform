@@ -1,94 +1,86 @@
 ---
 name: api-permissioning
-description: Guide for permissioning a resource — has_permission, list_for_user, the permission cache, and how resolvers gate access.
+description: Guide for access control — the Permission names and role map in core/permissions.py, @authorize / @owner_required on resolvers, visible_to / owned_by for collections, and the membership cache.
 ---
 
 # Permissioning
 
-Two separate paths, deliberately not blurred together:
+The **home** is the access boundary. A user reaches home-scoped data through
+their `UserHome` membership, whose role grants a set of named permissions.
+Access is declared on the resolver. Managers and querysets make no decisions.
 
-- **Single object** — `permissions.require(Manager.objects, user_id, resource_id)`, which calls `has_permission`.
-- **Collections** — `permissions.list_for_user(Manager.objects, user_id, role, **filters)`, which calls `list_for_user`.
+| Piece | Lives in | Does |
+| --- | --- | --- |
+| `Permission` enum | `core/permissions.py` | The named capabilities, e.g. `jobs.view` or `quotes.edit` |
+| `role_permissions(role)` | `core/permissions.py` | OWNER: all. MEMBER: all except `HOME_DELETE` |
+| `can(user, permission, home_id)` | `core/permissions.py` | **The only decision function.** ADMIN gets True here, explicitly |
+| `@authorize(...)` | `core/graphql.py` | Gates a resolver on one row's home |
+| `@owner_required(...)` | `core/graphql.py` | Gates a resolver on a user-owned row |
+| `visible_to(user, permission)` | `HomeScopedQuerySet` | Scopes a collection to homes granting the permission |
+| `owned_by(user)` | `UserOwnedQuerySet` | Scopes a collection to the user's own rows |
 
-A permission check answers one boolean question about one row. A list query applies a visibility filter in SQL. Never implement one in terms of the other.
-
-## The two manager methods
-
-### `has_permission(user_id, resource_id) -> bool`
-
-- A pure data check for a single row. **No role branching** — admin access is handled by the caller and by `list_for_user`.
-- Query only what the check needs, or delegate to the owning parent.
-- Returns `False` for an unknown id — never raises.
-
-```python
-def has_permission(self, user_id: str, resource_id: str) -> bool:
-    """Returns True when the user belongs to the home the job sits under."""
-    job = self.filter(pk=resource_id).only("home_id").first()
-    if not job:
-        return False
-    return Home.objects.has_permission(user_id, job.home_id)
-```
-
-### `list_for_user(user_id, role, **filters) -> QuerySet`
-
-- The visibility predicate for collections, expressed as a queryset filter.
-- This is where ADMIN is allowed to see everything, explicitly.
-- Raises `NotFoundError` when a caller filters by a parent they cannot see, rather than silently returning nothing.
+## Gating a resolver on one row
 
 ```python
-def list_for_user(self, user_id: str, role: str, **filters) -> models.QuerySet:
-    """Returns jobs on the given home for a member; every matching job for an ADMIN."""
-    if role == UserRole.ADMIN:
-        return self.all()
-    return self.filter(home__memberships__user_id=user_id)
+@authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
+def mutate(self, info, quote_id: str, **data):
+    """Applies the update to the quote."""
+    return UpdateQuote(quote=services.update_quote(quote_id, data))
 ```
 
-## Ownership chain
+- `resource` is the model whose row the argument names. `arg` is the argument's snake_case name.
+  The decorator resolves the row's home through `home_id_path` and calls `can()`.
+- **Creating a child checks the parent:** `createQuote(jobId)` uses `resource=Job, arg="job_id"`,
+  and `createJob(homeId)` uses `resource=Home, arg="home_id"`.
+- A missing row is `FORBIDDEN`, the same as a row the caller cannot see.
+- `@authorize` implies `@login_required`. Do not stack them.
+- **Choosing the permission:** reads use `*_VIEW` and writes use `*_EDIT`, for the area the data
+  belongs to. Images, AI generations and assignments belong to jobs. Sending or drafting email
+  belongs to communications. Deleting a home is `HOME_DELETE`. Adding or removing members is
+  `HOME_MANAGE_MEMBERS`.
 
-```
-Contractor        → always true (the directory is public to signed-in users; writes are admin-only)
-Home              → UserHome membership
-Job               → delegates to Home via job.home_id
-JobContractor     → delegates to Job
-Quote             → delegates to Job
-Communication     → delegates to Job
-UserContractor    → row belongs to the user
-Integration       → row belongs to the user (checked in the service)
-```
-
-## Gating a resolver
+## Collections
 
 ```python
-@login_required
-def resolve_job(self, info, job_id: str):
-    """Returns one job after checking the caller's access."""
-    permissions.require(Job.objects, current_user(info).pk, job_id)
-    return Job.objects.get_or_404(pk=job_id)
+@authorize(Permission.JOBS_VIEW, resource=Home, arg="home_id", optional=True)
+def resolve_jobs(self, info, home_id=None, status=None):
+    """Returns the jobs the caller can see, narrowed by home and status."""
+    return (
+        Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
+        .filter_home_ids([home_id] if home_id else None)
+        .filter_statuses([status] if status else None)
+    )
 ```
 
-- `@login_required` — the caller must be authenticated. `UNAUTHORIZED` otherwise.
-- `@admin_required` — the caller must hold ADMIN. `FORBIDDEN` otherwise.
-- `permissions.require(...)` — raises `ForbiddenError` for a caller without access to this row.
+- A list without a required parent argument **starts from `visible_to` or `owned_by`**,
+  never from `Model.objects.all()`.
+- `optional=True` skips the check when the argument is omitted. Use it only where the
+  resolver scopes with `visible_to`.
+- A list under a required parent (`quotes(jobId)`) is gated by `@authorize` on that
+  parent, then calls the manager composition.
 
-A mutation that writes to a child of a job checks the **job**, before touching anything:
+## User-owned rows
 
 ```python
-@login_required
-def mutate(self, info, job_id: str, **data):
-    """Creates the quote after checking the caller's access to the job."""
-    permissions.require(Job.objects, current_user(info).pk, job_id)
-    return CreateQuote(quote=services.create_quote(job_id, data))
+@owner_required(resource=UserContractor, arg="user_contractor_id")
 ```
+
+The list resolver returns `Model.objects.owned_by(current_user(info))`.
+
+## Platform-level
+
+The contractor directory is not home-scoped. Reads are `@login_required` and writes are `@admin_required`.
+
+## Adding a permission
+
+Add a member to `Permission`, then decide in `role_permissions` which roles hold it.
+Name it `<area>.<verb>` and keep the set small. A permission should correspond to
+something an owner would recognise as a page or an action.
 
 ## The cache
 
-`core.permissions` caches a **positive** result for `PERMISSION_CACHE_TIMEOUT` seconds. Denials are never cached, so granting access takes effect immediately.
-
-Keep it honest from services whenever access changes:
-
-```python
-permissions.grant(user_id, home.pk)        # creator, or a new member
-permissions.invalidate(user_id, home_id)   # member removed, or resource deleted
-```
-
-The cache is an optimisation, not the authority: if the backend is unreachable the check falls through to the database. Never add a code path where a cache miss means "denied".
+`membership_role(user_id, home_id)` caches a member's **role** per (user, home)
+for `PERMISSION_CACHE_TIMEOUT` seconds. Non-members are never cached. Any service
+that creates, changes or removes a membership calls
+`permissions.invalidate(user_id, home_id)` for each affected member. If the cache
+is unavailable, checks fall through to the database. A cache miss never means "denied".

@@ -1,29 +1,38 @@
 ---
 name: api-manager
-description: Guide for writing model managers — the query layer. Use when adding filters, permission predicates, or write helpers.
+description: Guide for <app>/managers.py — composing queryset filters into named lookups (filter_contractors, list_for_job), writes, and methods that return values. Managers make no access decisions.
 ---
 
 # API Manager
 
-Managers own every query their app makes. Resolvers call managers directly for reads; services call managers for writes.
+A manager sits on top of the app's queryset. It owns:
 
-Each model declares its manager as `objects`:
+- **Compositions:** named lookups that chain several queryset filters.
+- **Writes** that need more than `create()`, e.g. upserts or atomic multi-table writes.
+- **Methods that return values** rather than a queryset: a single row, a dict, a list of dicts.
+
+The chainable filters themselves live in `querysets.py` (see `queryset.md`).
+Access control does not live here at all (see `permissioning.md`).
+
+## Declaring a manager
+
+Build it from the app's queryset so every filter is reachable on `Model.objects`:
 
 ```python
-class Contractor(models.Model):
-    objects = ContractorManager()
+from core.managers import BaseManager
+from jobs.querysets import JobContractorQuerySet
+
+
+class JobContractorManager(BaseManager.from_queryset(JobContractorQuerySet)):
+    """Lookups and status transitions for contractor assignments."""
 ```
 
-## Base classes
+The model declares it as `objects = JobContractorManager()`. An app with no
+filters of its own still uses `BaseManager`, which carries `filter_ids` and `get_or_404`.
 
-- `BaseManager` — adds `get_or_404(**filters)`, which raises `NotFoundError` instead of `DoesNotExist`.
-- `PermissionedManager` — `BaseManager` plus the two methods the permission layer calls: `has_permission` and `list_for_user`. Every manager guarding user-visible rows extends it. See `.ai/recipes/api/permissioning.md`.
+## Compositions
 
-Use `get_or_404` only where the row is expected to exist — after a permission check, typically. For an existence question use `.filter(...).exists()`.
-
-## Filter methods
-
-A multi-field filter is one method that narrows a queryset, one clause at a time:
+Chain the queryset filters. Do not rewrite them with raw `.filter(...)`:
 
 ```python
 def filter_contractors(
@@ -34,44 +43,37 @@ def filter_contractors(
     trade_categories: list[str] | None = None,
     is_global: bool | None = None,
     search: str | None = None,
-) -> models.QuerySet:
+) -> ContractorQuerySet:
     """Returns contractors matching every supplied filter. An empty list matches nothing."""
-    queryset = self.all()
-    if ids is not None:
-        queryset = queryset.filter(pk__in=ids)
-    if zip_codes is not None:
-        queryset = queryset.filter(zip_code_rows__zip_code__in=zip_codes).distinct()
-    if trade_categories is not None:
-        queryset = queryset.filter(categories__overlap=trade_categories)
-    if is_global is not None:
-        queryset = queryset.filter(is_global=is_global)
-    if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search) | Q(company_name__icontains=search) | Q(email__icontains=search)
-        )
-    return queryset
+    return (
+        self.filter_ids(ids)
+        .filter_zip_codes(zip_codes)
+        .filter_trade_categories(trade_categories)
+        .filter_is_global(is_global)
+        .search(search)
+    )
+
+
+def list_for_job(self, job_id: str) -> QuoteQuerySet:
+    """Returns the quotes on a job with contractors preloaded."""
+    return self.filter_job_ids([job_id]).select_related("contractor")
 ```
 
-### Naming and semantics
+- **Keyword-only arguments** for every filter. Names are plural and domain-explicit,
+  matching the queryset method they feed (`trade_categories`, not `categories`).
+- A composition returns the queryset, so the caller can keep chaining, e.g. `visible_to` or `.prefetch_related`.
+- If a filter is missing, add it to the queryset first, then chain it here.
 
-- **Keyword-only arguments.** Callers name every filter.
-- **Plural, list-valued** for anything that can hold several values: `trade_categories`, `zip_codes`, `ids`. A caller with one value passes `[value]`. Do not add singular aliases.
-- **Domain-explicit names**: `trade_categories`, not `categories`.
-- **Boolean filters** (`is_global`) and **`search`** are exempt from the plural rule. `search` is a fuzzy OR across columns; it is not a `filter_*`.
-- **`None` means the filter is absent. `[]` means match nothing** — `pk__in=[]` already does exactly that, so no special case is needed.
+## Writes
+
+- A write touching more than one table is `@transaction.atomic`.
+- Use `get_or_404(pk=...)` where the row must exist. It raises `NotFoundError`.
 
 ## Rules
 
-- **Filter in the database, never in Python.** No list comprehension that drops rows a query could have excluded.
-- **No N+1.** Reach for `select_related` on forward FKs and `prefetch_related` on reverse ones. `list_for_job` returning assignments preloads `contractor`.
-- **Read methods return bare rows.** A resolver asks for what else it needs; a read method does not eagerly attach relations that most callers will not use.
-- **Multi-table writes are atomic.** Decorate with `@transaction.atomic` when a write touches more than one table — see `ContractorManager.create_with_zip_codes`.
-
-## Every public method gets a one-line docstring
-
-It says what the method returns and any assumption a caller must hold:
-
-```python
-def find_source_image(self, job_id: str):
-    """Returns the first user-uploaded source image for the job, or None."""
-```
+- **No access decisions.** No `user.role`, `is_admin` or membership checks, and no
+  `user_id` parameter used to decide visibility. Resolvers declare access with
+  `@authorize` / `@owner_required` and scope collections with `visible_to` / `owned_by`.
+- **Filter in the database**, never in Python.
+- **No N+1.** Add `select_related` / `prefetch_related` in the composition that needs it.
+- One-line docstring on every public method: what it returns and any assumption.

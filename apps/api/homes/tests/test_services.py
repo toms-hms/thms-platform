@@ -1,10 +1,12 @@
 """Home creation, membership changes and deletion."""
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.factories import UserFactory
 from core import permissions
-from core.errors import ForbiddenError, NotFoundError
+from core.errors import NotFoundError
+from core.permissions import Permission
 from homes import services
 from homes.factories import HomeFactory
 from homes.models import Home, HomeRole, UserHome
@@ -22,13 +24,6 @@ class CreateHomeTests(TestCase):
         membership = UserHome.objects.find_membership(user.pk, home.pk)
         self.assertEqual(membership.role, HomeRole.OWNER)
 
-    def test_warms_the_permission_cache(self):
-        """Access to a home just created does not need a second membership lookup."""
-        user = UserFactory()
-        home = services.create_home(user.pk, HOME_INPUT)
-        UserHome.objects.filter(user=user, home=home).delete()
-        self.assertTrue(permissions.check(Home.objects, user.pk, home.pk))
-
     def test_full_address_renders_on_one_line(self):
         """The home exposes its address as a single display string."""
         home = services.create_home(UserFactory().pk, HOME_INPUT)
@@ -38,28 +33,27 @@ class CreateHomeTests(TestCase):
 class DeleteHomeTests(TestCase):
     """delete_home()"""
 
-    def test_owner_may_delete(self):
-        """An owner can delete their home."""
-        user = UserFactory()
-        home = HomeFactory(owner=user)
-        services.delete_home(home.pk, user.pk)
-        self.assertFalse(Home.objects.filter(pk=home.pk).exists())
+    def setUp(self):
+        """Clears the cache so a stale role cannot leak between tests."""
+        cache.clear()
 
-    def test_member_may_not_delete(self):
-        """A non-owner member is refused."""
+    def test_deletes_the_home(self):
+        """The home and its memberships are removed."""
+        home = HomeFactory(owner=UserFactory())
+        services.delete_home(home.pk)
+        self.assertFalse(Home.objects.filter(pk=home.pk).exists())
+        self.assertFalse(UserHome.objects.filter(home_id=home.pk).exists())
+
+    def test_invalidates_every_members_cached_role(self):
+        """After deletion no member keeps access through the cache."""
         owner, member = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
         UserHome.objects.upsert(member.pk, home.pk, HomeRole.MEMBER)
-        with self.assertRaises(ForbiddenError):
-            services.delete_home(home.pk, member.pk)
-
-    def test_invalidates_the_permission_cache(self):
-        """After deletion the cached permission no longer grants access."""
-        user = UserFactory()
-        home = HomeFactory(owner=user)
-        permissions.grant(user.pk, home.pk)
-        services.delete_home(home.pk, user.pk)
-        self.assertFalse(permissions.check(Home.objects, user.pk, home.pk))
+        for user in (owner, member):
+            permissions.membership_role(user.pk, home.pk)
+        services.delete_home(home.pk)
+        for user in (owner, member):
+            self.assertFalse(permissions.can(user, Permission.HOME_VIEW, home.pk))
 
 
 class MembershipServiceTests(TestCase):
@@ -85,3 +79,12 @@ class MembershipServiceTests(TestCase):
         UserHome.objects.upsert(member.pk, home.pk, HomeRole.MEMBER)
         services.remove_user_from_home(home.pk, member.pk)
         self.assertIsNone(UserHome.objects.find_membership(member.pk, home.pk))
+
+    def test_changing_a_role_takes_effect_despite_the_cache(self):
+        """Re-adding an owner as a member invalidates their cached OWNER role."""
+        cache.clear()
+        owner = UserFactory()
+        home = HomeFactory(owner=owner)
+        self.assertTrue(permissions.can(owner, Permission.HOME_DELETE, home.pk))
+        services.add_user_to_home(home.pk, owner.email, HomeRole.MEMBER)
+        self.assertFalse(permissions.can(owner, Permission.HOME_DELETE, home.pk))

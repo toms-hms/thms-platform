@@ -20,18 +20,25 @@ Each test runs in a transaction that is rolled back afterwards, so there is no c
 
 ```
 <app>/tests/
-  test_managers.py   queries, permission predicates, visibility
+  test_querysets.py  filters (absent vs empty, chaining), home_id_for, visible_to
+  test_managers.py   compositions, writes, value-returning lookups
   test_services.py   orchestration, rules the database cannot express
   test_schema.py     the GraphQL surface: auth gates, error codes, happy path
 ```
 
 ## What each layer covers
 
+### `test_querysets.py`
+
+- Filters: each one narrows as documented. `None` is a no-op, `[]` matches nothing, and filters chain.
+- `home_id_for`: resolves to the right home, and to `None` for an unknown id.
+- `visible_to`: only rows in the user's homes, respecting the permission asked for. ADMIN sees everything.
+
 ### `test_managers.py`
 
-- Filters: each one narrows as documented; an empty list matches nothing; an absent filter is a no-op.
-- `has_permission`: true for a member, false for a stranger, false for an unknown id.
-- `list_for_user`: only visible rows; ADMIN sees everything.
+Compositions return what they promise. Writes such as upserts and status transitions behave as documented.
+
+The policy itself (`can`, the role map, the cache) is tested once, in `core/tests/test_permissions.py`.
 
 ### `test_services.py`
 
@@ -39,7 +46,7 @@ Business rules and multi-step writes: what gets created, what the defaults are, 
 
 ### `test_schema.py`
 
-Runs against the real endpoint over HTTP, so authentication, permissions and error codes are all exercised:
+Runs against the real endpoint over HTTP, so the access decorators and error codes are all exercised. Cover a stranger (`FORBIDDEN`) on every gated resolver, and a member being refused any permission their role lacks:
 
 ```python
 class JobQueryTests(GraphQLTestCase):

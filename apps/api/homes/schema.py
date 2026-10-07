@@ -1,56 +1,13 @@
 """GraphQL surface for homes and their membership."""
 
 import graphene
-from graphene_django import DjangoObjectType
 
-from accounts.schema import UserType
-from core import permissions
 from core.enums import HomeRoleEnum
-from core.graphql import current_user, login_required
+from core.graphql import authorize, current_user, login_required
+from core.permissions import Permission
 from homes import services
-from homes.models import Home, UserHome
-
-
-class HomeType(DjangoObjectType):
-    """A property the user is a member of."""
-
-    full_address = graphene.String(required=True, description="The address rendered as one display line.")
-
-    class Meta:
-        model = Home
-        fields = (
-            "id",
-            "name",
-            "address1",
-            "address2",
-            "city",
-            "state",
-            "zip_code",
-            "country",
-            "notes",
-            "created_at",
-            "updated_at",
-        )
-        convert_choices_to_enum = False
-
-    def resolve_full_address(self, info) -> str:
-        """Returns the home's single-line address."""
-        return self.full_address
-
-
-class HomeMemberType(DjangoObjectType):
-    """A user's membership of a home."""
-
-    class Meta:
-        model = UserHome
-        fields = ("role", "created_at")
-        convert_choices_to_enum = False
-
-    user = graphene.Field(UserType, required=True)
-
-    def resolve_user(self, info):
-        """Returns the member's user record."""
-        return self.user
+from homes.models import Home, HomeRole, UserHome
+from homes.types import HomeMemberType, HomeType
 
 
 class CreateHome(graphene.Mutation):
@@ -89,10 +46,9 @@ class UpdateHome(graphene.Mutation):
 
     home = graphene.Field(HomeType)
 
-    @login_required
+    @authorize(Permission.HOME_EDIT, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, **data):
-        """Applies the update after checking the caller's access to the home."""
-        permissions.require(Home.objects, current_user(info).pk, home_id)
+        """Applies the update to the home."""
         return UpdateHome(home=services.update_home(home_id, data))
 
 
@@ -104,12 +60,10 @@ class DeleteHome(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @login_required
+    @authorize(Permission.HOME_DELETE, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str):
-        """Deletes the home after checking access and ownership."""
-        user = current_user(info)
-        permissions.require(Home.objects, user.pk, home_id)
-        services.delete_home(home_id, user.pk)
+        """Deletes the home."""
+        services.delete_home(home_id)
         return DeleteHome(success=True)
 
 
@@ -123,12 +77,9 @@ class AddHomeUser(graphene.Mutation):
 
     member = graphene.Field(HomeMemberType)
 
-    @login_required
+    @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, email: str, role: str | None = None):
         """Grants the named user access to the home."""
-        from homes.models import HomeRole
-
-        permissions.require(Home.objects, current_user(info).pk, home_id)
         return AddHomeUser(member=services.add_user_to_home(home_id, email, role or HomeRole.MEMBER))
 
 
@@ -141,10 +92,9 @@ class RemoveHomeUser(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @login_required
+    @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, user_id: str):
         """Revokes the named user's membership of the home."""
-        permissions.require(Home.objects, current_user(info).pk, home_id)
         services.remove_user_from_home(home_id, user_id)
         return RemoveHomeUser(success=True)
 
@@ -162,21 +112,17 @@ class HomesQuery(graphene.ObjectType):
 
     @login_required
     def resolve_homes(self, info):
-        """Returns every home the caller belongs to."""
-        user = current_user(info)
-        return permissions.list_for_user(Home.objects, user.pk, user.role)
+        """Returns every home the caller belongs to; every home for an ADMIN."""
+        return Home.objects.visible_to(current_user(info), Permission.HOME_VIEW)
 
-    @login_required
+    @authorize(Permission.HOME_VIEW, resource=Home, arg="home_id")
     def resolve_home(self, info, home_id: str):
-        """Returns one home after checking the caller's access."""
-        user = current_user(info)
-        permissions.require(Home.objects, user.pk, home_id)
+        """Returns one home."""
         return Home.objects.get_or_404(pk=home_id)
 
-    @login_required
+    @authorize(Permission.HOME_VIEW, resource=Home, arg="home_id")
     def resolve_home_members(self, info, home_id: str):
-        """Returns the home's members after checking the caller's access."""
-        permissions.require(Home.objects, current_user(info).pk, home_id)
+        """Returns the home's members."""
         return UserHome.objects.list_members_for_home(home_id)
 
 

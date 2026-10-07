@@ -1,8 +1,9 @@
 """The homes GraphQL surface: auth gates and the happy path."""
 
-from accounts.factories import UserFactory
+from accounts.factories import AdminFactory, UserFactory
 from core.testing import GraphQLTestCase
 from homes.factories import HomeFactory
+from homes.models import Home, HomeRole, UserHome
 
 HOMES = "query { homes { id name fullAddress } }"
 HOME = "query($homeId: ID!) { home(homeId: $homeId) { id name } }"
@@ -11,6 +12,11 @@ mutation($name: String!, $address1: String!, $city: String!, $state: String!, $z
   createHome(name: $name, address1: $address1, city: $city, state: $state, zipCode: $zipCode) {
     home { id name fullAddress }
   }
+}
+"""
+DELETE_HOME = """
+mutation($homeId: ID!) {
+  deleteHome(homeId: $homeId) { success }
 }
 """
 UPDATE_HOME = """
@@ -75,4 +81,36 @@ class HomeMutationTests(GraphQLTestCase):
         body = self.execute(
             UPDATE_HOME, {"homeId": home.pk, "name": "Hacked"}, token=self.token_for(self.user)
         )
+        self.assert_error_code(body, "FORBIDDEN")
+
+
+class HomeAuthorizationTests(GraphQLTestCase):
+    """@authorize on the home surface"""
+
+    def setUp(self):
+        """Creates an owner and a member of one home."""
+        super().setUp()
+        self.owner, self.member = UserFactory(), UserFactory()
+        self.home = HomeFactory(owner=self.owner)
+        UserHome.objects.upsert(self.member.pk, self.home.pk, HomeRole.MEMBER)
+
+    def test_member_may_not_delete_the_home(self):
+        """MEMBER lacks HOME_DELETE, so deleting is FORBIDDEN and the home survives."""
+        body = self.execute(DELETE_HOME, {"homeId": self.home.pk}, token=self.token_for(self.member))
+        self.assert_error_code(body, "FORBIDDEN")
+        self.assertTrue(Home.objects.filter(pk=self.home.pk).exists())
+
+    def test_owner_may_delete_the_home(self):
+        """OWNER holds HOME_DELETE."""
+        body = self.execute(DELETE_HOME, {"homeId": self.home.pk}, token=self.token_for(self.owner))
+        self.assertTrue(self.assert_ok(body)["deleteHome"]["success"])
+
+    def test_admin_may_read_a_home_they_do_not_belong_to(self):
+        """ADMIN is allowed every permission without membership."""
+        body = self.execute(HOME, {"homeId": self.home.pk}, token=self.token_for(AdminFactory()))
+        self.assertEqual(self.assert_ok(body)["home"]["id"], self.home.pk)
+
+    def test_an_unknown_home_is_forbidden(self):
+        """A home that does not exist is indistinguishable from one the caller cannot see."""
+        body = self.execute(HOME, {"homeId": "does-not-exist"}, token=self.token_for(self.owner))
         self.assert_error_code(body, "FORBIDDEN")

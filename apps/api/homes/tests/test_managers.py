@@ -1,50 +1,10 @@
-"""Home visibility and membership lookups."""
+"""Home membership lookups."""
 
 from django.test import TestCase
 
-from accounts.factories import AdminFactory, UserFactory
-from accounts.models import UserRole
+from accounts.factories import UserFactory
 from homes.factories import HomeFactory
-from homes.models import Home, HomeRole, UserHome
-
-
-class HasPermissionTests(TestCase):
-    """HomeManager.has_permission()"""
-
-    def test_true_for_a_member(self):
-        """A member of the home may access it."""
-        user = UserFactory()
-        home = HomeFactory(owner=user)
-        self.assertTrue(Home.objects.has_permission(user.pk, home.pk))
-
-    def test_false_for_a_non_member(self):
-        """Someone with no membership may not."""
-        home = HomeFactory(owner=UserFactory())
-        self.assertFalse(Home.objects.has_permission(UserFactory().pk, home.pk))
-
-    def test_false_for_an_unknown_home(self):
-        """An id that does not exist is not accessible."""
-        self.assertFalse(Home.objects.has_permission(UserFactory().pk, "does-not-exist"))
-
-
-class ListForUserTests(TestCase):
-    """HomeManager.list_for_user()"""
-
-    def test_returns_only_the_users_homes(self):
-        """A user sees the homes they belong to and no others."""
-        user, other = UserFactory(), UserFactory()
-        mine = HomeFactory(owner=user)
-        theirs = HomeFactory(owner=other)
-        ids = [home.pk for home in Home.objects.list_for_user(user.pk, UserRole.USER)]
-        self.assertIn(mine.pk, ids)
-        self.assertNotIn(theirs.pk, ids)
-
-    def test_admin_sees_every_home(self):
-        """An ADMIN sees homes they are not a member of."""
-        admin = AdminFactory()
-        home = HomeFactory(owner=UserFactory())
-        ids = [h.pk for h in Home.objects.list_for_user(admin.pk, UserRole.ADMIN)]
-        self.assertIn(home.pk, ids)
+from homes.models import HomeRole, UserHome
 
 
 class MembershipTests(TestCase):

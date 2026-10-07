@@ -1,31 +1,66 @@
-"""Permission checks with a short-lived cache.
+"""Access policy: named permissions, what each home role grants, and the one decision function.
 
-A positive check is cached for PERMISSION_CACHE_TIMEOUT seconds so repeated
-object access inside a request (and across a page's queries) does not re-run the
-membership lookup. Only positive results are cached — a denial must be re-checked
-so that granting access takes effect immediately.
+A user reaches home-scoped data through their membership of the home. The
+membership's role maps to a set of permissions; `can()` is the only place that
+turns (user, permission, home) into yes or no, and ADMIN is allowed everything
+here, explicitly. Resolvers declare what they need with `@authorize` (see
+core.graphql); collections are scoped with `visible_to` (see core.querysets).
 
-The cache is an optimisation, never the authority: if the cache backend is
-unavailable the check falls through to the database rather than failing the
-request.
+A member's role is cached for PERMISSION_CACHE_TIMEOUT seconds per (user, home).
+Only memberships are cached — a non-member is re-checked every time, so adding
+someone takes effect immediately. Services call `invalidate()` whenever a
+membership changes or is removed. The cache is an optimisation, never the
+authority: an unavailable backend falls through to the database.
 """
 
 import logging
-from typing import Any
+from enum import StrEnum
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
 
 from core.errors import ForbiddenError
-from core.managers import PermissionedManager
 
 logger = logging.getLogger(__name__)
 
 
-def _key(user_id: str, resource_id: str) -> str:
-    """Returns the cache key for a single user/resource permission pair."""
-    return f"perm:{user_id}:{resource_id}"
+class Permission(StrEnum):
+    """Something a member may do inside a home. Resolvers name one of these in `@authorize`."""
+
+    HOME_VIEW = "home.view"
+    HOME_EDIT = "home.edit"
+    HOME_DELETE = "home.delete"
+    HOME_MANAGE_MEMBERS = "home.manage_members"
+    JOBS_VIEW = "jobs.view"
+    JOBS_EDIT = "jobs.edit"
+    QUOTES_VIEW = "quotes.view"
+    QUOTES_EDIT = "quotes.edit"
+    COMMUNICATIONS_VIEW = "communications.view"
+    COMMUNICATIONS_EDIT = "communications.edit"
+
+
+def role_permissions(role: str) -> frozenset[Permission]:
+    """Returns the permissions a home role grants. OWNER holds every permission."""
+    from homes.models import HomeRole
+
+    if role == HomeRole.OWNER:
+        return frozenset(Permission)
+    if role == HomeRole.MEMBER:
+        return frozenset(Permission) - {Permission.HOME_DELETE}
+    return frozenset()
+
+
+def roles_with(permission: Permission) -> list[str]:
+    """Returns the home roles that grant the permission."""
+    from homes.models import HomeRole
+
+    return [role for role in HomeRole if permission in role_permissions(role)]
+
+
+def _key(user_id: str, home_id: str) -> str:
+    """Returns the cache key for a user's role in a home."""
+    return f"home-role:{user_id}:{home_id}"
 
 
 def _cache_get(key: str):
@@ -37,7 +72,7 @@ def _cache_get(key: str):
         return None
 
 
-def _cache_set(key: str, value: bool) -> None:
+def _cache_set(key: str, value: str) -> None:
     """Writes to the cache, ignoring an unavailable backend."""
     try:
         cache.set(key, value, settings.PERMISSION_CACHE_TIMEOUT)
@@ -53,39 +88,42 @@ def _cache_delete(key: str) -> None:
         logger.warning("Permission cache unavailable on delete", exc_info=True)
 
 
-def check(manager: PermissionedManager, user_id: str, resource_id: str) -> bool:
-    """Returns True when the user may access the resource, consulting and warming the cache."""
-    if not resource_id:
-        return False
-    cached = _cache_get(_key(user_id, resource_id))
+def membership_role(user_id: str, home_id: str) -> str | None:
+    """Returns the user's role in the home, or None when they are not a member. Consults the cache."""
+    from homes.models import UserHome
+
+    cached = _cache_get(_key(user_id, home_id))
     if cached is not None:
-        return bool(cached)
-    allowed = manager.has_permission(user_id, resource_id)
-    if allowed:
-        _cache_set(_key(user_id, resource_id), True)
-    return allowed
+        return cached
+    role = UserHome.objects.filter(user_id=user_id, home_id=home_id).values_list("role", flat=True).first()
+    if role is not None:
+        _cache_set(_key(user_id, home_id), role)
+    return role
 
 
-def require(manager: PermissionedManager, user_id: str, resource_id: str) -> None:
-    """Raises ForbiddenError unless the user may access the resource."""
-    if not check(manager, user_id, resource_id):
+def can(user, permission: Permission, home_id: str | None) -> bool:
+    """Returns True when the user holds the permission in the home. ADMIN holds every permission."""
+    if not home_id:
+        return False
+    if user.is_admin:
+        return True
+    role = membership_role(user.pk, home_id)
+    return role is not None and permission in role_permissions(role)
+
+
+def require(user, permission: Permission, home_id: str | None) -> None:
+    """Raises ForbiddenError unless the user holds the permission in the home."""
+    if not can(user, permission, home_id):
         raise ForbiddenError()
 
 
-def list_for_user(manager: PermissionedManager, user_id: str, role: str, **filters: Any) -> models.QuerySet:
-    """Returns the rows visible to the user and warms the cache for each one."""
-    results = manager.list_for_user(user_id, role, **filters)
-    for item in results:
-        if getattr(item, "pk", None):
-            _cache_set(_key(user_id, item.pk), True)
-    return results
+def home_ids_with(user, permission: Permission) -> models.QuerySet:
+    """Returns a subquery of the ids of homes where the user holds the permission."""
+    from homes.models import UserHome
+
+    return UserHome.objects.filter(user_id=user.pk, role__in=roles_with(permission)).values("home_id")
 
 
-def grant(user_id: str, resource_id: str) -> None:
-    """Warms the cache for a resource the caller just created or was just given access to."""
-    _cache_set(_key(user_id, resource_id), True)
-
-
-def invalidate(user_id: str, resource_id: str) -> None:
-    """Drops the cached permission so the next check re-reads the database."""
-    _cache_delete(_key(user_id, resource_id))
+def invalidate(user_id: str, home_id: str) -> None:
+    """Drops the user's cached role in the home so the next check re-reads the database."""
+    _cache_delete(_key(user_id, home_id))

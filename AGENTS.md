@@ -31,9 +31,11 @@ Detailed how-to guides for common task types. Load only what the task requires.
 **Backend (API)**
 - File structure & app layout: `.ai/recipes/api/file-structure.md`
 - Django model / table mapping: `.ai/recipes/api/model.md`
-- Manager (queries, filters, permission predicates): `.ai/recipes/api/manager.md`
+- QuerySet (chainable filters, visibility): `.ai/recipes/api/queryset.md`
+- Manager (filter compositions, writes): `.ai/recipes/api/manager.md`
 - Service layer: `.ai/recipes/api/service.md`
-- GraphQL types, queries & mutations: `.ai/recipes/api/graphql.md`
+- GraphQL types (`types.py`): `.ai/recipes/api/types.md`
+- GraphQL queries & mutations (`schema.py`): `.ai/recipes/api/graphql.md`
 - Permissioning: `.ai/recipes/api/permissioning.md`
 - Authentication (JWT, password hashing): `.ai/recipes/api/auth.md`
 - Audit log: `.ai/recipes/api/audit.md`

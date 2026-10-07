@@ -44,14 +44,24 @@ Never auto-transition job or contractor status. The user controls all state.
 
 The database predates Django. Map it; do not regenerate it. Always set `db_table` and `db_column`, keep CUID2 string primary keys, declare Postgres enums with `PGEnumField`, and use `TimestampField` for `timestamp(3)` columns. See `.ai/recipes/api/model.md`.
 
-## Managers
+## QuerySets and managers
 
-Every manager guarding user-visible rows extends `PermissionedManager` and implements:
+- **`querysets.py`** holds chainable one-clause filters. A filter takes `list[...] | None` and starts with `if x is None: return self`, never `if not x`. `[]` must match nothing.
+- **`managers.py`** is built with `BaseManager.from_queryset(...)`. It holds compositions of those filters, writes, and methods that return values.
+- Neither makes access decisions.
 
-- `has_permission(user_id, resource_id)` — a pure data check for one row, with no role logic
-- `list_for_user(user_id, role, **filters)` — the collection visibility query, where ADMIN is handled explicitly
+See `.ai/recipes/api/queryset.md` and `.ai/recipes/api/manager.md`.
 
-Resolvers gate single objects with `permissions.require(...)`. See `.ai/recipes/api/permissioning.md`, and `.ai/recipes/api/manager.md` before writing any manager method.
+## Access control
+
+Declared on the resolver, decided in one place (`core.permissions.can`):
+
+- `@authorize(Permission.X, resource=Model, arg="model_id")` for home-scoped rows
+- `@owner_required(resource=Model, arg="model_id")` for user-owned rows
+- `@login_required` / `@admin_required` for everything else
+- Collections start from `Model.objects.visible_to(user, Permission.X)` or `owned_by(user)`, never from `.all()`
+
+No role or membership checks in managers, querysets or services. See `.ai/recipes/api/permissioning.md`.
 
 ## Queries
 
@@ -76,7 +86,7 @@ Never hand-write a migration for a schema change — edit the model and run `mak
 
 ## Tests
 
-Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one per model in the app's `factories.py`. Each app has `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py`. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
+Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one per model in the app's `factories.py`. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py` as it needs them. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
 
 ## Branching
 

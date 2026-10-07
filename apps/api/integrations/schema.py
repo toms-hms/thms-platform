@@ -4,29 +4,14 @@ Tokens never leave the server: the type exposes only the connection's metadata.
 """
 
 import graphene
-from graphene_django import DjangoObjectType
 
-from communications.schema import CommunicationType
-from core import permissions
-from core.graphql import current_user, login_required
+from communications.types import CommunicationType
+from core.graphql import authorize, current_user, login_required, owner_required
+from core.permissions import Permission
 from integrations import services
 from integrations.models import Integration
+from integrations.types import IntegrationType
 from jobs.models import Job
-
-
-class IntegrationType(DjangoObjectType):
-    """A connected third-party account. Encrypted tokens are deliberately not exposed."""
-
-    status = graphene.String(required=True)
-
-    class Meta:
-        model = Integration
-        fields = ("id", "type", "provider", "email", "scopes", "created_at", "updated_at")
-        convert_choices_to_enum = False
-
-    def resolve_status(self, info) -> str:
-        """Returns the connection status. A stored integration is by definition connected."""
-        return "CONNECTED"
 
 
 class SaveAiIntegration(graphene.Mutation):
@@ -53,10 +38,10 @@ class DisconnectIntegration(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @login_required
+    @owner_required(resource=Integration, arg="integration_id")
     def mutate(self, info, integration_id: str):
-        """Deletes the integration after checking the caller owns it."""
-        services.disconnect_integration(integration_id, current_user(info).pk)
+        """Deletes the integration."""
+        services.disconnect_integration(integration_id)
         return DisconnectIntegration(success=True)
 
 
@@ -74,12 +59,10 @@ class SendEmail(graphene.Mutation):
 
     communication = graphene.Field(CommunicationType)
 
-    @login_required
+    @authorize(Permission.COMMUNICATIONS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, **data):
-        """Sends the message after checking the caller's access to the job."""
-        user = current_user(info)
-        permissions.require(Job.objects, user.pk, job_id)
-        result = services.send_via_gmail(user_id=user.pk, job_id=job_id, **data)
+        """Sends the message and records it against the job."""
+        result = services.send_via_gmail(user_id=current_user(info).pk, job_id=job_id, **data)
         return SendEmail(communication=result["communication"])
 
 
@@ -95,7 +78,7 @@ class IntegrationsQuery(graphene.ObjectType):
     @login_required
     def resolve_integrations(self, info):
         """Returns the caller's connected accounts."""
-        return Integration.objects.list_for_user(current_user(info).pk)
+        return Integration.objects.owned_by(current_user(info))
 
     @login_required
     def resolve_google_auth_url(self, info) -> str:

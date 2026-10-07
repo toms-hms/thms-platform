@@ -23,18 +23,22 @@ apps/api/
     hashing.py      raw-bcrypt password hashing
     jwt_utils.py    access/refresh token signing
     crypto.py       AES-256-GCM for OAuth tokens at rest
-    managers.py     BaseManager, PermissionedManager
-    permissions.py  the permission cache
+    querysets.py    BaseQuerySet, HomeScopedQuerySet, UserOwnedQuerySet
+    managers.py     BaseManager
+    permissions.py  Permission names, role → permissions, can(), the membership cache
+    graphql.py      current_user and the access decorators (@authorize, @owner_required, …)
     middleware.py   JWT → request.user
     audit.py        the audit log query
     testing.py      GraphQLTestCase
   <app>/
     models.py       tables, mapped onto the pre-existing schema
-    managers.py     query methods + the permission predicates
+    querysets.py    chainable filters + home_id_path
+    managers.py     filter compositions, writes, value lookups
     services.py     orchestration for writes
-    schema.py       GraphQL types, queries, mutations
+    types.py        GraphQL object types
+    schema.py       GraphQL queries and mutations, each with an access decorator
     factories.py    test factories
-    tests/          test_managers.py, test_services.py, test_schema.py
+    tests/          test_querysets.py, test_managers.py, test_services.py, test_schema.py
 ```
 
 Apps: `accounts`, `homes`, `contractors`, `user_contractors`, `jobs`, `quotes`, `communications`, `ai`, `integrations`, plus `uploads` (services only, no models).

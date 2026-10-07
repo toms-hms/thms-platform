@@ -3,7 +3,7 @@
 from typing import Any
 
 from contractors.models import Contractor
-from core.errors import BadRequestError, ConflictError, NotFoundError
+from core.errors import BadRequestError, ConflictError
 from user_contractors.models import UserContractor
 
 
@@ -34,9 +34,6 @@ def create_user_contractor(user_id: str, data: dict[str, Any]) -> UserContractor
     return UserContractor.objects.create(user_id=user_id, contractor_id=contractor_id, note=data.get("note"))
 
 
-def delete_user_contractor(user_id: str, user_contractor_id: str) -> None:
-    """Removes an entry from the user's rolodex, verifying ownership first."""
-    entry = UserContractor.objects.filter(pk=user_contractor_id).first()
-    if not entry or entry.user_id != user_id:
-        raise NotFoundError("User contractor")
-    entry.delete()
+def delete_user_contractor(user_contractor_id: str) -> None:
+    """Removes an entry from a rolodex. The caller has already checked ownership."""
+    UserContractor.objects.get_or_404(pk=user_contractor_id).delete()

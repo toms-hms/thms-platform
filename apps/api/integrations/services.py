@@ -141,12 +141,9 @@ def save_ai_integration(user_id: str, provider: str, api_key: str) -> Integratio
     )
 
 
-def disconnect_integration(integration_id: str, user_id: str) -> None:
-    """Removes a connected account belonging to the user."""
-    integration = Integration.objects.filter(pk=integration_id).first()
-    if not integration or integration.user_id != user_id:
-        raise NotFoundError("Integration")
-    integration.delete()
+def disconnect_integration(integration_id: str) -> None:
+    """Removes a connected account. The caller has already checked ownership."""
+    Integration.objects.get_or_404(pk=integration_id).delete()
 
 
 def _gmail_credentials(integration: Integration) -> Credentials:

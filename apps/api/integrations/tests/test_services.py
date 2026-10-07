@@ -39,17 +39,16 @@ class SaveAiIntegrationTests(TestCase):
 class DisconnectTests(TestCase):
     """disconnect_integration()"""
 
-    def test_owner_may_disconnect(self):
-        """The owner removes their own connection."""
+    def test_deletes_the_connection(self):
+        """The connection is removed. Ownership is checked by the resolver's @owner_required."""
         integration = IntegrationFactory()
-        services.disconnect_integration(integration.pk, integration.user_id)
+        services.disconnect_integration(integration.pk)
         self.assertFalse(Integration.objects.filter(pk=integration.pk).exists())
 
-    def test_another_user_may_not(self):
-        """Someone else's connection is not visible to disconnect."""
-        integration = IntegrationFactory()
+    def test_an_unknown_connection_is_not_found(self):
+        """Disconnecting an id that does not exist raises NotFoundError."""
         with self.assertRaises(NotFoundError):
-            services.disconnect_integration(integration.pk, UserFactory().pk)
+            services.disconnect_integration("missing")
 
 
 @override_settings(GOOGLE_CLIENT_ID="client-id", GOOGLE_CLIENT_SECRET="client-secret")

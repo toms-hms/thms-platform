@@ -12,8 +12,6 @@ import boto3
 from botocore.client import Config
 from django.conf import settings
 
-from core.errors import NotFoundError
-
 
 def _client():
     """Returns an S3 client pointed at the configured MinIO/S3 endpoint."""
@@ -69,15 +67,10 @@ def confirm_upload(
     )
 
 
-def delete_job_image(image_id: str, user_id: str) -> None:
-    """Deletes a job image and its stored object, after checking access to the job."""
+def delete_job_image(image_id: str) -> None:
+    """Deletes a job image and its stored object. The caller has already checked access to the job."""
     from ai.models import JobImage
-    from jobs.models import Job
 
-    image = JobImage.objects.filter(pk=image_id).first()
-    if not image:
-        raise NotFoundError("Image")
-    if not Job.objects.has_permission(user_id, image.job_id):
-        raise NotFoundError("Job")
+    image = JobImage.objects.get_or_404(pk=image_id)
     delete_object(image.storage_key)
     image.delete()

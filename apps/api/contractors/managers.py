@@ -1,13 +1,13 @@
-"""Query methods for contractors and their service areas."""
+"""Query compositions and writes for contractors and their service areas."""
 
-from django.db import models, transaction
-from django.db.models import Q
+from django.db import transaction
 
-from core.managers import BaseManager, PermissionedManager
+from contractors.querysets import ContractorQuerySet, ContractorZipCodeQuerySet
+from core.managers import BaseManager
 
 
-class ContractorManager(PermissionedManager):
-    """Filtering and writes for the contractor directory."""
+class ContractorManager(BaseManager.from_queryset(ContractorQuerySet)):
+    """Filter compositions and writes for the contractor directory."""
 
     def filter_contractors(
         self,
@@ -18,35 +18,16 @@ class ContractorManager(PermissionedManager):
         emails: list[str] | None = None,
         is_global: bool | None = None,
         search: str | None = None,
-    ) -> models.QuerySet:
+    ) -> ContractorQuerySet:
         """Returns contractors matching every supplied filter. An empty list matches nothing."""
-        queryset = self.all()
-        if ids is not None:
-            queryset = queryset.filter(pk__in=ids)
-        if zip_codes is not None:
-            queryset = queryset.filter(zip_code_rows__zip_code__in=zip_codes).distinct()
-        if trade_categories is not None:
-            queryset = queryset.filter(categories__overlap=trade_categories)
-        if emails is not None:
-            email_match = Q()
-            for email in emails:
-                email_match |= Q(email__iexact=email)
-            queryset = queryset.filter(email_match) if emails else queryset.none()
-        if is_global is not None:
-            queryset = queryset.filter(is_global=is_global)
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | Q(company_name__icontains=search) | Q(email__icontains=search)
-            )
-        return queryset
-
-    def has_permission(self, user_id: str, resource_id: str) -> bool:
-        """Always True — the directory is readable by every authenticated user. Writes are admin-gated."""
-        return True
-
-    def list_for_user(self, user_id: str, role: str, **filters) -> models.QuerySet:
-        """Returns the global contractor directory."""
-        return self.filter_contractors(is_global=True)
+        return (
+            self.filter_ids(ids)
+            .filter_zip_codes(zip_codes)
+            .filter_trade_categories(trade_categories)
+            .filter_emails(emails)
+            .filter_is_global(is_global)
+            .search(search)
+        )
 
     @transaction.atomic
     def create_with_zip_codes(self, *, zip_codes: list[str], **fields):
@@ -104,9 +85,5 @@ class ContractorManager(PermissionedManager):
         ]
 
 
-class ContractorZipCodeManager(BaseManager):
+class ContractorZipCodeManager(BaseManager.from_queryset(ContractorZipCodeQuerySet)):
     """Lookups over contractor service areas."""
-
-    def list_for_contractors(self, contractor_ids: list[str]) -> models.QuerySet:
-        """Returns the ZIP code rows for the given contractors in one query."""
-        return self.filter(contractor_id__in=contractor_ids)

@@ -1,37 +1,15 @@
 ---
 name: api-graphql
-description: Guide for the GraphQL surface — types, queries, mutations, enums, auth decorators and error codes. Replaces the old route and Zod schema recipes.
+description: Guide for <app>/schema.py — queries, mutations, input enums, auth decorators and error codes. Object types live in types.py (see types.md).
 ---
 
 # API GraphQL
 
-Each app's `schema.py` contributes a `Query` and a `Mutation` class; `config/schema.py` combines them. There are no routes and no request-validation schemas — the schema is the contract, and it validates input.
+Each app's `schema.py` holds its mutations and contributes a `Query` and a `Mutation` class; `config/schema.py` combines them. There are no routes and no request-validation schemas — the schema is the contract, and it validates input.
 
 ## Types
 
-```python
-class JobType(DjangoObjectType):
-    """A piece of work on a home, with everything hanging off it."""
-
-    ai_session = graphene.JSONString()
-    home_id = graphene.ID(required=True)
-    quotes = graphene.List(graphene.NonNull("quotes.schema.QuoteType"), required=True)
-
-    class Meta:
-        model = Job
-        fields = ("id", "home", "title", "intent", "category", "status", "created_at", "updated_at")
-        convert_choices_to_enum = False
-
-    def resolve_home_id(self, info) -> str:
-        """Returns the id of the home this job belongs to."""
-        return self.home_id
-```
-
-- **Always list `fields` explicitly.** A field nobody named cannot leak — that is how password hashes and encrypted tokens stay out of the schema.
-- **Always set `convert_choices_to_enum = False`.** Enum-backed fields come out as plain strings, matching what clients already compare against.
-- **Expose flat FK ids** (`job_id`, `contractor_id`) next to the nested object, so a client that only wants an id does not have to select a whole object.
-- Relations are fields on the type. Let the client ask for what it needs instead of assembling composite payloads server-side.
-- Cross-app references use a string (`"quotes.schema.QuoteType"`) to avoid an import cycle.
+Object types live in `types.py`, not here. See `types.md`.
 
 ## Enums
 
@@ -59,28 +37,32 @@ class CreateJob(graphene.Mutation):
 
     job = graphene.Field(JobType)
 
-    @login_required
+    @authorize(Permission.JOBS_EDIT, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, **data):
-        """Creates the job after checking the caller's access to the home."""
-        user = current_user(info)
-        permissions.require(Home.objects, user.pk, home_id)
-        return CreateJob(job=services.create_job(home_id, user.pk, data))
+        """Creates the job on the home."""
+        return CreateJob(job=services.create_job(home_id, current_user(info).pk, data))
 ```
 
 - Names read as verbs: `createJob`, `assignContractor`, `disconnectIntegration`.
 - A mutation returns the object it changed, or `success: Boolean!` for a delete.
 - Arguments are flat, not input objects — they stay readable in GraphiQL and map straight onto service keyword arguments.
-- Business logic lives in the service. The mutation authenticates, authorises, and delegates.
+- Business logic lives in the service. The mutation declares access with a decorator, then delegates.
+- Reads call a manager composition or a queryset chain directly. There is no service in between.
 
 ## Auth
 
+Every resolver carries exactly one access decorator from `core.graphql`:
+
 | Decorator | Effect | Error |
 | --- | --- | --- |
-| `@login_required` | Requires a valid bearer token | `UNAUTHORIZED` |
-| `@admin_required` | Requires the ADMIN role | `FORBIDDEN` |
-| `permissions.require(...)` | Requires access to one row | `FORBIDDEN` |
+| `@login_required` | Any authenticated caller | `UNAUTHORIZED` |
+| `@admin_required` | Platform ADMIN only | `FORBIDDEN` |
+| `@authorize(permission, resource=, arg=)` | Caller holds the permission in the named row's home | `FORBIDDEN` |
+| `@owner_required(resource=, arg=)` | The named row belongs to the caller | `FORBIDDEN` |
 
-`current_user(info)` returns the authenticated user and raises `UnauthorizedError` when there is none.
+The decorator handles authentication too. Do not stack `@login_required` under the others.
+`current_user(info)` returns the authenticated user. See `permissioning.md` for choosing a
+permission and for scoping collections with `visible_to`.
 
 ## Errors
 

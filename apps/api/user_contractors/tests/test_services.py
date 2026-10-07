@@ -52,14 +52,13 @@ class CreateUserContractorTests(TestCase):
 class DeleteUserContractorTests(TestCase):
     """delete_user_contractor()"""
 
-    def test_owner_may_delete(self):
-        """The owner removes their own entry."""
+    def test_deletes_the_entry(self):
+        """The entry is removed. Ownership is checked by the resolver's @owner_required."""
         entry = UserContractorFactory()
-        services.delete_user_contractor(entry.user_id, entry.pk)
+        services.delete_user_contractor(entry.pk)
         self.assertFalse(UserContractor.objects.filter(pk=entry.pk).exists())
 
-    def test_another_user_may_not_delete(self):
-        """Someone else's entry is not visible, so deleting it is NotFoundError."""
-        entry = UserContractorFactory()
+    def test_an_unknown_entry_is_not_found(self):
+        """Deleting an id that does not exist raises NotFoundError."""
         with self.assertRaises(NotFoundError):
-            services.delete_user_contractor(UserFactory().pk, entry.pk)
+            services.delete_user_contractor("missing")

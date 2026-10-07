@@ -10,13 +10,16 @@ One Django app per domain. One concern per file.
 ```
 apps/api/<app>/
   models.py       Table definitions and TextChoices enums
-  managers.py     Query methods and permission predicates
+  querysets.py    Chainable filters and visibility (filter_*, visible_to, owned_by)
+  managers.py     Filter compositions, writes, value-returning lookups
   services.py     Write orchestration
-  schema.py       GraphQL types, queries and mutations
+  types.py        GraphQL object types
+  schema.py       GraphQL queries and mutations, with their access decorators
   factories.py    Test factories, one per model
   apps.py         AppConfig, including audit-log registration
   migrations/
   tests/
+    test_querysets.py
     test_managers.py
     test_services.py
     test_schema.py
@@ -27,9 +30,11 @@ apps/api/<app>/
 | File | Contains | Never contains |
 | --- | --- | --- |
 | `models.py` | Fields, `Meta`, `TextChoices`, cheap derived properties | Queries, business rules |
-| `managers.py` | Every query the app makes; `has_permission`; `list_for_user` | Orchestration across apps |
-| `services.py` | Multi-step writes, cross-app coordination, cache invalidation | Raw ORM filtering that belongs in a manager |
-| `schema.py` | Types, arguments, auth gates, calls into services and managers | Business logic |
+| `querysets.py` | One-clause filters that return the queryset; `home_id_path` | Role or policy logic, writes |
+| `managers.py` | Chains of queryset filters, writes, methods returning values | Access decisions, orchestration across apps |
+| `services.py` | Multi-step writes, cross-app coordination, cache invalidation | Raw ORM filtering, access checks |
+| `types.py` | `DjangoObjectType`s and payload `ObjectType`s | Access checks, queries beyond relation resolvers |
+| `schema.py` | Arguments, access decorators, calls into services and managers | Types, business logic |
 
 ## Adding a new app
 
@@ -41,7 +46,7 @@ apps/api/<app>/
 
 ## Reads and writes take different paths
 
-- **Reads** — a resolver calls a manager directly. No service in between.
+- **Reads** — a resolver calls a manager or queryset chain directly. No service in between.
 - **Writes** — a mutation calls a service, which calls managers.
 
 A resolver that needs several related collections lets GraphQL do the work: expose them as fields on the type (see `JobType`) rather than assembling a composite payload by hand.

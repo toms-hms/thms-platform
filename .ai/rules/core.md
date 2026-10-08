@@ -46,8 +46,9 @@ The database predates Django. Map it; do not regenerate it. Always set `db_table
 
 ## QuerySets and managers
 
-- **`querysets.py`** holds chainable one-clause filters. A filter takes `list[...] | None` and starts with `if x is None: return self`, never `if not x`. `[]` must match nothing.
-- **`managers.py`** is built with `BaseManager.from_queryset(...)`. It holds compositions of those filters, writes, and methods that return values.
+- Each model lives in `<app>/models/<model_name>/` with `model.py`, `queryset.py` and `manager.py`. The package `models/__init__.py` re-exports it. Import models as `from <app>.models import X`.
+- **`queryset.py`** holds chainable one-clause filters. A filter takes `list[...] | None` and starts with `if x is None: return self`, never `if not x`. `[]` must match nothing.
+- **`manager.py`** is built with `BaseManager.from_queryset(...)`. It holds compositions of those filters, writes, and methods that return values.
 - Neither makes access decisions.
 
 See `.ai/recipes/api/queryset.md` and `.ai/recipes/api/manager.md`.

@@ -31,9 +31,10 @@ apps/api/
     audit.py        the audit log query
     testing.py      GraphQLTestCase
   <app>/
-    models.py       tables, mapped onto the pre-existing schema
-    querysets.py    chainable filters + home_id_path
-    managers.py     filter compositions, writes, value lookups
+    models/
+      __init__.py   re-exports every model and enum
+      <model_name>/ model.py (table + its enums), queryset.py (filters + home_id_path),
+                    manager.py (compositions, writes, value lookups)
     services.py     orchestration for writes
     types.py        GraphQL object types
     schema.py       GraphQL queries and mutations, each with an access decorator

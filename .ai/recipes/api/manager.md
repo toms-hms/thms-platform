@@ -1,6 +1,6 @@
 ---
 name: api-manager
-description: Guide for <app>/managers.py — composing queryset filters into named lookups (filter_contractors, list_for_job), writes, and methods that return values. Managers make no access decisions.
+description: Guide for <app>/models/<model_name>/manager.py — composing queryset filters into named lookups (filter_contractors, list_for_job), writes, and methods that return values. Managers make no access decisions.
 ---
 
 # API Manager
@@ -11,7 +11,8 @@ A manager sits on top of the app's queryset. It owns:
 - **Writes** that need more than `create()`, e.g. upserts or atomic multi-table writes.
 - **Methods that return values** rather than a queryset: a single row, a dict, a list of dicts.
 
-The chainable filters themselves live in `querysets.py` (see `queryset.md`).
+It lives in `models/<model_name>/manager.py`. The chainable filters live next to
+it in `queryset.py` (see `queryset.md`).
 Access control does not live here at all (see `permissioning.md`).
 
 ## Declaring a manager
@@ -20,15 +21,16 @@ Build it from the app's queryset so every filter is reachable on `Model.objects`
 
 ```python
 from core.managers import BaseManager
-from jobs.querysets import JobContractorQuerySet
+from jobs.models.job_contractor.queryset import JobContractorQuerySet
 
 
 class JobContractorManager(BaseManager.from_queryset(JobContractorQuerySet)):
     """Lookups and status transitions for contractor assignments."""
 ```
 
-The model declares it as `objects = JobContractorManager()`. An app with no
-filters of its own still uses `BaseManager`, which carries `filter_ids` and `get_or_404`.
+The model declares it as `objects = JobContractorManager()`. A manager only ever
+imports its own folder's queryset. Other models are imported inside methods, from the
+app package (`from jobs.models import Job`).
 
 ## Compositions
 

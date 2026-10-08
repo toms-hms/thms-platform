@@ -1,6 +1,6 @@
 ---
 name: api-queryset
-description: Guide for <app>/querysets.py — chainable filter methods (filter_*, search), the base querysets (BaseQuerySet, HomeScopedQuerySet, UserOwnedQuerySet) and visibility (visible_to, owned_by).
+description: Guide for <app>/models/<model_name>/queryset.py — chainable filter methods (filter_*, search), the base querysets (BaseQuerySet, HomeScopedQuerySet, UserOwnedQuerySet) and visibility (visible_to, owned_by).
 ---
 
 # API QuerySet
@@ -12,8 +12,10 @@ clause and returns the queryset, so filters compose:
 Contractor.objects.filter_zip_codes(zip_codes).filter_trade_categories(trade_categories)
 ```
 
+It lives in `models/<model_name>/queryset.py`, next to the model and its manager.
 The manager is built from the queryset (`BaseManager.from_queryset(...)`, see
-`manager.md`), so every method here is also callable on `Model.objects`.
+`manager.md`), so every method here is also callable on `Model.objects`. Import
+other models **inside the method** (`from contractors.models import ContractorZipCode`).
 
 ## Pick the base class
 
@@ -55,7 +57,6 @@ class JobQuerySet(HomeScopedQuerySet):
     An empty `Q()` matches everything.
 - **Across a multi-valued relation**, filter with `Exists(...)` on a subquery, not a join
   plus `.distinct()`. `.distinct()` breaks once someone adds `order_by` or annotations.
-- Import another app's model **inside the method** to avoid import cycles.
 - Return `Self`. Docstring says which rows come back.
 
 ## What does not belong here

@@ -6,7 +6,6 @@ from accounts import services
 from accounts.factories import TEST_PASSWORD, UserFactory
 from accounts.models import User
 from core.errors import ConflictError, UnauthorizedError
-from core.hashing import hash_password, verify_password
 
 
 class RegisterTests(TestCase):
@@ -21,12 +20,12 @@ class RegisterTests(TestCase):
         self.assertTrue(result["tokens"]["access_token"])
         self.assertTrue(result["tokens"]["refresh_token"])
 
-    def test_stores_password_as_bcrypt_hash(self):
-        """The stored hash is raw bcrypt, not the plaintext and not Django's prefixed format."""
+    def test_stores_a_hashed_password(self):
+        """The password is stored through Django's hasher, never as plaintext."""
         services.register(email="hash@example.com", password="password123", first_name="A", last_name="B")
         user = User.objects.get(email="hash@example.com")
-        self.assertTrue(user.password.startswith("$2"))
-        self.assertTrue(verify_password("password123", user.password))
+        self.assertNotIn("password123", user.password)
+        self.assertTrue(user.check_password("password123"))
 
     def test_rejects_duplicate_email(self):
         """Registering an email that already exists is a conflict."""
@@ -58,12 +57,6 @@ class LoginTests(TestCase):
         with self.assertRaises(UnauthorizedError):
             services.login(email="nobody@example.com", password=TEST_PASSWORD)
 
-    def test_accepts_hash_written_by_the_previous_api(self):
-        """A bcrypt hash in the format bcryptjs wrote still authenticates."""
-        user = UserFactory(password=hash_password("legacy-password", rounds=4))
-        result = services.login(email=user.email, password="legacy-password")
-        self.assertEqual(result["user"].pk, user.pk)
-
 
 class RefreshTokenTests(TestCase):
     """refresh_tokens() and logout()"""
@@ -87,3 +80,13 @@ class RefreshTokenTests(TestCase):
         services.logout(user.pk)
         with self.assertRaises(UnauthorizedError):
             services.refresh_tokens(tokens["refresh_token"])
+
+    def test_a_rotated_refresh_token_cannot_be_reused(self):
+        """Only the most recently issued refresh token is accepted; the one it replaced is rejected."""
+        user = UserFactory()
+        first = services.login(email=user.email, password=TEST_PASSWORD)["tokens"]["refresh_token"]
+        second = services.refresh_tokens(first)["tokens"]["refresh_token"]
+        self.assertNotEqual(first, second)
+        with self.assertRaises(UnauthorizedError):
+            services.refresh_tokens(first)
+        self.assertTrue(services.refresh_tokens(second)["tokens"]["refresh_token"])

@@ -84,7 +84,6 @@ Open `http://localhost:3000` — done.
 | `make logs-web` | Tail web logs only |
 | `make migrate` | Generate and apply database migrations |
 | `make migrate-deploy` | Apply migrations only (production) |
-| `make migrate-adopt` | First run against a database created by the previous API (`--fake-initial`) |
 | `make seed` | Seed database with demo data |
 | `make shell-db` | Open a psql shell |
 | `make graphql-schema` | Write the schema to `schema.graphql` |
@@ -136,7 +135,7 @@ make test-web    # frontend only
 Backend tests use Django's test runner against a real database, with every test in a
 rolled-back transaction. Each app has `tests/test_managers.py`, `tests/test_services.py`
 and `tests/test_schema.py`, covering:
-- Auth (register, login, refresh, logout, bcrypt compatibility)
+- Auth (register, login, refresh rotation, logout)
 - Permission boundaries on every resource — owner, member, stranger, admin
 - Manager filters and visibility queries
 - The GraphQL surface end to end, including error codes

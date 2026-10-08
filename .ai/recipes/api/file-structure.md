@@ -47,7 +47,7 @@ apps/api/<app>/
 2. An `AppConfig` in `apps.py` whose `ready()` registers the models with the audit log.
 3. Add the app to `INSTALLED_APPS` in `config/settings.py`.
 4. Add its `Query` and `Mutation` mixins to `config/schema.py`.
-5. If the models need a new Postgres enum type, add it to `core/migrations/0001_enum_types.py` and depend on that migration.
+5. Run `make migrate` to generate the app's initial migration.
 
 ## Adding a model to an existing app
 

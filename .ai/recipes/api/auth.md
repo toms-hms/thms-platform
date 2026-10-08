@@ -11,20 +11,24 @@ Stateless JWT, not Django sessions. The contract is unchanged from the API this 
 
 | Token | Claims | Secret | Lifetime |
 | --- | --- | --- | --- |
-| Access | `sub`, `email`, `role`, `iat`, `exp` | `JWT_SECRET` | `JWT_EXPIRES_IN` (15m) |
-| Refresh | `sub`, `iat`, `exp` | `JWT_REFRESH_SECRET` | `JWT_REFRESH_EXPIRES_IN` (7d) |
+| Access | `sub`, `email`, `role`, `jti`, `iat`, `exp` | `JWT_SECRET` | `JWT_EXPIRES_IN` (15m) |
+| Refresh | `sub`, `jti`, `iat`, `exp` | `JWT_REFRESH_SECRET` | `JWT_REFRESH_EXPIRES_IN` (7d) |
 
-`login`, `register` and `refreshTokens` issue a pair. The bcrypt hash of the refresh token is stored on `User.refresh_token_hash`, so `logout` revokes it by clearing that column.
+`sub` is the user's UUID as a string. `jti` is random per token, so two tokens issued in the same second still differ.
+
+`login`, `register` and `refreshTokens` issue a pair and store the SHA-256 digest of the new refresh token on `User.refresh_token_hash` (`core.hashing.hash_token`). Only the most recently issued refresh token is accepted: rotating replaces the digest, and `logout` clears it. A refresh token is a high-entropy secret, so it uses a fast digest with a constant-time compare (`verify_token`), never a password hasher.
 
 Durations are Node-style strings (`15m`, `7d`, `3600`) — `core.jwt_utils.parse_duration` reads them.
 
 ## Passwords
 
-Hashes are **raw bcrypt** (`$2a$12$…`), not Django's `algorithm$salt$hash` format. `core.hashing` reads and writes that format so rows stay compatible in both directions.
+Django's password hashers (`PASSWORD_HASHERS` default, PBKDF2 first; MD5 under `DJANGO_ENV=test` for speed). Set and check passwords through the model:
 
-bcrypt only reads the first 72 bytes of its input; bcryptjs truncated silently and the Python library raises, so `core.hashing._prepare` truncates explicitly. This matters because refresh tokens are longer than 72 bytes.
+- `User.objects.create_user(email, password, ...)` / `user.set_password(...)` to store one.
+- `user.check_password(...)` to verify one. It also upgrades the hash when the configured hasher changes.
+- `make_password(...)` only where no user instance exists yet (factories, seed data).
 
-Always go through `hash_password` / `verify_password`. Never call bcrypt directly.
+Never store, compare or log a raw password.
 
 ## `request.user`
 

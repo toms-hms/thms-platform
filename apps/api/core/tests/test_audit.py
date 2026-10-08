@@ -93,8 +93,8 @@ class AuditLogQueryTests(GraphQLTestCase):
             AUDIT_LOG, {"objectType": "job", "objectId": self.job.pk}, token=self.token_for(AdminFactory())
         )
         object_ids = {entry["objectId"] for entry in self.assert_ok(body)["auditLog"]}
-        self.assertEqual(object_ids, {self.job.pk})
-        self.assertNotIn(other.pk, object_ids)
+        self.assertEqual(object_ids, {str(self.job.pk)})
+        self.assertNotIn(str(other.pk), object_ids)
 
     def test_regular_users_may_not_read_the_log(self):
         """The audit log is admin-only."""

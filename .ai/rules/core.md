@@ -42,7 +42,7 @@ Never auto-transition job or contractor status. The user controls all state.
 
 ## Models
 
-The database predates Django. Map it; do not regenerate it. Always set `db_table` and `db_column`, keep CUID2 string primary keys, declare Postgres enums with `PGEnumField`, and use `TimestampField` for `timestamp(3)` columns. See `.ai/recipes/api/model.md`.
+Django owns the schema. No `db_table` / `db_column` overrides. Primary keys are `UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`. Choices are `CharField(choices=...)`. Timestamps are timezone-aware `DateTimeField`s. Every foreign key names its `on_delete` deliberately, never `DO_NOTHING`. See `.ai/recipes/api/model.md`.
 
 ## QuerySets and managers
 
@@ -83,7 +83,7 @@ def filter_existing(self, user_id: str, contractor_id: str):
 
 ## Migrations
 
-Never hand-write a migration for a schema change — edit the model and run `make migrate`. Hand-written SQL is for data migrations and for Postgres enum changes, which Django cannot express. See `.ai/recipes/api/migrations.md`.
+Never hand-write a migration for a schema change — edit the model and run `make migrate`. Hand-written migrations are for data only (`RunPython`). See `.ai/recipes/api/migrations.md`.
 
 ## Tests
 

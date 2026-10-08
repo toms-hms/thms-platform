@@ -176,7 +176,7 @@ def draft_email(
             prompt=user_prompt,
             provider="openai",
             status=AIGenerationStatus.COMPLETED,
-            metadata={"contractorId": contractor.pk, "type": "EMAIL_DRAFT"},
+            metadata={"contractorId": str(contractor.pk), "type": "EMAIL_DRAFT"},
             created_by_id=user_id,
         )
         drafts.append(

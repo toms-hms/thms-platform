@@ -11,6 +11,7 @@ which permission is policy, and lives in core.permissions.
 
 from typing import Any, ClassVar, Self
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from core import permissions
@@ -30,7 +31,7 @@ class BaseQuerySet(models.QuerySet):
         """Returns the single row matching the filters, raising NotFoundError when absent."""
         try:
             return self.get(**kwargs)
-        except self.model.DoesNotExist as err:
+        except (self.model.DoesNotExist, ValidationError) as err:
             raise NotFoundError(self.model.__name__) from err
 
 
@@ -50,8 +51,14 @@ class HomeScopedQuerySet(BaseQuerySet):
         return self.filter(**{f"{self.home_id_path}__in": home_ids})
 
     def home_id_for(self, pk: str) -> str | None:
-        """Returns the id of the home the row belongs to, or None when the row does not exist."""
-        return self.filter(pk=pk).values_list(self.home_id_path, flat=True).first()
+        """Returns the id of the home the row belongs to, or None when the row does not exist.
+
+        A malformed id is treated as a row that does not exist.
+        """
+        try:
+            return self.filter(pk=pk).values_list(self.home_id_path, flat=True).first()
+        except ValidationError:
+            return None
 
     def visible_to(self, user, permission: permissions.Permission) -> Self:
         """Returns rows in homes where the user holds the permission; every row for an ADMIN."""
@@ -66,8 +73,11 @@ class UserOwnedQuerySet(BaseQuerySet):
     owner_id_path: ClassVar[str] = "user_id"
 
     def owner_id_for(self, pk: str) -> str | None:
-        """Returns the id of the user who owns the row, or None when the row does not exist."""
-        return self.filter(pk=pk).values_list(self.owner_id_path, flat=True).first()
+        """Returns the id of the user who owns the row, or None when the row does not exist or is malformed."""
+        try:
+            return self.filter(pk=pk).values_list(self.owner_id_path, flat=True).first()
+        except ValidationError:
+            return None
 
     def owned_by(self, user) -> Self:
         """Returns the user's own rows."""

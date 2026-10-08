@@ -54,7 +54,7 @@ def _google_flow() -> Flow:
 
 def get_google_auth_url(user_id: str) -> str:
     """Returns the Google consent URL the user should be sent to."""
-    url, _ = _google_flow().authorization_url(access_type="offline", prompt="consent", state=user_id)
+    url, _ = _google_flow().authorization_url(access_type="offline", prompt="consent", state=str(user_id))
     return url
 
 
@@ -86,7 +86,7 @@ def get_microsoft_auth_url(user_id: str) -> str:
         "response_type": "code",
         "redirect_uri": settings.MICROSOFT_REDIRECT_URI,
         "scope": MICROSOFT_SCOPES,
-        "state": user_id,
+        "state": str(user_id),
         "response_mode": "query",
     }
     query = "&".join(f"{k}={requests.utils.quote(str(v))}" for k, v in params.items())
@@ -173,7 +173,7 @@ def send_via_gmail(
     integration = Integration.objects.filter(pk=integration_id).first()
     if (
         not integration
-        or integration.user_id != user_id
+        or str(integration.user_id) != str(user_id)
         or integration.provider != IntegrationProvider.GOOGLE
     ):
         raise NotFoundError("Integration")

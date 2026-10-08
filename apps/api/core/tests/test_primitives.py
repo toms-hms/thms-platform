@@ -1,4 +1,4 @@
-"""Identifiers, encryption and token signing."""
+"""Encryption, token hashing and token signing."""
 
 from datetime import timedelta
 from unittest.mock import patch
@@ -7,24 +7,8 @@ from django.test import TestCase
 
 from core.crypto import decrypt, encrypt
 from core.errors import UnauthorizedError
-from core.hashing import hash_password, verify_password
-from core.ids import create_id
+from core.hashing import hash_token, verify_token
 from core.jwt_utils import parse_duration, sign_access_token, sign_refresh_token, verify_access_token
-
-
-class CreateIdTests(TestCase):
-    """create_id()"""
-
-    def test_matches_the_cuid2_shape(self):
-        """Ids are 24 characters, start with a letter and are lowercase base36."""
-        value = create_id()
-        self.assertEqual(len(value), 24)
-        self.assertTrue(value[0].isalpha() and value[0].islower())
-        self.assertTrue(all(c.isdigit() or ("a" <= c <= "z") for c in value))
-
-    def test_is_unique_across_many_calls(self):
-        """Ten thousand ids do not collide."""
-        self.assertEqual(len({create_id() for _ in range(10_000)}), 10_000)
 
 
 class CryptoTests(TestCase):
@@ -43,26 +27,26 @@ class CryptoTests(TestCase):
         self.assertNotEqual(encrypt("same"), encrypt("same"))
 
 
-class PasswordTests(TestCase):
-    """hash_password() / verify_password()"""
+class TokenHashTests(TestCase):
+    """hash_token() / verify_token()"""
 
-    def test_verifies_its_own_hash(self):
-        """A hash this code produces verifies against the original password."""
-        self.assertTrue(verify_password("hunter22", hash_password("hunter22", rounds=4)))
+    def test_verifies_its_own_digest(self):
+        """A digest this code produces verifies against the original token."""
+        self.assertTrue(verify_token("eyJ.token", hash_token("eyJ.token")))
 
-    def test_rejects_the_wrong_password(self):
-        """A different password does not verify."""
-        self.assertFalse(verify_password("wrong", hash_password("hunter22", rounds=4)))
+    def test_rejects_a_different_token(self):
+        """A different token does not verify."""
+        self.assertFalse(verify_token("eyJ.other", hash_token("eyJ.token")))
 
-    def test_handles_input_longer_than_bcrypt_reads(self):
-        """A value longer than 72 bytes (such as a JWT) hashes and verifies rather than raising."""
-        long_value = "x" * 400
-        self.assertTrue(verify_password(long_value, hash_password(long_value, rounds=4)))
+    def test_distinguishes_tokens_beyond_72_bytes(self):
+        """Tokens sharing a long prefix (as JWTs for one user do) hash differently."""
+        prefix = "x" * 200
+        self.assertFalse(verify_token(prefix + "a", hash_token(prefix + "b")))
 
-    def test_rejects_a_missing_or_malformed_hash(self):
-        """An empty or non-bcrypt hash never verifies."""
-        self.assertFalse(verify_password("anything", None))
-        self.assertFalse(verify_password("anything", "not-a-bcrypt-hash"))
+    def test_rejects_a_missing_digest(self):
+        """No stored digest never verifies."""
+        self.assertFalse(verify_token("anything", None))
+        self.assertFalse(verify_token("anything", ""))
 
 
 class JwtTests(TestCase):

@@ -27,7 +27,7 @@ class GraphQLTestCase(TestCase):
         headers = {"HTTP_AUTHORIZATION": f"Bearer {token}"} if token else {}
         response = self.client.post(
             GRAPHQL_URL,
-            data=json.dumps({"query": query, "variables": variables or {}}),
+            data=json.dumps({"query": query, "variables": variables or {}}, default=str),
             content_type="application/json",
             **headers,
         )

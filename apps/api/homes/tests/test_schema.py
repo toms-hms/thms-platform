@@ -39,7 +39,7 @@ class HomesQueryTests(GraphQLTestCase):
     def test_lists_only_the_callers_homes(self):
         """The list contains the caller's home and excludes other people's."""
         data = self.assert_ok(self.execute(HOMES, token=self.token_for(self.user)))
-        self.assertEqual([h["id"] for h in data["homes"]], [self.home.pk])
+        self.assertEqual([h["id"] for h in data["homes"]], [str(self.home.pk)])
 
     def test_stranger_sees_no_homes(self):
         """A user with no memberships gets an empty list."""
@@ -108,7 +108,7 @@ class HomeAuthorizationTests(GraphQLTestCase):
     def test_admin_may_read_a_home_they_do_not_belong_to(self):
         """ADMIN is allowed every permission without membership."""
         body = self.execute(HOME, {"homeId": self.home.pk}, token=self.token_for(AdminFactory()))
-        self.assertEqual(self.assert_ok(body)["home"]["id"], self.home.pk)
+        self.assertEqual(self.assert_ok(body)["home"]["id"], str(self.home.pk))
 
     def test_an_unknown_home_is_forbidden(self):
         """A home that does not exist is indistinguishable from one the caller cannot see."""

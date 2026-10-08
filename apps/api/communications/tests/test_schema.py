@@ -52,7 +52,7 @@ class CommunicationsTests(GraphQLTestCase):
             COMMUNICATIONS, {"jobId": self.job.pk, "direction": "RECEIVED"}, token=self.token_for(self.user)
         )
         data = self.assert_ok(body)
-        self.assertEqual([c["id"] for c in data["communications"]], [self.received.pk])
+        self.assertEqual([c["id"] for c in data["communications"]], [str(self.received.pk)])
 
     def test_filters_by_needs_review(self):
         """The needsReview filter distinguishes true from false rather than treating false as absent."""
@@ -60,7 +60,7 @@ class CommunicationsTests(GraphQLTestCase):
             COMMUNICATIONS, {"jobId": self.job.pk, "needsReview": False}, token=self.token_for(self.user)
         )
         data = self.assert_ok(body)
-        self.assertEqual([c["id"] for c in data["communications"]], [self.sent.pk])
+        self.assertEqual([c["id"] for c in data["communications"]], [str(self.sent.pk)])
 
     def test_is_forbidden_for_a_stranger(self):
         """Someone outside the home cannot read the job's messages."""

@@ -1,11 +1,11 @@
 """The integration table."""
 
+import uuid
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 
-from core.fields import CuidField, PGEnumField, TimestampField
-from core.ids import create_id
 from integrations.models.integration.manager import IntegrationManager
 
 
@@ -27,26 +27,23 @@ class IntegrationProvider(models.TextChoices):
 class Integration(models.Model):
     """A connected third-party account belonging to one user."""
 
-    id = CuidField(default=create_id)
-    user = models.ForeignKey(
-        "accounts.User", on_delete=models.CASCADE, db_column="userId", related_name="integrations"
-    )
-    type = PGEnumField(enum_type="IntegrationType", choices=IntegrationType.choices)
-    provider = PGEnumField(enum_type="IntegrationProvider", choices=IntegrationProvider.choices)
-    access_token_enc = models.TextField(db_column="accessTokenEnc")
-    refresh_token_enc = models.TextField(db_column="refreshTokenEnc", null=True, blank=True)
-    token_expires_at = TimestampField(db_column="tokenExpiresAt", null=True, blank=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="integrations")
+    type = models.CharField(max_length=32, choices=IntegrationType.choices)
+    provider = models.CharField(max_length=32, choices=IntegrationProvider.choices)
+    access_token_enc = models.TextField()
+    refresh_token_enc = models.TextField(null=True, blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
     email = models.TextField(null=True, blank=True)
     scopes = ArrayField(models.TextField(), default=list)
-    created_at = TimestampField(db_column="createdAt", default=timezone.now)
-    updated_at = TimestampField(db_column="updatedAt", auto_now=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = IntegrationManager()
 
     class Meta:
-        db_table = "Integration"
         constraints = [
-            models.UniqueConstraint(fields=["user", "provider"], name="Integration_userId_provider_key")
+            models.UniqueConstraint(fields=["user", "provider"], name="integration_user_provider_unique")
         ]
 
     def __str__(self) -> str:

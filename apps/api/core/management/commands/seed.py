@@ -4,12 +4,12 @@ Idempotent: running it twice leaves the same rows rather than duplicating them.
 Replaces the Node `db/seed.ts` script.
 """
 
+from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from accounts.models import User, UserRole
 from contractors.models import Contractor, TradeCategory
-from core.hashing import hash_password
 from homes.models import Home, HomeRole, UserHome
 from jobs.models import Job, JobIntent, JobStatus
 
@@ -142,7 +142,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options) -> None:
         """Creates the demo rows, skipping anything that already exists."""
-        password_hash = hash_password(DEMO_PASSWORD)
+        password_hash = make_password(DEMO_PASSWORD)
         users = {}
         for email, first_name, last_name, role in USERS:
             users[email], _ = User.objects.get_or_create(

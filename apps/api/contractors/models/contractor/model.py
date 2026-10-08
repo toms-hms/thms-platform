@@ -1,12 +1,12 @@
 """The contractor table."""
 
+import uuid
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 
 from contractors.models.contractor.manager import ContractorManager
-from core.fields import CuidField, PGEnumField, TimestampField
-from core.ids import create_id
 
 
 class TradeCategory(models.TextChoices):
@@ -29,21 +29,18 @@ class TradeCategory(models.TextChoices):
 class Contractor(models.Model):
     """A tradesperson or company that can be assigned to a job."""
 
-    id = CuidField(default=create_id)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField()
-    company_name = models.TextField(db_column="companyName", null=True, blank=True)
+    company_name = models.TextField(null=True, blank=True)
     email = models.TextField(null=True, blank=True)
     phone = models.TextField(null=True, blank=True)
-    categories = ArrayField(PGEnumField(enum_type="TradeCategory", choices=TradeCategory.choices))
+    categories = ArrayField(models.CharField(max_length=32, choices=TradeCategory.choices))
     notes = models.TextField(null=True, blank=True)
-    is_global = models.BooleanField(db_column="is_global", default=False)
-    created_at = TimestampField(db_column="createdAt", default=timezone.now)
-    updated_at = TimestampField(db_column="updatedAt", auto_now=True)
+    is_global = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = ContractorManager()
-
-    class Meta:
-        db_table = "Contractor"
 
     def __str__(self) -> str:
         return self.company_name or self.name

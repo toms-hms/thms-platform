@@ -1,6 +1,6 @@
 ---
 name: api-migrations
-description: Guide for schema changes — generating migrations, adopting the pre-existing database, and adding Postgres enum types or values.
+description: Guide for schema changes — generating migrations with makemigrations, checking for missing migrations, and when hand-written data migrations are allowed.
 ---
 
 # Migrations
@@ -8,43 +8,27 @@ description: Guide for schema changes — generating migrations, adopting the pr
 ```bash
 make migrate         # makemigrations + migrate inside the container
 make migrate-deploy  # apply only — what runs in a deployed environment
-make migrate-adopt   # first run against a database the previous API created
+make reset-db        # drop the local database volume; follow with make migrate && make seed
 ```
 
-Never hand-write a migration for a schema change. Edit the model, then generate.
+Django owns the schema. Every table, column, constraint and index comes from a
+model, and every migration comes from `makemigrations`.
 
-## Adopting the existing database
+## Changing the schema
 
-The tables predate Django, so the initial migrations describe tables that are already there. On such a database run `make migrate-adopt` once — `--fake-initial` records the initial migrations without re-creating anything. Everything after that is an ordinary `make migrate`.
+1. Edit the model (see `model.md`).
+2. Run `make migrate`. Commit the generated file in the app's `migrations/` alongside the model change.
+3. Never edit a generated migration by hand. If the generated file is wrong, fix the model and regenerate.
 
-A fresh database (a test run, a new environment) builds the whole schema from the same migrations, so the two stay identical.
+Choices are plain `CharField(choices=...)`, so adding or removing a `TextChoices`
+member needs a migration only because Django records `choices`. The column
+type does not change, and there is no database enum type to alter.
 
-## Postgres enum types
+## Hand-written migrations are for data, not structure
 
-The schema uses native enum types, which Django does not manage. They are created by `core/migrations/0001_enum_types.py`, and **every app's initial migration depends on it**.
-
-To add a **new** enum type:
-
-1. Add it to `ENUMS` in `core/migrations/0001_enum_types.py` — the migration is written to skip types that already exist, so it stays safe to re-run.
-2. Declare the field with `PGEnumField(enum_type="YourType", choices=YourChoices.choices)`.
-3. Make sure the app's migration depends on `("core", "0001_enum_types")`.
-
-To add a **value** to an existing enum, write a new migration with `ALTER TYPE`, because Postgres cannot do it implicitly:
-
-```python
-operations = [
-    migrations.RunSQL(
-        sql='ALTER TYPE "JobStatus" ADD VALUE IF NOT EXISTS \'ON_HOLD\';',
-        reverse_sql=migrations.RunSQL.noop,  # Postgres cannot drop an enum value
-    )
-]
-```
-
-Then add the member to the `TextChoices` class in the same change.
-
-## Hand-written SQL is for data, not structure
-
-A data migration (backfilling a column, repairing rows) is legitimately hand-written. A structural change is not — generate it.
+A data migration (backfilling a column, repairing rows) is legitimately hand-written
+with `RunPython`. Give it a reverse function, or `migrations.RunPython.noop` when
+there is nothing to undo. A structural change is never hand-written.
 
 ## Checking before you commit
 

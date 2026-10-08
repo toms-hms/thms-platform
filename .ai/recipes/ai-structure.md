@@ -28,11 +28,11 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
       types.md                ← GraphQL object types (types.py).
       schema.md               ← GraphQL queries, mutations, enums, access decorators, error codes.
       permissioning.md        ← Permission names, role map, @authorize / @owner_required, the cache.
-      auth.md                 ← JWT contract, raw-bcrypt passwords, request.user.
+      auth.md                 ← JWT contract, Django password hashers, refresh-token digests, request.user.
       audit.md                ← django-auditlog registration, exclusions, reading the log.
       testing.md              ← test structure, GraphQLTestCase, what each layer covers.
       factory.md              ← factory_boy factories (SubFactory, post_generation).
-      migrations.md           ← migration workflow, adopting the existing DB, PG enums.
+      migrations.md           ← migration workflow, data migrations, the missing-migration check.
       ai-service.md           ← OpenAI tool calling, JSON mode, multi-turn conversations.
     web/
       page.md                 ← Next.js App Router dashboard pages (useEffect, queries/mutations).

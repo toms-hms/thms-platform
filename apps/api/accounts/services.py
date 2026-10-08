@@ -1,14 +1,14 @@
 """Registration, login and token rotation.
 
-The token contract is unchanged from the Express API: login returns an access
-token and a refresh token, and the bcrypt hash of the refresh token is stored on
-the user row so a stolen token can be revoked by logging out.
+Login returns an access token and a refresh token. The SHA-256 digest of the
+current refresh token is stored on the user row, so only the most recently issued
+refresh token is accepted and logging out revokes it.
 """
 
 from typing import Any
 
 from core.errors import ConflictError, NotFoundError, UnauthorizedError
-from core.hashing import hash_password, verify_password
+from core.hashing import hash_token, verify_token
 from core.jwt_utils import sign_access_token, sign_refresh_token, verify_refresh_token
 
 
@@ -16,7 +16,7 @@ def _issue_tokens(user) -> dict[str, str]:
     """Returns a fresh token pair for the user and stores the refresh token's hash."""
     access_token = sign_access_token(user.pk, user.email, user.role)
     refresh_token = sign_refresh_token(user.pk)
-    user.refresh_token_hash = hash_password(refresh_token, rounds=10)
+    user.refresh_token_hash = hash_token(refresh_token)
     user.save(update_fields=["refresh_token_hash", "updated_at"])
     return {"access_token": access_token, "refresh_token": refresh_token}
 
@@ -27,9 +27,7 @@ def register(*, email: str, password: str, first_name: str, last_name: str) -> d
 
     if User.objects.find_by_email(email):
         raise ConflictError("Email already registered")
-    user = User.objects.create(
-        email=email, password=hash_password(password), first_name=first_name, last_name=last_name
-    )
+    user = User.objects.create_user(email, password, first_name=first_name, last_name=last_name)
     return {"user": user, "tokens": _issue_tokens(user)}
 
 
@@ -38,7 +36,7 @@ def login(*, email: str, password: str) -> dict[str, Any]:
     from accounts.models import User
 
     user = User.objects.find_by_email(email)
-    if not user or not verify_password(password, user.password):
+    if not user or not user.check_password(password):
         raise UnauthorizedError("Invalid credentials")
     return {"user": user, "tokens": _issue_tokens(user)}
 
@@ -51,7 +49,7 @@ def refresh_tokens(refresh_token: str) -> dict[str, Any]:
     user = User.objects.find_by_id(claims.get("sub"))
     if not user or not user.refresh_token_hash:
         raise UnauthorizedError("Invalid refresh token")
-    if not verify_password(refresh_token, user.refresh_token_hash):
+    if not verify_token(refresh_token, user.refresh_token_hash):
         raise UnauthorizedError("Invalid refresh token")
     return {"user": user, "tokens": _issue_tokens(user)}
 

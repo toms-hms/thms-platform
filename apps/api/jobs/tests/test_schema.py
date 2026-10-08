@@ -48,7 +48,7 @@ class JobQueryTests(GraphQLTestCase):
         """One query returns the job and everything attached to it."""
         data = self.assert_ok(self.execute(JOB, {"jobId": self.job.pk}, token=self.token_for(self.user)))
         job = data["job"]
-        self.assertEqual(job["id"], self.job.pk)
+        self.assertEqual(job["id"], str(self.job.pk))
         self.assertEqual(len(job["contractors"]), 1)
         self.assertEqual(len(job["quotes"]), 1)
         self.assertEqual(len(job["communications"]), 1)

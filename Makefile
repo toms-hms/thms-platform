@@ -1,5 +1,5 @@
 .PHONY: run run-d stop build build-run restart logs \
-        migrate migrate-deploy migrate-adopt seed reset-db shell-db graphql-schema \
+        migrate migrate-deploy seed reset-db shell-db graphql-schema \
         check test test-api test-web \
         shell-api shell-web \
         clean
@@ -41,12 +41,6 @@ migrate:
 
 migrate-deploy:
 	docker compose exec api python manage.py migrate
-
-# Adopts the pre-existing schema: the tables are already there, so the initial
-# migration is recorded rather than re-run. Use this once, on a database that
-# was created by the previous API.
-migrate-adopt:
-	docker compose exec api python manage.py migrate --fake-initial
 
 seed:
 	docker compose exec api python manage.py seed

@@ -1,32 +1,31 @@
 """The home table."""
 
+import uuid
+
 from django.db import models
 from django.utils import timezone
 
-from core.fields import CuidField, TimestampField
-from core.ids import create_id
 from homes.models.home.manager import HomeManager
 
 
 class Home(models.Model):
     """A property whose maintenance jobs the platform tracks."""
 
-    id = CuidField(default=create_id)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField()
     address1 = models.TextField()
     address2 = models.TextField(null=True, blank=True)
     city = models.TextField()
     state = models.TextField()
-    zip_code = models.TextField(db_column="zipCode")
+    zip_code = models.TextField()
     country = models.TextField(default="US")
     notes = models.TextField(null=True, blank=True)
-    created_at = TimestampField(db_column="createdAt", default=timezone.now)
-    updated_at = TimestampField(db_column="updatedAt", auto_now=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = HomeManager()
 
     class Meta:
-        db_table = "Home"
         ordering = ["-created_at"]
 
     def __str__(self) -> str:

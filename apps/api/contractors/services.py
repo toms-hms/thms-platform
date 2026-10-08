@@ -2,7 +2,10 @@
 
 from typing import Any
 
+from django.db.models import ProtectedError
+
 from contractors.models import Contractor
+from core.errors import ConflictError
 
 
 def create_contractor(data: dict[str, Any]) -> Contractor:
@@ -31,5 +34,8 @@ def promote_contractor(contractor_id: str) -> Contractor:
 
 
 def delete_contractor(contractor_id: str) -> None:
-    """Deletes the contractor, raising NotFoundError when it does not exist."""
-    Contractor.objects.get_or_404(pk=contractor_id).delete()
+    """Deletes the contractor. Raises NotFoundError when absent, ConflictError while quotes reference it."""
+    try:
+        Contractor.objects.get_or_404(pk=contractor_id).delete()
+    except ProtectedError as err:
+        raise ConflictError("Contractor has quotes and cannot be deleted") from err

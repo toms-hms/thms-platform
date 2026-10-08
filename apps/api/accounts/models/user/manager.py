@@ -18,9 +18,8 @@ class UserManager(BaseUserManager.from_queryset(UserQuerySet), BaseManager):
         return self.filter(pk=user_id).first()
 
     def create_user(self, email: str, password: str, **extra):
-        """Creates a user with a hashed password. Used by tests and management commands."""
-        from core.hashing import hash_password
-
-        user = self.model(email=self.normalize_email(email), password=hash_password(password), **extra)
+        """Creates a user with the password hashed by Django's configured hasher."""
+        user = self.model(email=self.normalize_email(email), **extra)
+        user.set_password(password)
         user.save(using=self._db)
         return user

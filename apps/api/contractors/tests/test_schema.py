@@ -4,6 +4,7 @@ from accounts.factories import AdminFactory, UserFactory
 from contractors.factories import ContractorFactory
 from contractors.models import Contractor, TradeCategory
 from core.testing import GraphQLTestCase
+from quotes.factories import QuoteFactory
 
 CONTRACTORS = """
 query($search: String, $tradeCategories: [TradeCategory!], $zipCodes: [String!]) {
@@ -34,7 +35,7 @@ class ContractorsQueryTests(GraphQLTestCase):
     def test_lists_the_directory(self):
         """Any authenticated user can read the global directory."""
         data = self.assert_ok(self.execute(CONTRACTORS, token=self.token_for(self.user)))
-        self.assertEqual(data["contractors"][0]["id"], self.contractor.pk)
+        self.assertEqual(data["contractors"][0]["id"], str(self.contractor.pk))
         self.assertEqual(data["contractors"][0]["zipCodes"], ["78701"])
 
     def test_filters_by_trade_category(self):
@@ -88,3 +89,17 @@ class ContractorMutationTests(GraphQLTestCase):
         body = self.execute(DELETE, {"contractorId": contractor.pk}, token=self.token_for(AdminFactory()))
         self.assertTrue(self.assert_ok(body)["deleteContractor"]["success"])
         self.assertFalse(Contractor.objects.filter(pk=contractor.pk).exists())
+
+    def test_deleting_a_contractor_with_quotes_is_a_conflict(self):
+        """Quotes protect their contractor; the delete is refused with CONFLICT and nothing is removed."""
+        quote = QuoteFactory()
+        body = self.execute(
+            DELETE, {"contractorId": quote.contractor_id}, token=self.token_for(AdminFactory())
+        )
+        self.assert_error_code(body, "CONFLICT")
+        self.assertTrue(Contractor.objects.filter(pk=quote.contractor_id).exists())
+
+    def test_a_malformed_id_is_not_found(self):
+        """An id that is not a UUID is NOT_FOUND, not an internal error."""
+        body = self.execute(DELETE, {"contractorId": "not-a-uuid"}, token=self.token_for(AdminFactory()))
+        self.assert_error_code(body, "NOT_FOUND")

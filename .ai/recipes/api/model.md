@@ -1,11 +1,11 @@
 ---
 name: api-model
-description: Guide for <app>/models/<model_name>/model.py — a Django model against the pre-existing schema: column mapping, CUID2 keys, Postgres enums, timestamps, re-export from models/__init__.py.
+description: Guide for <app>/models/<model_name>/model.py — fields, UUID primary keys, TextChoices, timestamps, foreign keys and on_delete rules, constraints, and re-export from models/__init__.py.
 ---
 
 # API Model
 
-Models map onto a database that already exists. The column names, types and constraints are fixed; the Python names are ours.
+Django owns the schema: table and column names are Django's defaults, and migrations are generated from the models.
 
 Each model lives in `models/<model_name>/model.py`. The model folder's `queryset.py` and
 `manager.py` sit next to it. The app's `models/__init__.py` re-exports it (see
@@ -18,31 +18,38 @@ Each model lives in `models/<model_name>/model.py`. The model folder's `queryset
 class Job(models.Model):
     """A piece of work on a home."""
 
-    id = CuidField(default=create_id)
-    home = models.ForeignKey("homes.Home", on_delete=models.CASCADE, db_column="homeId", related_name="jobs")
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    home = models.ForeignKey("homes.Home", on_delete=models.CASCADE, related_name="jobs")
+    created_by = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name="created_jobs")
     title = models.TextField()
-    intent = PGEnumField(enum_type="JobIntent", choices=JobIntent.choices, default=JobIntent.ISSUE)
+    intent = models.CharField(max_length=32, choices=JobIntent.choices, default=JobIntent.ISSUE)
     description = models.TextField(null=True, blank=True)
-    ai_session = models.JSONField(db_column="ai_session", null=True, blank=True)
-    created_at = TimestampField(db_column="createdAt", default=timezone.now)
-    updated_at = TimestampField(db_column="updatedAt", auto_now=True)
+    ai_session = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = JobManager()
 
     class Meta:
-        db_table = "Job"
         ordering = ["-created_at"]
 ```
 
 ## Rules
 
-- **Always set `db_table`.** It is the real table name, usually PascalCase.
-- **Always set `db_column`** when the Python name differs from the column — which is most of the time. Foreign keys carry the `…Id` column name.
-- **Primary keys are `CuidField(default=create_id)`.** The application generates ids; the database has no default and no sequence.
-- **Enums are `PGEnumField(enum_type="…", choices=…)`** with a matching `TextChoices` class in the `model.py` of the model that owns it. Add it to `models/__init__.py` too. The enum type must exist in `core/migrations/0001_enum_types.py`.
-- **Timestamps are `TimestampField`** — naive `timestamp(3)`. Use `default=timezone.now` for `created_at` and `auto_now=True` for `updated_at`.
-- **Nullable text columns keep `null=True`.** The API distinguishes null from empty string, so the usual Django advice does not apply here (ruff's DJ001 is disabled for this reason).
+- **No `db_table` or `db_column`.** Tables are Django's `<app>_<model>` and columns are the field names.
+- **Primary keys are `models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`.** Every model, including join models. GraphQL exposes them as `String!` (see `core/converters.py`).
+- **A join model gets its own UUID `id`** plus a `UniqueConstraint` on the pair. No composite primary keys.
+- **Choices are `models.CharField(max_length=32, choices=X.choices)`** with the `TextChoices` class in the `model.py` of the model that owns it. Add it to `models/__init__.py` and expose it in `core/enums.py`.
+- **Timestamps are `models.DateTimeField`.** `USE_TZ` is on, so values are timezone-aware UTC. Use `default=timezone.now` for `created_at` and `auto_now=True` for `updated_at`. Never use `datetime.now()` / `utcnow()`.
 - **Foreign keys use a string target** (`"homes.Home"`), including for a model in the same app. This keeps `model.py` files from importing each other.
+- **Every foreign key states its `on_delete` deliberately:**
+  - `CASCADE` for children that make no sense without the parent (quotes, images and messages under a job).
+  - `SET_NULL` (with `null=True`) for optional references.
+  - `PROTECT` for authorship and history (`created_by`, a quote's contractor). The service that deletes the parent turns `ProtectedError` into `ConflictError`.
+  - Never `DO_NOTHING`.
+- **Constraint names are lowercase `<model>_<fields>_unique`.**
+- **Nullable text columns keep `null=True`.** The API distinguishes null from empty string, so the usual Django advice does not apply here (ruff's DJ001 is disabled for this reason).
+- **Store ids in JSON as strings.** A UUID in a `JSONField` or JWT claim raises at serialization time, so use `str(obj.pk)`.
 - A derived value that needs no query can be a `@property` (`Home.full_address`, `Contractor.zip_codes`). Anything that queries belongs in the queryset or manager.
 
 ## Choices
@@ -55,7 +62,7 @@ class JobStatus(models.TextChoices):
     PLANNING = "PLANNING", "Planning"
 ```
 
-Use the member, never the literal: `JobStatus.DRAFT`, not `"DRAFT"`. Expose it to GraphQL by adding it to `core/enums.py`.
+Use the member, never the literal: `JobStatus.DRAFT`, not `"DRAFT"`. Expose it to GraphQL by adding it to `core/enums.py`. Adding a member is a code change plus a generated migration (see `migrations.md`).
 
 ## Registering with the audit log
 

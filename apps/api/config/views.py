@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django_ratelimit.core import is_ratelimited
 from graphene_django.views import GraphQLView
@@ -61,7 +62,7 @@ class ThmsGraphQLView(GraphQLView):
         original = getattr(error, "original_error", None)
         if original is None:
             return GraphQLView.format_error(error)
-        if not isinstance(original, AppError):
+        if not isinstance(original, (AppError, DjangoValidationError)):
             logger.exception("Unhandled GraphQL error", exc_info=original)
         return GraphQLView.format_error(to_graphql_error(original))
 

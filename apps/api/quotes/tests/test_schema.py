@@ -35,7 +35,7 @@ class QuotesTests(GraphQLTestCase):
     def test_lists_quotes_for_a_visible_job(self):
         """The owner sees the quotes on their job."""
         data = self.assert_ok(self.execute(QUOTES, {"jobId": self.job.pk}, token=self.token_for(self.user)))
-        self.assertEqual(data["quotes"][0]["id"], self.quote.pk)
+        self.assertEqual(data["quotes"][0]["id"], str(self.quote.pk))
 
     def test_is_forbidden_for_a_stranger(self):
         """Someone outside the home cannot read the job's quotes."""

@@ -125,10 +125,12 @@ JWT_REFRESH_SECRET = env("JWT_REFRESH_SECRET", "dev-refresh-secret-at-least-32-c
 JWT_EXPIRES_IN = env("JWT_EXPIRES_IN", "15m")
 JWT_REFRESH_EXPIRES_IN = env("JWT_REFRESH_EXPIRES_IN", "7d")
 JWT_ALGORITHM = "HS256"
-BCRYPT_ROUNDS = int(env("BCRYPT_ROUNDS", "12"))
 ENCRYPTION_KEY = env("ENCRYPTION_KEY", "thms-dev-encryptionkey-32chars!!")
 
-PASSWORD_HASHERS = ["core.hashing.BcryptRawPasswordHasher"]
+# Django's default hashers (PBKDF2 first) in every environment except tests,
+# where a fast hasher keeps factory-built users cheap.
+if TESTING:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # ── Permissions cache ─────────────────────────────────────────────────────────
 
@@ -225,10 +227,7 @@ AUDITLOG_DISABLE_ON_RAW_SAVE = True
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = False
-# The schema stores naive UTC timestamps (`timestamp(3)`), matching what the
-# Node API wrote. Keeping USE_TZ off means the ORM round-trips those columns
-# without converting through an offset-aware type.
-USE_TZ = False
+USE_TZ = True
 STATIC_URL = "static/"
 
 LOGGING = {

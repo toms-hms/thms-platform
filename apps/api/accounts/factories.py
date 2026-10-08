@@ -1,10 +1,10 @@
 """Test factories for user accounts."""
 
 import factory
+from django.contrib.auth.hashers import make_password
 from factory.django import DjangoModelFactory
 
 from accounts.models import User, UserRole
-from core.hashing import hash_password
 
 TEST_PASSWORD = "password123"
 
@@ -16,7 +16,7 @@ class UserFactory(DjangoModelFactory):
         model = User
 
     email = factory.Sequence(lambda n: f"test-user-{n}@example.com")
-    password = factory.LazyFunction(lambda: hash_password(TEST_PASSWORD, rounds=4))
+    password = factory.LazyFunction(lambda: make_password(TEST_PASSWORD))
     first_name = "Test"
     last_name = factory.Sequence(lambda n: f"User{n}")
     role = UserRole.USER

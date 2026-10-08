@@ -7,6 +7,7 @@ existed still verify.
 """
 
 import re
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -30,20 +31,20 @@ def parse_duration(value: str) -> timedelta:
 def _encode(payload: dict[str, Any], secret: str, expires_in: str) -> str:
     """Returns the payload signed with the secret and an exp claim derived from expires_in."""
     now = datetime.now(UTC)
-    claims = {**payload, "iat": now, "exp": now + parse_duration(expires_in)}
+    claims = {**payload, "jti": uuid.uuid4().hex, "iat": now, "exp": now + parse_duration(expires_in)}
     return jwt.encode(claims, secret, algorithm=settings.JWT_ALGORITHM)
 
 
 def sign_access_token(user_id: str, email: str, role: str) -> str:
     """Returns a signed access token for the user."""
     return _encode(
-        {"sub": user_id, "email": email, "role": role}, settings.JWT_SECRET, settings.JWT_EXPIRES_IN
+        {"sub": str(user_id), "email": email, "role": role}, settings.JWT_SECRET, settings.JWT_EXPIRES_IN
     )
 
 
 def sign_refresh_token(user_id: str) -> str:
     """Returns a signed refresh token for the user."""
-    return _encode({"sub": user_id}, settings.JWT_REFRESH_SECRET, settings.JWT_REFRESH_EXPIRES_IN)
+    return _encode({"sub": str(user_id)}, settings.JWT_REFRESH_SECRET, settings.JWT_REFRESH_EXPIRES_IN)
 
 
 def verify_access_token(token: str) -> dict[str, Any]:

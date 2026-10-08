@@ -27,7 +27,7 @@ class IntegrationsTests(GraphQLTestCase):
     def test_lists_the_callers_connections(self):
         """The caller sees their own connections marked CONNECTED."""
         data = self.assert_ok(self.execute(INTEGRATIONS, token=self.token_for(self.user)))
-        self.assertEqual(data["integrations"][0]["id"], self.integration.pk)
+        self.assertEqual(data["integrations"][0]["id"], str(self.integration.pk))
         self.assertEqual(data["integrations"][0]["status"], "CONNECTED")
 
     def test_does_not_expose_tokens(self):

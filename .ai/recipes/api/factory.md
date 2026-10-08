@@ -27,7 +27,7 @@ class JobFactory(DjangoModelFactory):
 - **`SubFactory` for required relations.** `JobFactory()` alone must produce a valid job; a test that cares about the home passes `JobFactory(home=home)`.
 - **`Sequence` for anything unique** — emails, names, storage keys.
 - **Enum members, never string literals**, exactly as in application code.
-- **No id.** The model's `CuidField` default generates it.
+- **No id.** The model's `uuid.uuid4` default generates it.
 - **Use the enum defaults a real row would have**, so a factory-built row is representative.
 
 ## Post-generation hooks for related rows

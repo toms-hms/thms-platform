@@ -17,10 +17,9 @@ apps/api/
     views.py        the GraphQL view: rate limiting and error codes
     schema.py       the schema root — combines every app's Query and Mutation
   core/
-    fields.py       PGEnumField, CuidField, TimestampField, JsonField
-    ids.py          CUID2 generation — the app supplies every primary key
+    converters.py   GraphQL field conversions (UUID → String)
     errors.py       domain errors and their GraphQL error codes
-    hashing.py      raw-bcrypt password hashing
+    hashing.py      refresh-token digests (passwords use Django's hashers)
     jwt_utils.py    access/refresh token signing
     crypto.py       AES-256-GCM for OAuth tokens at rest
     querysets.py    BaseQuerySet, HomeScopedQuerySet, UserOwnedQuerySet
@@ -44,22 +43,19 @@ apps/api/
 
 Apps: `accounts`, `homes`, `contractors`, `user_contractors`, `jobs`, `quotes`, `communications`, `ai`, `integrations`, plus `uploads` (services only, no models).
 
-## The schema predates Django
+## The schema
 
-The database was built by drizzle-kit and is mapped, not regenerated:
+Django owns it: default `<app>_<model>` table names, field-named columns, generated migrations.
 
-- Tables are PascalCase (`"Job"`, `"User"`); `user_contractors` is the one snake_case table.
-- Columns are camelCase (`homeId`, `createdAt`), except on `user_contractors` and `Job.ai_session` / `Contractor.is_global`.
-- Primary keys are CUID2 **strings the application generates** — `core.ids.create_id`, wired as the field default.
-- Enums are native Postgres types (`"TradeCategory"`, `"JobStatus"`, …), declared with `PGEnumField`.
-- Timestamps are naive `timestamp(3)`. `USE_TZ` is off so the ORM round-trips them unchanged.
-- `UserHome` has a composite primary key `(userId, homeId)` — `models.CompositePrimaryKey`.
-
-Python attribute names are snake_case; `db_column` carries the real column name. Never rename a column to suit Django.
+- Primary keys are UUIDs (`uuid4`), exposed to GraphQL as `String!`.
+- Choices are `CharField`s, not Postgres enum types.
+- Timestamps are timezone-aware (`USE_TZ = True`, UTC).
+- Join models (`UserHome`, `JobContractor`) have their own UUID id plus a unique constraint on the pair.
 
 ## Non-obvious patterns
 
-- Passwords are **raw bcrypt** (`$2a$…`), not Django's `algorithm$…` format, so hashes written by the previous API still verify. bcrypt reads only the first 72 bytes — `core.hashing` truncates explicitly because refresh tokens are longer than that.
+- Passwords use Django's hashers through `User.set_password` / `check_password`. Refresh tokens are stored as SHA-256 digests (`core.hashing`), and only the latest one is valid.
+- A malformed id (not a UUID) is never an internal error. `get_or_404` raises NOT_FOUND, `home_id_for` / `owner_id_for` return None (so `@authorize` answers FORBIDDEN), and anything else maps to BAD_REQUEST.
 - Auth is stateless JWT, not Django sessions. `core.middleware.JWTAuthenticationMiddleware` sets `request.user`, and it runs **before** `AuditlogMiddleware` so audit entries have an actor.
 - `convert_choices_to_enum = False` on every `DjangoObjectType`: outputs stay plain strings. Inputs use the explicit enums in `core/enums.py`.
 - Types expose flat FK ids (`jobId`, `contractorId`) alongside nested objects, so a client can get an id without a nested selection.
@@ -70,7 +66,7 @@ Python attribute names are snake_case; `db_column` carries the real column name.
 
 ```bash
 make migrate         # makemigrations + migrate, inside the container
-make migrate-adopt   # first run against a database the old API created (--fake-initial)
+make reset-db        # drop the local database volume (then make migrate && make seed)
 make seed            # demo data
 make test-api        # the full test suite
 make graphql-schema  # write schema.graphql

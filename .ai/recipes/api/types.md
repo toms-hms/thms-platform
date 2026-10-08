@@ -6,7 +6,7 @@ description: Guide for <app>/types.py — GraphQL object types (DjangoObjectType
 # API Types
 
 Every GraphQL object type lives in its app's `types.py`. `schema.py` imports
-from it and holds only queries and mutations (see `graphql.md`). Keeping types
+from it and holds only queries and mutations (see `schema.md`). Keeping types
 separate lets one app reference another's types without importing its schema.
 
 ```python

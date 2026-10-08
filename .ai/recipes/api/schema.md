@@ -1,9 +1,9 @@
 ---
-name: api-graphql
+name: api-schema
 description: Guide for <app>/schema.py — queries, mutations, input enums, auth decorators and error codes. Object types live in types.py (see types.md).
 ---
 
-# API GraphQL
+# API Schema
 
 Each app's `schema.py` holds its mutations and contributes a `Query` and a `Mutation` class; `config/schema.py` combines them. There are no routes and no request-validation schemas — the schema is the contract, and it validates input.
 

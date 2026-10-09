@@ -26,14 +26,16 @@ make test-api     # run the test suite
 
 ```
 config/        settings, URL routing, the GraphQL view and the schema root
-core/          shared plumbing: fields, errors, permissions, JWT, crypto, audit
+core/          shared plumbing: base querysets/managers, permission + storage services, S3 client, utils, GraphQL helpers, errors
 <app>/         one Django app per domain
-  models.py      tables, mapped onto the pre-existing schema
-  managers.py    query methods and the permission predicates
-  services.py    orchestration
-  schema.py      GraphQL types, queries and mutations
-  factories.py   test factories
-  tests/         manager, service and schema tests
+  models/        one folder per model: model.py, queryset.py, manager.py
+  services/      <domain>_service.py — business logic and writes (classes)
+  clients/       <vendor>_client.py — third-party SDK wrappers (classes)
+  utils/         <topic>_utils.py — pure helper functions
+  factories/     <model>_factory.py — test factories
+  types.py       GraphQL object types
+  schema.py      GraphQL queries and mutations
+  tests/         queryset, manager, service and schema tests
 ```
 
 See `.ai/context/api.md` for the conventions and `.ai/recipes/api/` for how to add each kind of file.

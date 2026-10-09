@@ -16,9 +16,9 @@ Stateless JWT, not Django sessions. The contract is unchanged from the API this 
 
 `sub` is the user's UUID as a string. `jti` is random per token, so two tokens issued in the same second still differ.
 
-`login`, `register` and `refreshTokens` issue a pair and store the SHA-256 digest of the new refresh token on `User.refresh_token_hash` (`core.hashing.hash_token`). Only the most recently issued refresh token is accepted: rotating replaces the digest, and `logout` clears it. A refresh token is a high-entropy secret, so it uses a fast digest with a constant-time compare (`verify_token`), never a password hasher.
+`AuthService` (`accounts/services/auth_service.py`) issues the pair on `login`, `register` and `refreshTokens`, and store the SHA-256 digest of the new refresh token on `User.refresh_token_hash` (`core.utils.hashing_utils.hash_token`). Only the most recently issued refresh token is accepted: rotating replaces the digest, and `logout` clears it. A refresh token is a high-entropy secret, so it uses a fast digest with a constant-time compare (`verify_token`), never a password hasher.
 
-Durations are Node-style strings (`15m`, `7d`, `3600`) — `core.jwt_utils.parse_duration` reads them.
+Durations are Node-style strings (`15m`, `7d`, `3600`) — `core.utils.jwt_utils.parse_duration` reads them.
 
 ## Passwords
 
@@ -42,7 +42,7 @@ The middleware runs **before** `AuditlogMiddleware`, which is what gives audit e
 @login_required
 def resolve_me(self, info):
     """Returns the authenticated user's own record."""
-    return services.get_me(current_user(info).pk)
+    return current_user(info)
 ```
 
 Never read `info.context.user` directly — `current_user(info)` raises the right error when there is no caller.

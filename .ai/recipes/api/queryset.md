@@ -61,7 +61,7 @@ class JobQuerySet(HomeScopedQuerySet):
 
 ## What does not belong here
 
-- **Role or policy logic.** `visible_to` asks `core.permissions` which homes grant
+- **Role or policy logic.** `visible_to` asks `core.services.permission_service` which homes grant
   the permission. A queryset never checks `user.role` or `HomeRole` itself.
 - **Compositions of several filters, writes, and methods returning values**
   (dicts, single rows). Those go on the manager.

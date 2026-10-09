@@ -1,50 +1,104 @@
 ---
 name: api-service
-description: Guide for the service layer — what belongs in a service, and what belongs in a manager or a resolver.
+description: Guide for <app>/services/<name>_service.py — service classes that own business logic and writes; keyword-only methods, UNSET partial updates via apply_updates, collaborators (clients, other services) injected in __init__ with defaults.
 ---
 
 # API Service
 
-Services orchestrate writes. They are plain module-level functions, not classes.
+Services are where business logic lives. Every mutation calls one. Each service
+is a class in `<app>/services/<name>_service.py`, named for the domain area it
+owns: `quote_service.py` → `QuoteService`, `diagnose_service.py` → `DiagnoseService`.
+Cross-app services (storage, permissions) live in `core/services/`.
 
 ```python
-def create_home(user_id: str, data: dict[str, Any]) -> Home:
-    """Creates a home owned by the user."""
-    home = Home.objects.create(
-        name=data["name"],
-        address1=data["address1"],
-        address2=data.get("address2"),
-        ...
-    )
-    UserHome.objects.create(user_id=user_id, home=home, role=HomeRole.OWNER)
-    permissions.invalidate(user_id, home.pk)
-    return home
+class QuoteService:
+    """Records, edits and removes quotes."""
+
+    def create(
+        self,
+        *,
+        job_id: str,
+        contractor_id: str,
+        amount: Decimal | float,
+        description: str | None = None,
+        status: str | None = None,
+    ) -> Quote:
+        """Records a quote from a contractor against the job."""
+        return Quote.objects.create(
+            job_id=job_id, contractor_id=contractor_id, amount=amount,
+            description=description, status=status or QuoteStatus.DRAFT,
+        )
+
+    def update(
+        self,
+        *,
+        quote_id: str,
+        amount: Decimal | float | Unset = UNSET,
+        description: str | None | Unset = UNSET,
+        status: str | Unset = UNSET,
+    ) -> Quote:
+        """Applies the provided fields. UNSET leaves a field alone; None clears the description."""
+        quote = Quote.objects.get_or_404(pk=quote_id)
+        return Quote.objects.apply_updates(quote, amount=amount, description=description, status=status)
 ```
 
-## What belongs here
+## Methods
 
-- A write that touches more than one table or more than one app.
-- Rules the database cannot express, e.g. "a contractor cannot be in a rolodex twice".
-- Permission-cache maintenance: `permissions.invalidate(user_id, home_id)` after any membership change.
-- Calls to a third party (OpenAI, Gmail) and whatever they imply for our own tables.
+- **Every parameter after `self` is keyword-only (`*,`)** and explicitly typed. Never take `data: dict`.
+- **Parameter names match the GraphQL argument names** (snake_case), so the mutation calls `QuoteService().update(quote_id=quote_id, **data)`.
+- **Method names are verbs about the domain area:** `create`, `update`, `delete`, `promote`, `add_member`, `send`. The class already names the noun, so `QuoteService().create`, not `create_quote`.
+- **Return the model instance written,** or `None` for a delete.
+- Raise domain errors from `core.errors`. Never return an error value, never raise bare `Exception`.
 
-## What does not
+## Partial updates: UNSET, not None
 
-- **Reads.** A resolver calls the manager directly. There is no `get_job` service.
-- **Query construction.** If a function is mostly `.filter(...)`, it belongs in a queryset or manager.
-- **Access checks.** The resolver's decorator (`@authorize`, `@owner_required`) has already decided. A service assumes the caller may act and does not take a `user_id` just to re-check access.
+An update method defaults every optional field to `UNSET` (`core.utils.unset_utils`):
 
-## Conventions
+| Client sends | Service receives | Effect |
+| --- | --- | --- |
+| argument omitted | `UNSET` | field unchanged |
+| `null` | `None` | nullable field cleared; required field → `VALIDATION_ERROR` |
+| a value | the value | field set |
 
-- Keyword-only arguments for anything with more than one parameter of the same type.
-- Raise domain errors from `core.errors` — never return an error value, never raise bare `Exception`.
-- Update only the fields the caller supplied:
+Always finish with `Model.objects.apply_updates(instance, field=value, ...)`. It
+skips UNSET, enforces null rules, and saves only the changed columns (plus
+`updated_at`). Never write a `for field in (...): setattr(...)` loop, and never
+treat `None` as "not provided".
+
+## Collaborators: injected in `__init__` with defaults
+
+A service that uses a client or another service takes it as a keyword-only
+constructor argument that defaults to the real one:
 
 ```python
-for field in ("amount", "description", "status"):
-    if data.get(field) is not None:
-        setattr(quote, field, data[field])
-quote.save()
+class ImageGenerationService:
+    """Generates an image, stores it as a job image and records the generation."""
+
+    def __init__(self, *, openai: OpenAIClient | None = None, storage: StorageService | None = None) -> None:
+        self.openai = openai or OpenAIClient()
+        self.storage = storage or StorageService()
 ```
 
-- **Never auto-transition a job or contractor status.** The user owns every state change; a service only applies the transition it was asked for.
+- Production code constructs services with no arguments: `ImageGenerationService().generate(...)`.
+- Tests pass fakes: `ImageGenerationService(openai=MagicMock(spec=OpenAIClient))`.
+- Constructing a service must be cheap. Clients create their SDK object on first use (see `client.md`).
+- Managers, querysets and utils are **not** injected. Call them directly.
+
+## What a service may call
+
+- Other services, through constructor collaborators.
+- Clients, through constructor collaborators. A vendor SDK is never imported in a service (see `client.md`).
+- Managers and querysets of any app.
+- Utils (see `utils.md`).
+
+## What does not belong here
+
+- **Access checks.** The resolver's decorator (`@authorize`, `@owner_required`) has already decided. A service assumes the caller may act.
+- **Reads for GraphQL.** Queries and type fields read through managers and querysets directly. A service exists for writes and for reads that are part of business logic.
+- **Query construction.** A chain of filters belongs on the queryset or manager.
+- **Pure helpers** (prompt building, message encoding, payload shaping). Put them in `utils/`.
+
+## Permission cache
+
+Any write that creates, changes or removes a home membership calls
+`PermissionService().invalidate(user_id=..., home_id=...)` for each affected member.

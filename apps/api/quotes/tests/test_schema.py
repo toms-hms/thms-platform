@@ -18,6 +18,11 @@ mutation($quoteId: ID!, $status: QuoteStatus!) {
   updateQuote(quoteId: $quoteId, status: $status) { quote { id status } }
 }
 """
+PATCH = """
+mutation($quoteId: ID!, $amount: Float, $description: String) {
+  updateQuote(quoteId: $quoteId, amount: $amount, description: $description) { quote { amount description } }
+}
+"""
 DELETE = "mutation($quoteId: ID!) { deleteQuote(quoteId: $quoteId) { success } }"
 
 
@@ -74,3 +79,35 @@ class QuotesTests(GraphQLTestCase):
         body = self.execute(DELETE, {"quoteId": self.quote.pk}, token=self.token_for(self.user))
         self.assertTrue(self.assert_ok(body)["deleteQuote"]["success"])
         self.assertFalse(Quote.objects.filter(pk=self.quote.pk).exists())
+
+
+class QuotePartialUpdateTests(GraphQLTestCase):
+    """updateQuote: omitted vs null"""
+
+    def setUp(self):
+        """Creates a quote with an amount and description on the user's job."""
+        super().setUp()
+        self.user = UserFactory()
+        job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.quote = QuoteFactory(job=job, amount=100, description="Original")
+
+    def test_an_omitted_argument_leaves_the_field_alone(self):
+        """Sending only amount keeps the description."""
+        body = self.execute(PATCH, {"quoteId": self.quote.pk, "amount": 250}, token=self.token_for(self.user))
+        quote = self.assert_ok(body)["updateQuote"]["quote"]
+        self.assertEqual((quote["amount"], quote["description"]), (250.0, "Original"))
+
+    def test_an_explicit_null_clears_a_nullable_field(self):
+        """description: null clears the description."""
+        body = self.execute(
+            PATCH, {"quoteId": self.quote.pk, "description": None}, token=self.token_for(self.user)
+        )
+        self.assertIsNone(self.assert_ok(body)["updateQuote"]["quote"]["description"])
+
+    def test_an_explicit_null_on_a_required_field_is_a_validation_error(self):
+        """amount: null is refused and nothing changes."""
+        body = self.execute(
+            PATCH, {"quoteId": self.quote.pk, "amount": None}, token=self.token_for(self.user)
+        )
+        self.assert_error_code(body, "VALIDATION_ERROR")
+        self.assertEqual(Quote.objects.get(pk=self.quote.pk).amount, 100)

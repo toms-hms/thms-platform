@@ -80,7 +80,7 @@ class JobHistoryTests(TestCase):
     def test_returns_the_contractors_assignments(self):
         """Each row names the job, its home and the assignment's status."""
         assignment = JobContractorFactory()
-        history = Contractor.objects.list_job_history(assignment.contractor_id)
+        history = Contractor.objects.list_job_history(contractor_id=assignment.contractor_id)
         self.assertEqual(len(history), 1)
         self.assertEqual(history[0]["job_id"], assignment.job_id)
         self.assertEqual(history[0]["home_name"], assignment.job.home.name)

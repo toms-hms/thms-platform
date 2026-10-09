@@ -4,34 +4,33 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.factories import UserFactory
-from core import permissions
 from core.errors import NotFoundError
-from core.permissions import Permission
-from homes import services
+from core.services.permission_service import Permission, PermissionService
 from homes.factories import HomeFactory
 from homes.models import Home, HomeRole, UserHome
+from homes.services.home_service import HomeService
 
 HOME_INPUT = {"name": "Test Home", "address1": "1 St", "city": "Austin", "state": "TX", "zip_code": "78701"}
 
 
 class CreateHomeTests(TestCase):
-    """create_home()"""
+    """HomeService.create()"""
 
     def test_creates_the_home_and_owns_it(self):
         """The creator becomes the home's owner."""
         user = UserFactory()
-        home = services.create_home(user.pk, HOME_INPUT)
-        membership = UserHome.objects.find_membership(user.pk, home.pk)
+        home = HomeService().create(user_id=user.pk, **HOME_INPUT)
+        membership = UserHome.objects.find_membership(user_id=user.pk, home_id=home.pk)
         self.assertEqual(membership.role, HomeRole.OWNER)
 
     def test_full_address_renders_on_one_line(self):
         """The home exposes its address as a single display string."""
-        home = services.create_home(UserFactory().pk, HOME_INPUT)
+        home = HomeService().create(user_id=UserFactory().pk, **HOME_INPUT)
         self.assertEqual(home.full_address, "1 St, Austin, TX 78701")
 
 
 class DeleteHomeTests(TestCase):
-    """delete_home()"""
+    """HomeService.delete()"""
 
     def setUp(self):
         """Clears the cache so a stale role cannot leak between tests."""
@@ -40,7 +39,7 @@ class DeleteHomeTests(TestCase):
     def test_deletes_the_home(self):
         """The home and its memberships are removed."""
         home = HomeFactory(owner=UserFactory())
-        services.delete_home(home.pk)
+        HomeService().delete(home_id=home.pk)
         self.assertFalse(Home.objects.filter(pk=home.pk).exists())
         self.assertFalse(UserHome.objects.filter(home_id=home.pk).exists())
 
@@ -48,43 +47,43 @@ class DeleteHomeTests(TestCase):
         """After deletion no member keeps access through the cache."""
         owner, member = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
-        UserHome.objects.upsert(member.pk, home.pk, HomeRole.MEMBER)
+        UserHome.objects.upsert(user_id=member.pk, home_id=home.pk, role=HomeRole.MEMBER)
         for user in (owner, member):
-            permissions.membership_role(user.pk, home.pk)
-        services.delete_home(home.pk)
+            PermissionService().membership_role(user_id=user.pk, home_id=home.pk)
+        HomeService().delete(home_id=home.pk)
         for user in (owner, member):
-            self.assertFalse(permissions.can(user, Permission.HOME_VIEW, home.pk))
+            self.assertFalse(PermissionService().can(user, Permission.HOME_VIEW, home.pk))
 
 
 class MembershipServiceTests(TestCase):
-    """add_user_to_home() and remove_user_from_home()"""
+    """HomeService.add_member() and remove_member()"""
 
     def test_adds_a_user_by_email(self):
         """A user is added to the home by their email address."""
         owner, invitee = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
-        services.add_user_to_home(home.pk, invitee.email, HomeRole.MEMBER)
-        self.assertIsNotNone(UserHome.objects.find_membership(invitee.pk, home.pk))
+        HomeService().add_member(home_id=home.pk, email=invitee.email, role=HomeRole.MEMBER)
+        self.assertIsNotNone(UserHome.objects.find_membership(user_id=invitee.pk, home_id=home.pk))
 
     def test_unknown_email_is_not_found(self):
         """Adding an email with no account raises NotFoundError."""
         home = HomeFactory(owner=UserFactory())
         with self.assertRaises(NotFoundError):
-            services.add_user_to_home(home.pk, "nobody@example.com", HomeRole.MEMBER)
+            HomeService().add_member(home_id=home.pk, email="nobody@example.com", role=HomeRole.MEMBER)
 
     def test_removes_a_member(self):
         """Removing a member drops their membership row."""
         owner, member = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
-        UserHome.objects.upsert(member.pk, home.pk, HomeRole.MEMBER)
-        services.remove_user_from_home(home.pk, member.pk)
-        self.assertIsNone(UserHome.objects.find_membership(member.pk, home.pk))
+        UserHome.objects.upsert(user_id=member.pk, home_id=home.pk, role=HomeRole.MEMBER)
+        HomeService().remove_member(home_id=home.pk, user_id=member.pk)
+        self.assertIsNone(UserHome.objects.find_membership(user_id=member.pk, home_id=home.pk))
 
     def test_changing_a_role_takes_effect_despite_the_cache(self):
         """Re-adding an owner as a member invalidates their cached OWNER role."""
         cache.clear()
         owner = UserFactory()
         home = HomeFactory(owner=owner)
-        self.assertTrue(permissions.can(owner, Permission.HOME_DELETE, home.pk))
-        services.add_user_to_home(home.pk, owner.email, HomeRole.MEMBER)
-        self.assertFalse(permissions.can(owner, Permission.HOME_DELETE, home.pk))
+        self.assertTrue(PermissionService().can(owner, Permission.HOME_DELETE, home.pk))
+        HomeService().add_member(home_id=home.pk, email=owner.email, role=HomeRole.MEMBER)
+        self.assertFalse(PermissionService().can(owner, Permission.HOME_DELETE, home.pk))

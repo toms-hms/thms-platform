@@ -4,7 +4,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from ai.models import AIGeneration, JobImage
-from uploads import services as uploads
+from core.services.storage_service import StorageService
 
 
 class AIGenerationType(DjangoObjectType):
@@ -48,7 +48,7 @@ class JobImageType(DjangoObjectType):
 
     def resolve_url(self, info) -> str:
         """Returns a presigned URL for the stored object."""
-        return uploads.get_download_url(self.storage_key)
+        return StorageService().download_url(key=self.storage_key)
 
     def resolve_job_id(self, info) -> str:
         """Returns the id of the job this image belongs to."""

@@ -35,7 +35,7 @@ class GraphQLTestCase(TestCase):
 
     def token_for(self, user) -> str:
         """Returns a signed access token for the user."""
-        from core.jwt_utils import sign_access_token
+        from core.utils.jwt_utils import sign_access_token
 
         return sign_access_token(user.pk, user.email, user.role)
 

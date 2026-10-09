@@ -5,9 +5,11 @@ from unittest.mock import patch
 from django.test import override_settings
 
 from accounts.factories import TEST_PASSWORD, UserFactory
+from accounts.services.auth_service import AuthService
 from core.testing import GraphQLTestCase
 
 ME = "query { me { id email } }"
+LOGOUT = "mutation { logout { success } }"
 LOGIN = """
 mutation Login($email: String!, $password: String!) {
   login(email: $email, password: $password) { tokens { accessToken } }
@@ -61,8 +63,8 @@ class ErrorShapeTests(GraphQLTestCase):
 
     def test_unexpected_errors_are_masked(self):
         """An unhandled exception is logged, not leaked to the client."""
-        with patch("accounts.services.get_me", side_effect=RuntimeError("database on fire")):
-            body = self.execute(ME, token=self.token_for(UserFactory()))
+        with patch.object(AuthService, "logout", side_effect=RuntimeError("database on fire")):
+            body = self.execute(LOGOUT, token=self.token_for(UserFactory()))
         self.assert_error_code(body, "INTERNAL_ERROR")
         self.assertNotIn("database on fire", str(body["errors"]))
 

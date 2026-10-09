@@ -6,8 +6,8 @@ the role gates the REST routes applied.
 
 import graphene
 
-from contractors import services
 from contractors.models import Contractor
+from contractors.services.contractor_service import ContractorService
 from contractors.types import ContractorJobHistoryType, ContractorType
 from core.enums import TradeCategoryEnum
 from core.graphql import admin_required, login_required
@@ -30,7 +30,7 @@ class CreateContractor(graphene.Mutation):
     @admin_required
     def mutate(self, info, **data):
         """Creates the global contractor."""
-        return CreateContractor(contractor=services.create_contractor(data))
+        return CreateContractor(contractor=ContractorService().create(is_global=True, **data))
 
 
 class UpdateContractor(graphene.Mutation):
@@ -51,7 +51,7 @@ class UpdateContractor(graphene.Mutation):
     @admin_required
     def mutate(self, info, contractor_id: str, **data):
         """Applies the update to the contractor."""
-        return UpdateContractor(contractor=services.update_contractor(contractor_id, data))
+        return UpdateContractor(contractor=ContractorService().update(contractor_id=contractor_id, **data))
 
 
 class PromoteContractor(graphene.Mutation):
@@ -65,7 +65,7 @@ class PromoteContractor(graphene.Mutation):
     @admin_required
     def mutate(self, info, contractor_id: str):
         """Marks the contractor as global."""
-        return PromoteContractor(contractor=services.promote_contractor(contractor_id))
+        return PromoteContractor(contractor=ContractorService().promote(contractor_id=contractor_id))
 
 
 class DeleteContractor(graphene.Mutation):
@@ -79,7 +79,7 @@ class DeleteContractor(graphene.Mutation):
     @admin_required
     def mutate(self, info, contractor_id: str):
         """Deletes the contractor."""
-        services.delete_contractor(contractor_id)
+        ContractorService().delete(contractor_id=contractor_id)
         return DeleteContractor(success=True)
 
 
@@ -113,7 +113,10 @@ class ContractorsQuery(graphene.ObjectType):
     @login_required
     def resolve_contractor_job_history(self, info, contractor_id: str):
         """Returns the contractor's job history, most recent first."""
-        return [ContractorJobHistoryType(**row) for row in Contractor.objects.list_job_history(contractor_id)]
+        return [
+            ContractorJobHistoryType(**row)
+            for row in Contractor.objects.list_job_history(contractor_id=contractor_id)
+        ]
 
 
 class ContractorsMutation(graphene.ObjectType):

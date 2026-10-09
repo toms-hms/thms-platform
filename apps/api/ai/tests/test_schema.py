@@ -5,10 +5,10 @@ from unittest.mock import patch
 from accounts.factories import UserFactory
 from ai.factories import JobImageFactory
 from ai.models import JobImage
+from core.services.storage_service import StorageService
 from core.testing import GraphQLTestCase
 from homes.factories import HomeFactory
 from jobs.factories import JobFactory
-from uploads import services as uploads
 
 IMAGES = "query($jobId: ID!) { jobImages(jobId: $jobId) { id kind url } }"
 UPLOAD_URL = """
@@ -38,7 +38,7 @@ class JobImagesTests(GraphQLTestCase):
 
     def test_lists_images_with_a_presigned_url(self):
         """Each image comes back with a URL the client can read it from."""
-        with patch.object(uploads, "get_download_url", return_value="https://signed.test/image.png"):
+        with patch.object(StorageService, "download_url", return_value="https://signed.test/image.png"):
             data = self.assert_ok(
                 self.execute(IMAGES, {"jobId": self.job.pk}, token=self.token_for(self.user))
             )
@@ -51,11 +51,7 @@ class JobImagesTests(GraphQLTestCase):
 
     def test_issues_an_upload_url_for_a_visible_job(self):
         """The owner gets a presigned PUT target keyed under the job."""
-        with patch.object(
-            uploads,
-            "get_upload_url",
-            return_value={"upload_url": "https://put.test", "key": "jobs/k.png", "kind": "SOURCE"},
-        ):
+        with patch.object(StorageService, "upload_url", return_value="https://put.test"):
             body = self.execute(
                 UPLOAD_URL,
                 {"jobId": self.job.pk, "fileName": "photo.png", "contentType": "image/png", "kind": "SOURCE"},
@@ -63,6 +59,8 @@ class JobImagesTests(GraphQLTestCase):
             )
         upload = self.assert_ok(body)["requestUploadUrl"]["upload"]
         self.assertEqual(upload["uploadUrl"], "https://put.test")
+        self.assertTrue(upload["key"].startswith(f"jobs/{self.job.pk}/source/"))
+        self.assertTrue(upload["key"].endswith(".png"))
 
     def test_stranger_cannot_request_an_upload_url(self):
         """Uploading to someone else's job is FORBIDDEN."""

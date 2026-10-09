@@ -10,7 +10,7 @@ from accounts.schema import AccountsMutation, AccountsQuery
 from ai.schema import AiMutation, AiQuery
 from communications.schema import CommunicationsMutation, CommunicationsQuery
 from contractors.schema import ContractorsMutation, ContractorsQuery
-from core.audit import AuditQuery
+from core.schema import AuditQuery
 from homes.schema import HomesMutation, HomesQuery
 from integrations.schema import IntegrationsMutation, IntegrationsQuery
 from jobs.schema import JobsMutation, JobsQuery

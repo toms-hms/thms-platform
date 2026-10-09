@@ -1,11 +1,11 @@
 ---
 name: api-factory
-description: Guide for writing test factories with factory_boy.
+description: Guide for <app>/factories/<model_name>_factory.py — factory_boy DjangoModelFactory per model, SubFactory relations, post-generation hooks, re-export from factories/__init__.py.
 ---
 
 # Test Factories
 
-One `DjangoModelFactory` per model, in the app's `factories.py`.
+One `DjangoModelFactory` per model, in `<app>/factories/<model_name>_factory.py` (`job_factory.py` → `JobFactory`). A variant of the same model (`AdminFactory`) lives in that model's file. `factories/__init__.py` re-exports every factory, so tests import `from jobs.factories import JobFactory`. A factory module imports a same-app factory from its module (`from homes.factories.home_factory import HomeFactory`) and other apps' factories from their package.
 
 ```python
 class JobFactory(DjangoModelFactory):
@@ -55,4 +55,4 @@ Called as `HomeFactory(owner=user)` and `ContractorFactory(zip_codes=["78701"])`
 
 ## Passwords
 
-`UserFactory` hashes `TEST_PASSWORD` at cost 4, not the production cost. Tests that need to log in import `TEST_PASSWORD` from `accounts.factories` rather than hard-coding the string.
+`UserFactory` hashes `TEST_PASSWORD` with `make_password`, which uses the fast MD5 hasher under `DJANGO_ENV=test`. Tests that need to log in import `TEST_PASSWORD` from `accounts.factories` rather than hard-coding the string.

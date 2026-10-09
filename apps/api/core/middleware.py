@@ -11,7 +11,7 @@ from django.http import HttpRequest, HttpResponse
 from django.utils.functional import SimpleLazyObject
 
 from core.errors import UnauthorizedError
-from core.jwt_utils import verify_access_token
+from core.utils.jwt_utils import verify_access_token
 
 
 class AnonymousUser:

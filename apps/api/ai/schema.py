@@ -6,8 +6,11 @@ straight to storage, then confirm so the row is written.
 
 import graphene
 
-from ai import services
 from ai.models import AIGeneration, JobImage
+from ai.services.diagnose_service import DiagnoseService
+from ai.services.email_draft_service import EmailDraftService
+from ai.services.image_generation_service import ImageGenerationService
+from ai.services.job_image_service import JobImageService
 from ai.types import (
     AIGenerationType,
     CategorySuggestionType,
@@ -17,9 +20,8 @@ from ai.types import (
     UploadUrlType,
 )
 from core.graphql import authorize, current_user
-from core.permissions import Permission
+from core.services.permission_service import Permission
 from jobs.models import Job
-from uploads import services as uploads
 
 
 def _diagnose_payload(result: dict) -> dict:
@@ -52,7 +54,7 @@ class RequestUploadUrl(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, file_name: str, content_type: str, kind: str):
         """Issues the presigned URL."""
-        result = uploads.get_upload_url(
+        result = JobImageService().request_upload(
             job_id=job_id, file_name=file_name, content_type=content_type, kind=kind
         )
         return RequestUploadUrl(upload=UploadUrlType(**result))
@@ -72,8 +74,8 @@ class ConfirmUpload(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, key: str, kind: str | None = None, label: str | None = None):
         """Writes the image row."""
-        image = uploads.confirm_upload(
-            job_id=job_id, user_id=current_user(info).pk, key=key, kind=kind or "SOURCE", label=label
+        image = JobImageService().confirm_upload(
+            job_id=job_id, user_id=current_user(info).pk, key=key, kind=kind, label=label
         )
         return ConfirmUpload(image=image)
 
@@ -89,7 +91,7 @@ class DeleteImage(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=JobImage, arg="image_id")
     def mutate(self, info, image_id: str):
         """Deletes the image and its stored object."""
-        uploads.delete_job_image(image_id)
+        JobImageService().delete(image_id=image_id)
         return DeleteImage(success=True)
 
 
@@ -108,7 +110,7 @@ class CreateAiGeneration(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, source_image_id: str, prompt: str, provider=None, metadata=None):
         """Runs the generation."""
-        generation = services.generate_image(
+        generation = ImageGenerationService().generate(
             job_id=job_id,
             user_id=current_user(info).pk,
             source_image_id=source_image_id,
@@ -130,7 +132,9 @@ class StartDiagnose(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str):
         """Returns the assistant's opening question."""
-        return StartDiagnose(result=DiagnoseResultType(**_diagnose_payload(services.start_diagnose(job_id))))
+        return StartDiagnose(
+            result=DiagnoseResultType(**_diagnose_payload(DiagnoseService().start(job_id=job_id)))
+        )
 
 
 class DiagnoseJob(graphene.Mutation):
@@ -145,7 +149,7 @@ class DiagnoseJob(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, message: str):
         """Runs one diagnostic turn."""
-        payload = _diagnose_payload(services.diagnose_job(job_id, message))
+        payload = _diagnose_payload(DiagnoseService().answer(job_id=job_id, message=message))
         return DiagnoseJob(result=DiagnoseResultType(**payload))
 
 
@@ -172,7 +176,7 @@ class DraftEmail(graphene.Mutation):
         custom_instructions=None,
     ):
         """Returns one draft per contractor."""
-        drafts = services.draft_email(
+        drafts = EmailDraftService().draft(
             job_id=job_id,
             user_id=current_user(info).pk,
             contractor_ids=contractor_ids,

@@ -9,7 +9,7 @@ from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_GET
 
-from integrations import services
+from integrations.services.integration_service import IntegrationService
 
 
 def _redirect_to_web(provider: str, status: str) -> HttpResponseRedirect:
@@ -24,7 +24,7 @@ def google_callback(request: HttpRequest) -> HttpResponse:
     code, state = request.GET.get("code"), request.GET.get("state")
     if not code or not state:
         return _redirect_to_web("google", "failed")
-    services.handle_google_callback(code=code, user_id=state)
+    IntegrationService().connect_google(user_id=state, code=code)
     return _redirect_to_web("google", "connected")
 
 
@@ -34,5 +34,5 @@ def microsoft_callback(request: HttpRequest) -> HttpResponse:
     code, state = request.GET.get("code"), request.GET.get("state")
     if not code or not state:
         return _redirect_to_web("microsoft", "failed")
-    services.handle_microsoft_callback(code=code, user_id=state)
+    IntegrationService().connect_microsoft(user_id=state, code=code)
     return _redirect_to_web("microsoft", "connected")

@@ -6,7 +6,7 @@ filters compose: `Contractor.objects.filter_ids(ids).filter_zip_codes(zips)`.
 list is a filter nothing satisfies. See .ai/recipes/api/queryset.md.
 
 Visibility predicates live here too — they are data filters. Which roles grant
-which permission is policy, and lives in core.permissions.
+which permission is policy, and lives in core.services.permission_service.
 """
 
 from typing import Any, ClassVar, Self
@@ -14,8 +14,8 @@ from typing import Any, ClassVar, Self
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from core import permissions
 from core.errors import NotFoundError
+from core.services.permission_service import Permission, PermissionService
 
 
 class BaseQuerySet(models.QuerySet):
@@ -60,11 +60,13 @@ class HomeScopedQuerySet(BaseQuerySet):
         except ValidationError:
             return None
 
-    def visible_to(self, user, permission: permissions.Permission) -> Self:
+    def visible_to(self, user, permission: Permission) -> Self:
         """Returns rows in homes where the user holds the permission; every row for an ADMIN."""
         if user.is_admin:
             return self
-        return self.filter(**{f"{self.home_id_path}__in": permissions.home_ids_with(user, permission)})
+        return self.filter(
+            **{f"{self.home_id_path}__in": PermissionService().home_ids_with(user, permission)}
+        )
 
 
 class UserOwnedQuerySet(BaseQuerySet):

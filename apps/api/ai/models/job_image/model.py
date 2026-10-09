@@ -8,11 +8,11 @@ from django.utils import timezone
 from ai.models.job_image.manager import JobImageManager
 
 
-class JobImageKind:
-    """Image roles. Stored as free text, not an enum, exactly as the column is defined."""
+class JobImageKind(models.TextChoices):
+    """Whether an image was uploaded by the user or produced by an AI generation."""
 
-    SOURCE = "SOURCE"
-    GENERATED = "GENERATED"
+    SOURCE = "SOURCE", "Source"
+    GENERATED = "GENERATED", "Generated"
 
 
 class JobImage(models.Model):
@@ -21,7 +21,7 @@ class JobImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     job = models.ForeignKey("jobs.Job", on_delete=models.CASCADE, related_name="images")
     storage_key = models.TextField()
-    kind = models.TextField(default=JobImageKind.SOURCE)
+    kind = models.CharField(max_length=32, choices=JobImageKind.choices, default=JobImageKind.SOURCE)
     label = models.TextField(null=True, blank=True)
     ai_generation = models.ForeignKey(
         "ai.AIGeneration",

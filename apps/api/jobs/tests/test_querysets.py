@@ -3,7 +3,7 @@
 from django.test import TestCase
 
 from accounts.factories import AdminFactory, UserFactory
-from core.permissions import Permission
+from core.services.permission_service import Permission
 from homes.factories import HomeFactory
 from jobs.factories import JobContractorFactory, JobFactory
 from jobs.models import Job, JobContractor, JobStatus

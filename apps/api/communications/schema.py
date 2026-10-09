@@ -2,12 +2,12 @@
 
 import graphene
 
-from communications import services
 from communications.models import Communication
+from communications.services.communication_service import CommunicationService
 from communications.types import CommunicationType
 from core.enums import CommunicationDirectionEnum
 from core.graphql import authorize
-from core.permissions import Permission
+from core.services.permission_service import Permission
 from jobs.models import Job
 
 
@@ -24,7 +24,9 @@ class UpdateCommunication(graphene.Mutation):
     @authorize(Permission.COMMUNICATIONS_EDIT, resource=Communication, arg="communication_id")
     def mutate(self, info, communication_id: str, **data):
         """Applies the update to the message."""
-        return UpdateCommunication(communication=services.update_communication(communication_id, data))
+        return UpdateCommunication(
+            communication=CommunicationService().update(communication_id=communication_id, **data)
+        )
 
 
 class CommunicationsQuery(graphene.ObjectType):

@@ -7,9 +7,10 @@ import graphene
 
 from communications.types import CommunicationType
 from core.graphql import authorize, current_user, login_required, owner_required
-from core.permissions import Permission
-from integrations import services
+from core.services.permission_service import Permission
 from integrations.models import Integration
+from integrations.services.email_service import EmailService
+from integrations.services.integration_service import IntegrationService
 from integrations.types import IntegrationType
 from jobs.models import Job
 
@@ -26,7 +27,9 @@ class SaveAiIntegration(graphene.Mutation):
     @login_required
     def mutate(self, info, provider: str, api_key: str):
         """Encrypts and stores the API key."""
-        integration = services.save_ai_integration(current_user(info).pk, provider, api_key)
+        integration = IntegrationService().save_ai_key(
+            user_id=current_user(info).pk, provider=provider, api_key=api_key
+        )
         return SaveAiIntegration(integration=integration)
 
 
@@ -41,7 +44,7 @@ class DisconnectIntegration(graphene.Mutation):
     @owner_required(resource=Integration, arg="integration_id")
     def mutate(self, info, integration_id: str):
         """Deletes the integration."""
-        services.disconnect_integration(integration_id)
+        IntegrationService().disconnect(integration_id=integration_id)
         return DisconnectIntegration(success=True)
 
 
@@ -62,8 +65,8 @@ class SendEmail(graphene.Mutation):
     @authorize(Permission.COMMUNICATIONS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, **data):
         """Sends the message and records it against the job."""
-        result = services.send_via_gmail(user_id=current_user(info).pk, job_id=job_id, **data)
-        return SendEmail(communication=result["communication"])
+        communication = EmailService().send(user_id=current_user(info).pk, job_id=job_id, **data)
+        return SendEmail(communication=communication)
 
 
 class IntegrationsQuery(graphene.ObjectType):
@@ -83,12 +86,12 @@ class IntegrationsQuery(graphene.ObjectType):
     @login_required
     def resolve_google_auth_url(self, info) -> str:
         """Returns the Google consent URL for the caller."""
-        return services.get_google_auth_url(current_user(info).pk)
+        return IntegrationService().google_auth_url(user_id=current_user(info).pk)
 
     @login_required
     def resolve_microsoft_auth_url(self, info) -> str:
         """Returns the Microsoft consent URL for the caller."""
-        return services.get_microsoft_auth_url(current_user(info).pk)
+        return IntegrationService().microsoft_auth_url(user_id=current_user(info).pk)
 
 
 class IntegrationsMutation(graphene.ObjectType):

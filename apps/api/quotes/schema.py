@@ -4,10 +4,10 @@ import graphene
 
 from core.enums import QuoteStatusEnum
 from core.graphql import authorize
-from core.permissions import Permission
+from core.services.permission_service import Permission
 from jobs.models import Job
-from quotes import services
 from quotes.models import Quote
+from quotes.services.quote_service import QuoteService
 from quotes.types import QuoteType
 
 
@@ -27,7 +27,7 @@ class CreateQuote(graphene.Mutation):
     @authorize(Permission.QUOTES_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, **data):
         """Records the quote against the job."""
-        return CreateQuote(quote=services.create_quote(job_id, data))
+        return CreateQuote(quote=QuoteService().create(job_id=job_id, **data))
 
 
 class UpdateQuote(graphene.Mutation):
@@ -44,7 +44,7 @@ class UpdateQuote(graphene.Mutation):
     @authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
     def mutate(self, info, quote_id: str, **data):
         """Applies the update to the quote."""
-        return UpdateQuote(quote=services.update_quote(quote_id, data))
+        return UpdateQuote(quote=QuoteService().update(quote_id=quote_id, **data))
 
 
 class DeleteQuote(graphene.Mutation):
@@ -58,7 +58,7 @@ class DeleteQuote(graphene.Mutation):
     @authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
     def mutate(self, info, quote_id: str):
         """Deletes the quote."""
-        services.delete_quote(quote_id)
+        QuoteService().delete(quote_id=quote_id)
         return DeleteQuote(success=True)
 
 

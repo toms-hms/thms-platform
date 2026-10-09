@@ -4,8 +4,8 @@ import graphene
 
 from core.enums import TradeCategoryEnum
 from core.graphql import current_user, login_required, owner_required
-from user_contractors import services
 from user_contractors.models import UserContractor
+from user_contractors.services.user_contractor_service import UserContractorService
 from user_contractors.types import UserContractorType
 
 
@@ -32,7 +32,7 @@ class CreateUserContractor(graphene.Mutation):
     @login_required
     def mutate(self, info, **data):
         """Adds the contractor to the caller's rolodex."""
-        entry = services.create_user_contractor(current_user(info).pk, data)
+        entry = UserContractorService().add(user_id=current_user(info).pk, **data)
         return CreateUserContractor(user_contractor=entry)
 
 
@@ -47,7 +47,7 @@ class DeleteUserContractor(graphene.Mutation):
     @owner_required(resource=UserContractor, arg="user_contractor_id")
     def mutate(self, info, user_contractor_id: str):
         """Deletes the rolodex entry."""
-        services.delete_user_contractor(user_contractor_id)
+        UserContractorService().remove(user_contractor_id=user_contractor_id)
         return DeleteUserContractor(success=True)
 
 

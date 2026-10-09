@@ -4,7 +4,7 @@ The backend is Python (Django + Graphene); the frontend is TypeScript (Next.js).
 
 ## Function signatures
 
-**Python.** Keyword-only arguments for anything with more than one parameter of the same type, and for every filter. Callers name what they pass.
+**Python.** Keyword-only arguments for anything with more than one parameter of the same type, for every filter, and for **every** service and client method (`def update(self, *, quote_id, ...)`). Callers name what they pass.
 
 ```python
 # good
@@ -48,14 +48,25 @@ Django owns the schema. No `db_table` / `db_column` overrides. Primary keys are 
 
 - Each model lives in `<app>/models/<model_name>/` with `model.py`, `queryset.py` and `manager.py`. The package `models/__init__.py` re-exports it. Import models as `from <app>.models import X`.
 - **`queryset.py`** holds chainable one-clause filters. A filter takes `list[...] | None` and starts with `if x is None: return self`, never `if not x`. `[]` must match nothing.
-- **`manager.py`** is built with `BaseManager.from_queryset(...)`. It holds compositions of those filters, writes, and methods that return values.
-- Neither makes access decisions.
+- **`manager.py`** is built with `BaseManager.from_queryset(...)`. It holds compositions of those filters, generic writes (`upsert`, `apply_updates`), and methods that return values.
+- Neither holds business rules nor makes access decisions.
 
 See `.ai/recipes/api/queryset.md` and `.ai/recipes/api/manager.md`.
 
+## Services, clients and utils
+
+- **Business logic lives in services:** classes in `<app>/services/<domain>_service.py`. Every mutation calls one; queries read through managers and querysets directly.
+- **Every vendor SDK is wrapped in a client:** a class in `<app>/clients/<vendor>_client.py`. Only that file imports the SDK, and only services use clients.
+- Services take their clients and other services as keyword-only `__init__` arguments that default to the real ones. Tests pass fakes there instead of patching module paths.
+- **Updates use `UNSET`:** optional fields default to `UNSET`, the method ends with `Model.objects.apply_updates(...)`, and `None` means "clear". Never use a `setattr` loop over a dict.
+- **Pure helpers are functions** in `<app>/utils/<topic>_utils.py`: no database, no network.
+- The role is in every file name: `model.py`, `queryset.py`, `manager.py`, `*_service.py`, `*_client.py`, `*_utils.py`, `*_factory.py`.
+
+See `.ai/recipes/api/file-structure.md` for who may call what, plus `service.md`, `client.md` and `utils.md`.
+
 ## Access control
 
-Declared on the resolver, decided in one place (`core.permissions.can`):
+Declared on the resolver, decided in one place (`PermissionService.can` in `core/services/permission_service.py`):
 
 - `@authorize(Permission.X, resource=Model, arg="model_id")` for home-scoped rows
 - `@owner_required(resource=Model, arg="model_id")` for user-owned rows
@@ -87,7 +98,7 @@ Never hand-write a migration for a schema change — edit the model and run `mak
 
 ## Tests
 
-Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one per model in the app's `factories.py`. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py` as it needs them. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
+Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one module per model in the app's `factories/` package. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py` as it needs them. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
 
 ## Branching
 

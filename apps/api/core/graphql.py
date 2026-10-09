@@ -18,8 +18,8 @@ from typing import Any
 from django.core.exceptions import ValidationError as DjangoValidationError
 from graphql import GraphQLError
 
-from core import permissions
 from core.errors import AppError, ForbiddenError, UnauthorizedError
+from core.services.permission_service import Permission, PermissionService
 
 
 def current_user(info: Any):
@@ -57,7 +57,7 @@ def admin_required(resolver: Callable) -> Callable:
 
 
 def authorize(
-    permission: permissions.Permission, *, resource: type, arg: str, optional: bool = False
+    permission: Permission, *, resource: type, arg: str, optional: bool = False
 ) -> Callable[[Callable], Callable]:
     """Wraps a resolver so it runs only when the caller holds the permission in the row's home.
 
@@ -76,7 +76,7 @@ def authorize(
             if resource_id is None and optional:
                 return resolver(root, info, **kwargs)
             home_id = resource.objects.home_id_for(resource_id) if resource_id else None
-            permissions.require(user, permission, home_id)
+            PermissionService().require(user, permission, home_id)
             return resolver(root, info, **kwargs)
 
         return wrapper

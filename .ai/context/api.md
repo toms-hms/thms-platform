@@ -17,31 +17,30 @@ apps/api/
     views.py        the GraphQL view: rate limiting and error codes
     schema.py       the schema root — combines every app's Query and Mutation
   core/
-    converters.py   GraphQL field conversions (UUID → String)
-    errors.py       domain errors and their GraphQL error codes
-    hashing.py      refresh-token digests (passwords use Django's hashers)
-    jwt_utils.py    access/refresh token signing
-    crypto.py       AES-256-GCM for OAuth tokens at rest
+    services/       permission_service.py (Permission, PermissionService), storage_service.py
+    clients/        s3_client.py — the only boto3 importer
+    utils/          crypto_utils.py, hashing_utils.py, jwt_utils.py, unset_utils.py (UNSET)
     querysets.py    BaseQuerySet, HomeScopedQuerySet, UserOwnedQuerySet
-    managers.py     BaseManager
-    permissions.py  Permission names, role → permissions, can(), the membership cache
+    managers.py     BaseManager (incl. apply_updates)
     graphql.py      current_user and the access decorators (@authorize, @owner_required, …)
-    middleware.py   JWT → request.user
-    audit.py        the audit log query
-    testing.py      GraphQLTestCase
+    converters.py   GraphQL field conversions (UUID → String)
+    types.py / schema.py  the audit log query
+    errors.py, enums.py, middleware.py, testing.py
   <app>/
-    models/
-      __init__.py   re-exports every model and enum
-      <model_name>/ model.py (table + its enums), queryset.py (filters + home_id_path),
-                    manager.py (compositions, writes, value lookups)
-    services.py     orchestration for writes
+    models/<model>/ model.py · queryset.py · manager.py   (models/__init__.py re-exports)
+    services/       <domain>_service.py — classes holding business logic and writes
+    clients/        <vendor>_client.py — classes wrapping one vendor SDK (ai, integrations)
+    utils/          <topic>_utils.py — pure functions (ai, integrations, jobs)
+    factories/      <model>_factory.py (factories/__init__.py re-exports)
     types.py        GraphQL object types
-    schema.py       GraphQL queries and mutations, each with an access decorator
-    factories.py    test factories
+    schema.py       queries (read via managers) and mutations (write via services)
     tests/          test_querysets.py, test_managers.py, test_services.py, test_schema.py
 ```
 
-Apps: `accounts`, `homes`, `contractors`, `user_contractors`, `jobs`, `quotes`, `communications`, `ai`, `integrations`, plus `uploads` (services only, no models).
+Apps: `accounts`, `homes`, `contractors`, `user_contractors`, `jobs`, `quotes`, `communications`, `ai`, `integrations`.
+
+Reads go resolver → manager/queryset. Writes go mutation → service → managers, clients
+and other services. See `.ai/recipes/api/file-structure.md` for the full call rules.
 
 ## The schema
 
@@ -54,7 +53,7 @@ Django owns it: default `<app>_<model>` table names, field-named columns, genera
 
 ## Non-obvious patterns
 
-- Passwords use Django's hashers through `User.set_password` / `check_password`. Refresh tokens are stored as SHA-256 digests (`core.hashing`), and only the latest one is valid.
+- Passwords use Django's hashers through `User.set_password` / `check_password`. Refresh tokens are stored as SHA-256 digests (`core.utils.hashing_utils`), and only the latest one is valid.
 - A malformed id (not a UUID) is never an internal error. `get_or_404` raises NOT_FOUND, `home_id_for` / `owner_id_for` return None (so `@authorize` answers FORBIDDEN), and anything else maps to BAD_REQUEST.
 - Auth is stateless JWT, not Django sessions. `core.middleware.JWTAuthenticationMiddleware` sets `request.user`, and it runs **before** `AuditlogMiddleware` so audit entries have an actor.
 - `convert_choices_to_enum = False` on every `DjangoObjectType`: outputs stay plain strings. Inputs use the explicit enums in `core/enums.py`.

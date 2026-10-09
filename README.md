@@ -133,7 +133,7 @@ make test-web    # frontend only
 ```
 
 Backend tests use Django's test runner against a real database, with every test in a
-rolled-back transaction. Each app has `tests/test_managers.py`, `tests/test_services.py`
+rolled-back transaction. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py`
 and `tests/test_schema.py`, covering:
 - Auth (register, login, refresh rotation, logout)
 - Permission boundaries on every resource — owner, member, stranger, admin

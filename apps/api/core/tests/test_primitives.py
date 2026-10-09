@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from core.crypto import decrypt, encrypt
 from core.errors import UnauthorizedError
-from core.hashing import hash_token, verify_token
-from core.jwt_utils import parse_duration, sign_access_token, sign_refresh_token, verify_access_token
+from core.utils.crypto_utils import decrypt, encrypt
+from core.utils.hashing_utils import hash_token, verify_token
+from core.utils.jwt_utils import parse_duration, sign_access_token, sign_refresh_token, verify_access_token
 
 
 class CryptoTests(TestCase):
@@ -66,7 +66,7 @@ class JwtTests(TestCase):
 
     def test_rejects_an_expired_token(self):
         """An expired token is rejected."""
-        with patch("core.jwt_utils.parse_duration", return_value=timedelta(seconds=-10)):
+        with patch("core.utils.jwt_utils.parse_duration", return_value=timedelta(seconds=-10)):
             token = sign_access_token("user-1", "a@b.test", "USER")
         with self.assertRaises(UnauthorizedError):
             verify_access_token(token)

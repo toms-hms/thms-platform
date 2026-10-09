@@ -2,7 +2,7 @@
 
 import graphene
 
-from accounts import services
+from accounts.services.auth_service import AuthService
 from accounts.types import AuthTokensType, UserType
 from core.graphql import current_user, login_required
 
@@ -21,7 +21,9 @@ class Register(graphene.Mutation):
 
     def mutate(self, info, email: str, password: str, first_name: str, last_name: str):
         """Registers the user and returns them with a fresh token pair."""
-        result = services.register(email=email, password=password, first_name=first_name, last_name=last_name)
+        result = AuthService().register(
+            email=email, password=password, first_name=first_name, last_name=last_name
+        )
         return Register(user=result["user"], tokens=AuthTokensType(**result["tokens"]))
 
 
@@ -37,7 +39,7 @@ class Login(graphene.Mutation):
 
     def mutate(self, info, email: str, password: str):
         """Authenticates the user and returns them with a fresh token pair."""
-        result = services.login(email=email, password=password)
+        result = AuthService().login(email=email, password=password)
         return Login(user=result["user"], tokens=AuthTokensType(**result["tokens"]))
 
 
@@ -51,7 +53,7 @@ class RefreshTokens(graphene.Mutation):
 
     def mutate(self, info, refresh_token: str):
         """Rotates the token pair for the user the refresh token belongs to."""
-        result = services.refresh_tokens(refresh_token)
+        result = AuthService().refresh(refresh_token=refresh_token)
         return RefreshTokens(tokens=AuthTokensType(**result["tokens"]))
 
 
@@ -63,7 +65,7 @@ class Logout(graphene.Mutation):
     @login_required
     def mutate(self, info):
         """Clears the stored refresh-token hash for the authenticated user."""
-        services.logout(current_user(info).pk)
+        AuthService().logout(user_id=current_user(info).pk)
         return Logout(success=True)
 
 
@@ -75,7 +77,7 @@ class AccountsQuery(graphene.ObjectType):
     @login_required
     def resolve_me(self, info):
         """Returns the authenticated user's own record."""
-        return services.get_me(current_user(info).pk)
+        return current_user(info)
 
 
 class AccountsMutation(graphene.ObjectType):

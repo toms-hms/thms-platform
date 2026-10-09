@@ -40,14 +40,16 @@ class CreateJob(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, **data):
         """Creates the job on the home."""
-        return CreateJob(job=services.create_job(home_id, current_user(info).pk, data))
+        return CreateJob(job=JobService().create(home_id=home_id, user_id=current_user(info).pk, **data))
 ```
 
 - Names read as verbs: `createJob`, `assignContractor`, `disconnectIntegration`.
 - A mutation returns the object it changed, or `success: Boolean!` for a delete.
-- Arguments are flat, not input objects — they stay readable in GraphiQL and map straight onto service keyword arguments.
-- Business logic lives in the service. The mutation declares access with a decorator, then delegates.
-- Reads call a manager composition or a queryset chain directly. There is no service in between.
+- Arguments are flat, not input objects. They stay readable in GraphiQL and map straight onto service keyword arguments: argument names match the service method's parameter names, so `**data` passes through.
+- **A mutation always calls a service** (`XService().method(...)`) and never writes through a manager itself. It declares access with a decorator, then delegates.
+- **Pass `**data` through untouched for updates.** Graphene leaves omitted arguments out, so the service sees them as `UNSET`, and an explicit `null` arrives as `None` (see `service.md`).
+- **Queries read through a manager composition or a queryset chain directly.** There is no service in between.
+- Never import a client in `schema.py`.
 
 ## Auth
 

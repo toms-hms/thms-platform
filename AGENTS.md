@@ -33,7 +33,9 @@ Detailed how-to guides for common task types. Load only what the task requires.
 - Django model / table mapping: `.ai/recipes/api/model.md`
 - QuerySet (chainable filters, visibility): `.ai/recipes/api/queryset.md`
 - Manager (filter compositions, writes): `.ai/recipes/api/manager.md`
-- Service layer: `.ai/recipes/api/service.md`
+- Service classes (business logic, writes): `.ai/recipes/api/service.md`
+- Vendor clients (one SDK each): `.ai/recipes/api/client.md`
+- Pure helpers (`*_utils.py`): `.ai/recipes/api/utils.md`
 - GraphQL types (`types.py`): `.ai/recipes/api/types.md`
 - GraphQL queries & mutations (`schema.py`): `.ai/recipes/api/schema.md`
 - Permissioning: `.ai/recipes/api/permissioning.md`

@@ -11,6 +11,6 @@ class UserContractorManager(BaseManager.from_queryset(UserContractorQuerySet)):
         """Returns the user's rolodex entries with contractors preloaded."""
         return self.owned_by(user).select_related("contractor")
 
-    def filter_existing(self, user_id: str, contractor_id: str):
+    def filter_existing(self, *, user_id: str, contractor_id: str):
         """Returns the user's existing entry for this contractor, or None."""
         return self.filter(user_id=user_id).filter_contractor_ids([contractor_id]).first()

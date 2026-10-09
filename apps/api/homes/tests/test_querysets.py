@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from accounts.factories import AdminFactory, UserFactory
 from core.errors import NotFoundError
-from core.permissions import Permission
+from core.services.permission_service import Permission
 from homes.factories import HomeFactory
 from homes.models import Home, HomeRole, UserHome
 
@@ -53,7 +53,7 @@ class VisibleToTests(TestCase):
         """A member sees the home for HOME_VIEW but not for HOME_DELETE."""
         member = UserFactory()
         home = HomeFactory(owner=UserFactory())
-        UserHome.objects.upsert(member.pk, home.pk, HomeRole.MEMBER)
+        UserHome.objects.upsert(user_id=member.pk, home_id=home.pk, role=HomeRole.MEMBER)
         self.assertTrue(Home.objects.visible_to(member, Permission.HOME_VIEW).filter(pk=home.pk).exists())
         self.assertFalse(Home.objects.visible_to(member, Permission.HOME_DELETE).filter(pk=home.pk).exists())
 

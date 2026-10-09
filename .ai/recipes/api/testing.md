@@ -38,11 +38,11 @@ Each test runs in a transaction that is rolled back afterwards, so there is no c
 
 Compositions return what they promise. Writes such as upserts and status transitions behave as documented.
 
-The policy itself (`can`, the role map, the cache) is tested once, in `core/tests/test_permissions.py`.
+The policy itself (`PermissionService.can`, the role map, the cache) is tested once, in `core/tests/test_permission_service.py`. `BaseManager.apply_updates` is tested once, in `core/tests/test_managers.py`.
 
 ### `test_services.py`
 
-Business rules and multi-step writes: what gets created, what the defaults are, what is rejected, and what happens to the permission cache.
+Business rules and multi-step writes, one test class per service method (`QuoteService.update()`): what gets created, what the defaults are, what is rejected, what UNSET and None do, and what happens to the permission cache. Construct the service with fakes for its clients: `ImageGenerationService(openai=MagicMock(spec=OpenAIClient), storage=fake_storage())`.
 
 ### `test_schema.py`
 
@@ -86,12 +86,19 @@ Every mutation gets at least: the happy path, `UNAUTHORIZED` without a token, an
 
 ## Third parties are always mocked
 
-No test may reach OpenAI, Google or object storage. Patch the seam:
+No test may reach OpenAI, Google, Microsoft or object storage. In service tests,
+pass a fake client to the service's constructor. Use `MagicMock(spec=TheClient)`,
+so a renamed method fails loudly:
 
 ```python
-with patch.object(services, "get_openai_client", return_value=client):
-    result = services.start_diagnose(job.pk)
+openai = MagicMock(spec=OpenAIClient)
+openai.chat.return_value = SimpleNamespace(tool_calls=[tool_call("ask_question", {...})], content=None)
+result = DiagnoseService(openai=openai).start(job_id=job.pk)
 ```
+
+In schema tests, where the resolver constructs the service itself, patch the
+service or client **class** method: `patch.object(StorageService, "download_url", return_value=...)`.
+Never patch a module path such as `services.requests`.
 
 Assert what we sent as well as what we stored — that the recurring-work prompt was used, that the tone reached the system message.
 

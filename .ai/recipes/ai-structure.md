@@ -24,14 +24,16 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
       model.md                ← Django models mapped onto the pre-existing schema.
       queryset.md             ← querysets (chainable filters, None vs [], visible_to / owned_by).
       manager.md              ← managers (filter compositions, writes, value lookups).
-      service.md              ← service layer (orchestration, when NOT to use services).
+      service.md              ← service classes (business logic, UNSET updates, injected collaborators).
+      client.md               ← vendor client classes (one SDK each, used only by services).
+      utils.md                ← pure helper functions (*_utils.py).
       types.md                ← GraphQL object types (types.py).
       schema.md               ← GraphQL queries, mutations, enums, access decorators, error codes.
       permissioning.md        ← Permission names, role map, @authorize / @owner_required, the cache.
       auth.md                 ← JWT contract, Django password hashers, refresh-token digests, request.user.
       audit.md                ← django-auditlog registration, exclusions, reading the log.
       testing.md              ← test structure, GraphQLTestCase, what each layer covers.
-      factory.md              ← factory_boy factories (SubFactory, post_generation).
+      factory.md              ← factory_boy factories, one module per model (SubFactory, post_generation).
       migrations.md           ← migration workflow, data migrations, the missing-migration check.
       ai-service.md           ← OpenAI tool calling, JSON mode, multi-turn conversations.
     web/

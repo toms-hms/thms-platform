@@ -4,9 +4,9 @@ import graphene
 
 from core.enums import HomeRoleEnum
 from core.graphql import authorize, current_user, login_required
-from core.permissions import Permission
-from homes import services
+from core.services.permission_service import Permission
 from homes.models import Home, HomeRole, UserHome
+from homes.services.home_service import HomeService
 from homes.types import HomeMemberType, HomeType
 
 
@@ -28,7 +28,7 @@ class CreateHome(graphene.Mutation):
     @login_required
     def mutate(self, info, **data):
         """Creates the home and makes the caller its owner."""
-        return CreateHome(home=services.create_home(current_user(info).pk, data))
+        return CreateHome(home=HomeService().create(user_id=current_user(info).pk, **data))
 
 
 class UpdateHome(graphene.Mutation):
@@ -49,7 +49,7 @@ class UpdateHome(graphene.Mutation):
     @authorize(Permission.HOME_EDIT, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, **data):
         """Applies the update to the home."""
-        return UpdateHome(home=services.update_home(home_id, data))
+        return UpdateHome(home=HomeService().update(home_id=home_id, **data))
 
 
 class DeleteHome(graphene.Mutation):
@@ -63,7 +63,7 @@ class DeleteHome(graphene.Mutation):
     @authorize(Permission.HOME_DELETE, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str):
         """Deletes the home."""
-        services.delete_home(home_id)
+        HomeService().delete(home_id=home_id)
         return DeleteHome(success=True)
 
 
@@ -80,7 +80,9 @@ class AddHomeUser(graphene.Mutation):
     @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, email: str, role: str | None = None):
         """Grants the named user access to the home."""
-        return AddHomeUser(member=services.add_user_to_home(home_id, email, role or HomeRole.MEMBER))
+        return AddHomeUser(
+            member=HomeService().add_member(home_id=home_id, email=email, role=role or HomeRole.MEMBER)
+        )
 
 
 class RemoveHomeUser(graphene.Mutation):
@@ -95,7 +97,7 @@ class RemoveHomeUser(graphene.Mutation):
     @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, user_id: str):
         """Revokes the named user's membership of the home."""
-        services.remove_user_from_home(home_id, user_id)
+        HomeService().remove_member(home_id=home_id, user_id=user_id)
         return RemoveHomeUser(success=True)
 
 
@@ -123,7 +125,7 @@ class HomesQuery(graphene.ObjectType):
     @authorize(Permission.HOME_VIEW, resource=Home, arg="home_id")
     def resolve_home_members(self, info, home_id: str):
         """Returns the home's members."""
-        return UserHome.objects.list_members_for_home(home_id)
+        return UserHome.objects.list_members_for_home(home_id=home_id)
 
 
 class HomesMutation(graphene.ObjectType):

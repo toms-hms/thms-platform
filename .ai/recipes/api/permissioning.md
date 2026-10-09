@@ -1,6 +1,6 @@
 ---
 name: api-permissioning
-description: Guide for access control — the Permission names and role map in core/permissions.py, @authorize / @owner_required on resolvers, visible_to / owned_by for collections, and the membership cache.
+description: Guide for access control — the Permission names and role map in core/services/permission_service.py (PermissionService), @authorize / @owner_required on resolvers, visible_to / owned_by for collections, and the membership cache.
 ---
 
 # Permissioning
@@ -11,9 +11,9 @@ Access is declared on the resolver. Managers and querysets make no decisions.
 
 | Piece | Lives in | Does |
 | --- | --- | --- |
-| `Permission` enum | `core/permissions.py` | The named capabilities, e.g. `jobs.view` or `quotes.edit` |
-| `role_permissions(role)` | `core/permissions.py` | OWNER: all. MEMBER: all except `HOME_DELETE` |
-| `can(user, permission, home_id)` | `core/permissions.py` | **The only decision function.** ADMIN gets True here, explicitly |
+| `Permission` enum | `core/services/permission_service.py` | The named capabilities, e.g. `jobs.view` or `quotes.edit` |
+| `PermissionService.role_permissions(role)` | `core/services/permission_service.py` | OWNER: all. MEMBER: all except `HOME_DELETE` |
+| `PermissionService.can(user, permission, home_id)` | `core/services/permission_service.py` | **The only decision function.** ADMIN gets True here, explicitly |
 | `@authorize(...)` | `core/graphql.py` | Gates a resolver on one row's home |
 | `@owner_required(...)` | `core/graphql.py` | Gates a resolver on a user-owned row |
 | `visible_to(user, permission)` | `HomeScopedQuerySet` | Scopes a collection to homes granting the permission |
@@ -25,7 +25,7 @@ Access is declared on the resolver. Managers and querysets make no decisions.
 @authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
 def mutate(self, info, quote_id: str, **data):
     """Applies the update to the quote."""
-    return UpdateQuote(quote=services.update_quote(quote_id, data))
+    return UpdateQuote(quote=QuoteService().update(quote_id=quote_id, **data))
 ```
 
 - `resource` is the model whose row the argument names. `arg` is the argument's snake_case name.
@@ -79,8 +79,8 @@ something an owner would recognise as a page or an action.
 
 ## The cache
 
-`membership_role(user_id, home_id)` caches a member's **role** per (user, home)
+`PermissionService.membership_role(user_id=..., home_id=...)` caches a member's **role** per (user, home)
 for `PERMISSION_CACHE_TIMEOUT` seconds. Non-members are never cached. Any service
 that creates, changes or removes a membership calls
-`permissions.invalidate(user_id, home_id)` for each affected member. If the cache
+`PermissionService().invalidate(user_id=..., home_id=...)` for each affected member. If the cache
 is unavailable, checks fall through to the database. A cache miss never means "denied".

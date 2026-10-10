@@ -1,115 +1,80 @@
 ---
 name: web-api-client
-description: Guide for frontend query and mutation helpers — file structure, buildUrl for query params, and mutation patterns.
+description: Guide for frontend query and mutation helpers — the GraphQL client, where operations live, and how results are shaped.
 ---
 
 # Web API Client
 
-API calls live in `queries.ts` (reads) and `mutations.ts` (writes) colocated with the component or page that uses them. All calls go through `request` from `@/lib/api`.
-
-## File structure
+The API is GraphQL. Every call goes through `gqlRequest` from `@/lib/graphql`, in a `queries.ts` (reads) or `mutations.ts` (writes) file colocated with the page or component that uses it.
 
 ```
 src/app/(dashboard)/{route}/
-  queries.ts    — GET helpers
-  mutations.ts  — POST, PATCH, DELETE helpers
+  queries.ts    reads
+  mutations.ts  writes
 
 src/components/{module}/
   queries.ts
   mutations.ts
 ```
 
-## The `request` helper
+Authentication operations are the exception: they live in `src/lib/auth-api.ts`, because the login page, the register page and the navbar all need them.
 
-All API calls go through `src/lib/api.ts`'s `request<T>()`:
+## `gqlRequest`
 
 ```typescript
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!res.ok) {
-    if (res.status === 401) { /* clear token, redirect to /login */ }
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(body?.error?.message ?? `HTTP ${res.status}`, res.status, body?.error?.code);
-  }
-  return res.json();
+export async function gqlRequest<T>(query: string, variables?: Record<string, unknown>): Promise<T>
+```
+
+It attaches the stored bearer token, posts to `/graphql`, and throws `ApiError` carrying the server's `code` when the response contains errors. A rejected token (`UNAUTHORIZED`) clears the session and redirects to `/login`.
+
+## Helpers return `{ data }`
+
+Every helper unwraps the operation and returns `{ data: T }`, so a caller reads `res.data` regardless of which operation it used:
+
+```typescript
+/** Returns all homes the current user has access to. */
+export async function listHomes(): Promise<{ data: HomeDto[] }> {
+  const data = await gqlRequest<{ homes: HomeDto[] }>(`query { homes { ${HOME_FIELDS} } }`);
+  return { data: data.homes };
 }
 ```
 
-## Building query strings — `buildUrl`
+## Field lists are shared constants
 
-Use `buildUrl` from `@/lib/api` instead of manually constructing `URLSearchParams`. It handles string fields, array fields (appended as repeated keys), and omits undefined values:
-
-```typescript
-// src/lib/api.ts
-export function buildUrl(
-  path: string,
-  params?: Record<string, string | string[] | undefined>,
-): string {
-  const qs = new URLSearchParams();
-  for (const [key, value] of Object.entries(params ?? {})) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) value.forEach((v) => qs.append(key, v));
-    else qs.set(key, value);
-  }
-  const query = qs.toString();
-  return query ? `${path}?${query}` : path;
-}
-```
-
-## Queries
+Export the selection set and reuse it, so a type's fields are defined once:
 
 ```typescript
-// app/(dashboard)/contractors/queries.ts
-import { request, buildUrl } from '@/lib/api';
-import type { ContractorDto } from '@thms/shared';
-
-export function listContractors(params?: {
-  search?: string;
-  tradeCategories?: string[];
-  zipCodes?: string[];
-}) {
-  return request<{ data: ContractorDto[] }>(buildUrl('/api/v1/contractors', params));
-}
-
-export function getContractor(contractorId: string) {
-  return request<{ data: ContractorDto }>(`/api/v1/contractors/${contractorId}`);
-}
+export const HOME_FIELDS = `
+  id name address1 address2 city state zipCode country notes fullAddress createdAt updatedAt
+`;
 ```
 
-Always type the return with the DTO from `@thms/shared`. Never use `any`.
+Import it across files (`import { CONTRACTOR_FIELDS } from '../contractors/queries'`) rather than retyping the selection.
 
-## Mutations
+## Variables, never interpolation
 
 ```typescript
-// app/(dashboard)/homes/mutations.ts
-import { request } from '@/lib/api';
-import type { HomeDto, CreateHomeInput, UpdateHomeInput } from '@thms/shared';
+// Good — the value travels as a variable
+gqlRequest(`query GetHome($homeId: ID!) { home(homeId: $homeId) { ${HOME_FIELDS} } }`, { homeId });
 
-export function createHome(data: CreateHomeInput) {
-  return request<{ data: HomeDto }>('/api/v1/homes', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export function updateHome(homeId: string, data: UpdateHomeInput) {
-  return request<{ data: HomeDto }>(`/api/v1/homes/${homeId}`, { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-export function deleteHome(homeId: string) {
-  return request(`/api/v1/homes/${homeId}`, { method: 'DELETE' });
-}
+// Bad — string-built query
+gqlRequest(`query { home(homeId: "${homeId}") { id } }`);
 ```
+
+Only field selections are interpolated. Every value is a variable, typed in the operation signature.
+
+## Types
+
+Types come from `@/types/api`, which mirrors the server schema. The web app does not import from the API — they deploy separately (see `.ai/rules/core.md`). When the schema changes, update `@/types/api` in the same change.
+
+`JSONString` fields (`aiSession`, `metadata`) arrive as strings: `JSON.parse` on the way in, `JSON.stringify` on the way out.
 
 ## List filter rules
 
-- Use plural array fields for filters that can hold multiple values.
-- Do not add singular helper params as aliases for plural API params.
-- Use domain-explicit names: `tradeCategories` not `categories`.
-- If the UI has one selected value, wrap it in a one-item array before calling:
+- Plural array fields for filters that can hold several values.
+- No singular aliases for convenience.
+- Domain-explicit names: `tradeCategories`, not `categories`.
+- One selected value is still an array:
 
 ```typescript
 listContractors({
@@ -120,16 +85,13 @@ listContractors({
 
 ## No hidden lookups
 
-Do not pass convenience IDs to collection endpoints so the backend can infer filters. Load explicit values and pass them directly.
+Do not pass a convenience id so the backend can infer filters. Load the values and pass them:
 
 ```typescript
-// Bad: backend infers zip and category from jobId
+// Bad
 listContractors({ jobId: 'job_123' });
 
-// Good: frontend loads the values and passes them explicitly
+// Good
 const job = await getJob(jobId);
-listContractors({
-  zipCodes: [home.zipCode],
-  tradeCategories: job.aiSession?.confirmedCategories,
-});
+listContractors({ zipCodes: [home.zipCode], tradeCategories: job.aiSession?.confirmedCategories });
 ```

@@ -2,7 +2,7 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/api';
+import { register } from '@/lib/auth-api';
 import { saveTokens, saveUser } from '@/lib/auth';
 
 export default function RegisterPage() {
@@ -25,7 +25,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await auth.register(form);
+      const res = await register(form);
       saveTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
       saveUser(res.data.user);
       router.push('/homes');

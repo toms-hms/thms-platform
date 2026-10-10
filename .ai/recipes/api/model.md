@@ -1,121 +1,81 @@
 ---
 name: api-model
-description: Guide for writing Drizzle table definitions (models) — columns, enums, FKs, JSONB, and inferred types.
+description: Guide for <app>/models/<model_name>/model.py — fields, UUID primary keys, TextChoices, timestamps, foreign keys and on_delete rules, constraints, and re-export from models/__init__.py.
 ---
 
-# API Model (Drizzle Table)
+# API Model
 
-Each model lives at `src/{module}/models/<ModelName>.ts`. It exports the table object and its inferred select/insert types.
+Django owns the schema: table and column names are Django's defaults, and migrations are generated from the models.
 
-## File structure
+Each model lives in `models/<model_name>/model.py`. The model folder's `queryset.py` and
+`manager.py` sit next to it. The app's `models/__init__.py` re-exports it (see
+`file-structure.md`). `model.py` imports only its own manager
+(`from jobs.models.job.manager import JobManager`). Foreign keys name other models as strings.
 
-```
-src/{module}/models/
-  ModelName.ts         — pgTable definition + inferred types
-  ModelNameManager.ts  — query methods
-  ModelNameManager.where.ts — predicate helpers (when the manager has filters)
-```
+## The shape of a model
 
-## Basic table definition
+```python
+class Job(models.Model):
+    """A piece of work on a home."""
 
-```typescript
-// apps/api/src/job/models/Job.ts
-import { jsonb, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { homes } from '@/home/models/Home';
-import { users } from '@/auth/models/User';
-import type { AiSession } from '@thms/shared';
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    home = models.ForeignKey("homes.Home", on_delete=models.CASCADE, related_name="jobs")
+    created_by = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name="created_jobs")
+    title = models.TextField()
+    intent = models.CharField(max_length=32, choices=JobIntent.choices, default=JobIntent.ISSUE)
+    description = models.TextField(null=True, blank=True)
+    ai_session = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
-export const jobStatusEnum = pgEnum('JobStatus', ['DRAFT', 'PLANNING', ...]);
-export const jobIntentEnum = pgEnum('JobIntent', ['ISSUE', 'IMPROVEMENT', 'RECURRING_WORK']);
-export const tradeCategoryEnum = pgEnum('TradeCategory', ['PLUMBING', 'ELECTRICAL', ...]);
+    objects = JobManager()
 
-export const jobs = pgTable('Job', {
-  id:              text('id').primaryKey(),
-  homeId:          text('homeId').notNull().references(() => homes.id, { onDelete: 'cascade' }),
-  title:           text('title').notNull(),
-  intent:          jobIntentEnum('intent').notNull().default('ISSUE'),
-  category:        tradeCategoryEnum('category').notNull(),
-  description:     text('description'),
-  notes:           text('notes'),
-  status:          jobStatusEnum('status').notNull().default('DRAFT'),
-  aiSession:       jsonb('ai_session').$type<AiSession>(),
-  createdByUserId: text('createdByUserId').notNull().references(() => users.id),
-  createdAt:       timestamp('createdAt', { precision: 3 }).notNull().defaultNow(),
-  updatedAt:       timestamp('updatedAt', { precision: 3 }).notNull(),
-});
-
-export type Job    = typeof jobs.$inferSelect;
-export type NewJob = typeof jobs.$inferInsert;
+    class Meta:
+        ordering = ["-created_at"]
 ```
 
-## Column types
+## Rules
 
-| Drizzle type | Use for |
-|---|---|
-| `text('col')` | strings, IDs, foreign keys |
-| `text('col').array()` | string arrays (e.g. `categories: text('categories').array()`) |
-| `boolean('col')` | flags |
-| `integer('col')` | counts, small numbers |
-| `timestamp('col', { precision: 3 })` | dates; always `.notNull()` on `createdAt`/`updatedAt` |
-| `jsonb('col').$type<T>()` | structured blobs (AI sessions, metadata) |
+- **No `db_table` or `db_column`.** Tables are Django's `<app>_<model>` and columns are the field names.
+- **Primary keys are `models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`.** Every model, including join models. GraphQL exposes them as `String!` (see `core/converters.py`).
+- **A join model gets its own UUID `id`** plus a `UniqueConstraint` on the pair. No composite primary keys.
+- **Choices are `models.CharField(max_length=32, choices=X.choices)`** with the `TextChoices` class in the `model.py` of the model that owns it. Add it to `models/__init__.py` and expose it in `core/enums.py`.
+- **Timestamps are `models.DateTimeField`.** `USE_TZ` is on, so values are timezone-aware UTC. Use `default=timezone.now` for `created_at` and `auto_now=True` for `updated_at`. Never use `datetime.now()` / `utcnow()`.
+- **Foreign keys use a string target** (`"homes.Home"`), including for a model in the same app. This keeps `model.py` files from importing each other.
+- **Every foreign key states its `on_delete` deliberately:**
+  - `CASCADE` for children that make no sense without the parent (quotes, images and messages under a job).
+  - `SET_NULL` (with `null=True`) for optional references.
+  - `PROTECT` for authorship and history (`created_by`, a quote's contractor). The service that deletes the parent turns `ProtectedError` into `ConflictError`.
+  - Never `DO_NOTHING`.
+- **Constraint names are lowercase `<model>_<fields>_unique`.**
+- **Nullable text columns keep `null=True`.** The API distinguishes null from empty string, so the usual Django advice does not apply here (ruff's DJ001 is disabled for this reason).
+- **Store ids in JSON as strings.** A UUID in a `JSONField` or JWT claim raises at serialization time, so use `str(obj.pk)`.
+- A derived value that needs no query can be a `@property` (`Home.full_address`, `Contractor.zip_codes`). Anything that queries belongs in the queryset or manager.
 
-## Enum columns
+## Choices
 
-Drizzle enum types live with the owning model or module, not in a shared `src/db/enums.ts` file. Define the `pgEnum(...)` near the table that owns the column, export it when another model in the same domain needs it, and import it directly from that owning model/module. Never use a raw `text` column with a comment-described set of values.
+```python
+class JobStatus(models.TextChoices):
+    """Where the job sits in its lifecycle. Only the user moves a job between states."""
 
-```typescript
-// apps/api/src/job/models/Job.ts
-import { pgEnum } from 'drizzle-orm/pg-core';
-
-export const jobStatusEnum    = pgEnum('JobStatus',    ['DRAFT', 'PLANNING', ...]);
-export const jobIntentEnum    = pgEnum('JobIntent',    ['ISSUE', 'IMPROVEMENT', 'RECURRING_WORK']);
-export const tradeCategoryEnum = pgEnum('TradeCategory', ['PLUMBING', 'ELECTRICAL', ...]);
+    DRAFT = "DRAFT", "Draft"
+    PLANNING = "PLANNING", "Planning"
 ```
 
-When the model's enum column name differs from the DB column name, pass the DB column name as the first arg:
+Use the member, never the literal: `JobStatus.DRAFT`, not `"DRAFT"`. Expose it to GraphQL by adding it to `core/enums.py`. Adding a member is a code change plus a generated migration (see `migrations.md`).
 
-```typescript
-intent: jobIntentEnum('intent').notNull().default('ISSUE'),
+## Registering with the audit log
+
+In the app's `AppConfig.ready()`:
+
+```python
+def ready(self) -> None:
+    """Registers this app's models with the audit log."""
+    from auditlog.registry import auditlog
+
+    from jobs.models import Job
+
+    auditlog.register(Job, exclude_fields=["updated_at"])
 ```
 
-## Foreign keys
-
-Always use `.references(() => otherTable.id, { onDelete: 'cascade' })` for child records. References are thunks (arrow functions) to avoid circular import issues.
-
-```typescript
-homeId: text('homeId').notNull().references(() => homes.id, { onDelete: 'cascade' }),
-```
-
-## JSONB columns
-
-Use `jsonb('col').$type<T>()` to attach a TypeScript type to a JSONB column. The type comes from `@thms/shared` — keep it there so both API validation and the web app share it.
-
-```typescript
-import type { AiSession } from '@thms/shared';
-
-aiSession: jsonb('ai_session').$type<AiSession>(),
-```
-
-## Array columns
-
-Postgres native arrays (e.g. for trade categories):
-
-```typescript
-categories: tradeCategoryEnum('categories').array().notNull().default([]),
-```
-
-## IDs and timestamps
-
-- **IDs**: generated with `createId()` from `@paralleldrive/cuid2` in the Manager, not auto-generated by the DB. Always include `id: text('id').primaryKey()`.
-- **Timestamps**: `createdAt` uses `.defaultNow()`. `updatedAt` has no DB default — always pass `updatedAt: new Date()` at insert/update time in the Manager.
-
-## Re-export in `src/db/schema.ts`
-
-Add every new table to `src/db/schema.ts` so drizzle-kit can generate migrations:
-
-```typescript
-// src/db/schema.ts
-export { jobs } from '../job/models/Job';
-export { contractors } from '../contractor/models/Contractor';
-// ... one line per table
-```
+Exclude anything secret — password hashes, encrypted tokens — and `updated_at`, which changes on every write and says nothing.

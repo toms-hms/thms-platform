@@ -1,54 +1,89 @@
-import { request, buildUrl } from '@/lib/api';
+import { gqlRequest } from '@/lib/graphql';
 import type {
-  ContractorDto,
-  JobContractorDto,
-  QuoteDto,
   AIGenerationDto,
+  ContractorDto,
   IntegrationDto,
-} from '@thms/shared';
+  JobContractorDto,
+  JobImageDto,
+  QuoteDto,
+} from '@/types/api';
 
-interface JobImageDto {
-  id: string;
-  jobId: string;
-  storageKey: string;
-  kind: string;
-  label?: string | null;
-  aiGenerationId?: string | null;
-  uploadedById: string;
-  createdAt: string;
-  url: string;
-}
+export const CONTRACTOR_FIELDS = `
+  id name companyName email phone categories zipCodes notes isGlobal createdAt updatedAt
+`;
+export const JOB_CONTRACTOR_FIELDS = `
+  id jobId contractorId status lastContactedAt lastResponseAt notes createdAt updatedAt
+  contractor { ${CONTRACTOR_FIELDS} }
+`;
+export const QUOTE_FIELDS = `
+  id jobId contractorId sourceCommunicationId amount description status createdAt updatedAt contractor { ${CONTRACTOR_FIELDS} }
+`;
+export const JOB_IMAGE_FIELDS = `id jobId aiGenerationId storageKey kind label url createdAt`;
+export const AI_GENERATION_FIELDS = `
+  id jobId prompt provider status originalImageUrl generatedImageUrl createdAt
+`;
 
 /** Lists job-contractor assignments for a given job. */
-export function listJobContractors(params: { jobId?: string }) {
-  return request<{ data: JobContractorDto[] }>(buildUrl('/job-contractors', params));
+export async function listJobContractors(params: { jobId: string }): Promise<{ data: JobContractorDto[] }> {
+  const data = await gqlRequest<{ jobContractors: JobContractorDto[] }>(
+    `query JobContractors($jobId: ID!) { jobContractors(jobId: $jobId) { ${JOB_CONTRACTOR_FIELDS} } }`,
+    params
+  );
+  return { data: data.jobContractors };
 }
 
 /** Lists quotes for a given job. */
-export function listQuotes(params: { jobId?: string }) {
-  return request<{ data: QuoteDto[] }>(buildUrl('/quotes', params));
+export async function listQuotes(params: { jobId: string }): Promise<{ data: QuoteDto[] }> {
+  const data = await gqlRequest<{ quotes: QuoteDto[] }>(
+    `query Quotes($jobId: ID!) { quotes(jobId: $jobId) { ${QUOTE_FIELDS} } }`,
+    params
+  );
+  return { data: data.quotes };
 }
 
 /** Lists uploaded images for a given job. */
-export function listImages(params: { jobId?: string }) {
-  return request<{ data: JobImageDto[] }>(buildUrl('/images', params));
+export async function listImages(params: { jobId: string }): Promise<{ data: JobImageDto[] }> {
+  const data = await gqlRequest<{ jobImages: JobImageDto[] }>(
+    `query JobImages($jobId: ID!) { jobImages(jobId: $jobId) { ${JOB_IMAGE_FIELDS} } }`,
+    params
+  );
+  return { data: data.jobImages };
 }
 
 /** Lists AI generations for a given job. */
-export function listAIGenerations(params: { jobId?: string }) {
-  return request<{ data: AIGenerationDto[] }>(buildUrl('/ai-generations', params));
+export async function listAIGenerations(params: { jobId: string }): Promise<{ data: AIGenerationDto[] }> {
+  const data = await gqlRequest<{ aiGenerations: AIGenerationDto[] }>(
+    `query AiGenerations($jobId: ID!) { aiGenerations(jobId: $jobId) { ${AI_GENERATION_FIELDS} } }`,
+    params
+  );
+  return { data: data.aiGenerations };
 }
 
 /** Lists contractors filtered by search, trade categories, and/or ZIP codes. */
-export function listContractors(params?: {
+export async function listContractors(params?: {
   search?: string;
   tradeCategories?: string[];
   zipCodes?: string[];
-}) {
-  return request<{ data: ContractorDto[] }>(buildUrl('/contractors', params));
+}): Promise<{ data: ContractorDto[] }> {
+  const data = await gqlRequest<{ contractors: ContractorDto[] }>(
+    `query JobContractorPicker($search: String, $tradeCategories: [TradeCategory!], $zipCodes: [String!]) {
+       contractors(search: $search, tradeCategories: $tradeCategories, zipCodes: $zipCodes) {
+         ${CONTRACTOR_FIELDS}
+       }
+     }`,
+    {
+      search: params?.search,
+      tradeCategories: params?.tradeCategories,
+      zipCodes: params?.zipCodes,
+    }
+  );
+  return { data: data.contractors };
 }
 
 /** Returns all integrations for the current user. */
-export function listIntegrations() {
-  return request<{ data: IntegrationDto[] }>('/integrations');
+export async function listIntegrations(): Promise<{ data: IntegrationDto[] }> {
+  const data = await gqlRequest<{ integrations: IntegrationDto[] }>(
+    `query { integrations { id type provider status email scopes createdAt updatedAt } }`
+  );
+  return { data: data.integrations };
 }

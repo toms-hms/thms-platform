@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { auth } from '@/lib/api';
+import { logout } from '@/lib/auth-api';
 import { clearTokens, getStoredUser } from '@/lib/auth';
 import { useState, useEffect } from 'react';
 
@@ -25,7 +25,7 @@ export default function Navbar() {
   async function handleLogout() {
     setLoggingOut(true);
     try {
-      await auth.logout();
+      await logout();
     } catch {}
     clearTokens();
     router.push('/login');

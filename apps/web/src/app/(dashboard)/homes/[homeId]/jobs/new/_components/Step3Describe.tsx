@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { JobIntent, TradeCategory } from '@thms/shared';
+import { JobIntent, TradeCategory } from '@/types/api';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
 interface Props {

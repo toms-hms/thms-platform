@@ -5,12 +5,9 @@ FROM base AS builder
 WORKDIR /app
 
 COPY package.json turbo.json tsconfig.base.json ./
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/shared/src ./packages/shared/src
-COPY packages/shared/tsconfig.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 
-RUN npm install --workspace=apps/web --workspace=packages/shared
+RUN npm install --workspace=apps/web
 
 COPY apps/web/ ./apps/web/
 

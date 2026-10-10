@@ -1,7 +1,7 @@
 'use client';
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TradeCategory, type UserContractorDto } from '@thms/shared';
+import { TradeCategory, type UserContractorDto } from '@/types/api';
 import { createUserContractor, deleteUserContractor } from './mutations';
 import { listUserContractors } from './queries';
 import EmptyState from '@/components/ui/EmptyState';

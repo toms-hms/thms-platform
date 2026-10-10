@@ -158,4 +158,4 @@ async function handleUpdate(e: FormEvent) {
 - Reset `error` to `''` at the start of each submit attempt.
 - Empty optional string fields should be sent as `undefined`, not `''` — use `field || undefined`.
 - Use the `.input` class for all inputs; `.btn-primary`/`.btn-danger` for buttons.
-- Enum values come from `@thms/shared` — never hardcode string literals for category/status values.
+- Enum values come from `@/types/api` — never hardcode string literals for category/status values.

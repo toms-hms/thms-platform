@@ -1,12 +1,19 @@
-import { request } from '@/lib/api';
-import type { CommunicationDto } from '@thms/shared';
-
-interface UpdateCommunicationInput {
-  needsReview?: boolean;
-  parsedSummary?: string;
-}
+import { gqlRequest } from '@/lib/graphql';
+import type { CommunicationDto, UpdateCommunicationInput } from '@/types/api';
+import { COMMUNICATION_FIELDS } from './queries';
 
 /** Updates review status or parsed summary on a communication. */
-export function updateCommunication(communicationId: string, data: UpdateCommunicationInput) {
-  return request<{ data: CommunicationDto }>(`/communications/${communicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateCommunication(
+  communicationId: string,
+  input: UpdateCommunicationInput
+): Promise<{ data: CommunicationDto }> {
+  const data = await gqlRequest<{ updateCommunication: { communication: CommunicationDto } }>(
+    `mutation UpdateCommunication($communicationId: ID!, $needsReview: Boolean, $parsedSummary: String) {
+       updateCommunication(
+         communicationId: $communicationId, needsReview: $needsReview, parsedSummary: $parsedSummary
+       ) { communication { ${COMMUNICATION_FIELDS} } }
+     }`,
+    { communicationId, ...input }
+  );
+  return { data: data.updateCommunication.communication };
 }

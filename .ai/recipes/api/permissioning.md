@@ -1,175 +1,86 @@
 ---
 name: api-permissioning
-description: Guide for implementing permissions on a new resource — hasPermission, where.filterUser, permit middleware, and cache invalidation.
+description: Guide for access control — the Permission names and role map in core/services/permission_service.py (PermissionService), @authorize / @owner_required on resolvers, visible_to / owned_by for collections, and the membership cache.
 ---
 
-# Permissioning Pattern
+# Permissioning
 
-Every resource follows two separate access paths:
+The **home** is the access boundary. A user reaches home-scoped data through
+their `UserHome` membership, whose role grants a set of named permissions.
+Access is declared on the resolver. Managers and querysets make no decisions.
 
-- Single-object authorization uses `permit(...)` → `PermissionService.check(...)` → `manager.hasPermission(...)`.
-- Collection visibility uses `PermissionService.list(...)` with `where.filterUser(userId)`.
+| Piece | Lives in | Does |
+| --- | --- | --- |
+| `Permission` enum | `core/services/permission_service.py` | The named capabilities, e.g. `jobs.view` or `quotes.edit` |
+| `PermissionService.role_permissions(role)` | `core/services/permission_service.py` | OWNER: all. MEMBER: all except `HOME_DELETE` |
+| `PermissionService.can(user, permission, home_id)` | `core/services/permission_service.py` | **The only decision function.** ADMIN gets True here, explicitly |
+| `@authorize(...)` | `core/graphql.py` | Gates a resolver on one row's home |
+| `@owner_required(...)` | `core/graphql.py` | Gates a resolver on a user-owned row |
+| `visible_to(user, permission)` | `HomeScopedQuerySet` | Scopes a collection to homes granting the permission |
+| `owned_by(user)` | `UserOwnedQuerySet` | Scopes a collection to the user's own rows |
 
-Do not blur these together. A permission check must be an explicit boolean check for one resource. A list query applies a SQL visibility predicate for the collection.
+## Gating a resolver on one row
 
-## Required manager pieces
-
-Names are fixed by the framework — do not rename them.
-
-### `hasPermission(userId, resourceId): Promise<boolean>`
-- Dedicated authorization check for one resource ID.
-- Pure boolean data check — no role branching.
-- Do not implement by calling `filterUser`, fetching a user-visible list, or scanning list results.
-- Query the exact row needed for the check, or delegate to the owning parent resource.
-- Only `true` results are cached by `PermissionService.check`; false always hits DB to avoid stale denials.
-- Nested resources delegate up the ownership chain.
-
-### `where.filterUser(userId): SQL | undefined`
-- SQL visibility predicate for collection routes.
-- Lives in `models/ModelNameManager.where.ts`.
-- Encodes which rows may be returned to this user in lists.
-- May use joins, subqueries, ownership columns, or membership tables.
-- Must not be used for write/update/delete authorization.
-- Must not replace `hasPermission` for single-object routes.
-
-### `PermissionService.list(...)`
-- Applies `where.filterUser(userId)` to list queries and warms the cache for returned rows.
-- Must not loop over rows and call `hasPermission` per item.
-- Admin/global list behavior should be explicit in the route or manager query; do not hide admin semantics inside `filterUser`.
-
-## Ownership chain
-
-```
-ContractorManager   → always true (global resource)
-HomeManager         → UserHome membership check
-JobManager          → delegates to HomeManager via job.homeId
-JobContractorManager → delegates to JobManager
-QuoteManager        → delegates to JobManager
-CommunicationManager → delegates to JobManager
+```python
+@authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
+def mutate(self, info, quote_id: str, **data):
+    """Applies the update to the quote."""
+    return UpdateQuote(quote=QuoteService().update(quote_id=quote_id, **data))
 ```
 
-## Implementing on a new manager
+- `resource` is the model whose row the argument names. `arg` is the argument's snake_case name.
+  The decorator resolves the row's home through `home_id_path` and calls `can()`.
+- **Creating a child checks the parent:** `createQuote(jobId)` uses `resource=Job, arg="job_id"`,
+  and `createJob(homeId)` uses `resource=Home, arg="home_id"`.
+- A missing row is `FORBIDDEN`, the same as a row the caller cannot see.
+- `@authorize` implies `@login_required`. Do not stack them.
+- **Choosing the permission:** reads use `*_VIEW` and writes use `*_EDIT`, for the area the data
+  belongs to. Images, AI generations and assignments belong to jobs. Sending or drafting email
+  belongs to communications. Deleting a home is `HOME_DELETE`. Adding or removing members is
+  `HOME_MANAGE_MEMBERS`.
 
-```typescript
-// New resource owned by a Home
-// DocumentManager.where.ts
-import { and, eq, exists, type SQL } from 'drizzle-orm';
-import { db } from '@/db';
-import { userHomes } from '@/home/models/UserHome';
-import { documents } from './Document';
+## Collections
 
-/** Matches documents readable by the given user through home membership. */
-export function filterUser(userId: string): SQL {
-  return exists(
-    db.select({ id: userHomes.id })
-      .from(userHomes)
-      .where(and(
-        eq(userHomes.userId, userId),
-        eq(userHomes.homeId, documents.homeId),
-      )),
-  );
-}
-
-// New resource owned by a Home
-class DocumentManagerClass extends BaseManager<typeof documents> {
-  readonly table: typeof documents = documents;
-
-  /** Delegates permission check up to the owning home. */
-  async hasPermission(userId: string, documentId: string): Promise<boolean> {
-    const doc = await this.findById(documentId);
-    if (!doc) return false;
-    return HomeManager.hasPermission(userId, doc.homeId);
-  }
-
-  /** Returns documents for a home using the caller-provided visibility predicate. */
-  async listForHome(homeId: string, visibility: SQL) {
-    return db.select().from(documents).where(and(
-      eq(documents.homeId, homeId),
-      visibility,
-    ));
-  }
-}
+```python
+@authorize(Permission.JOBS_VIEW, resource=Home, arg="home_id", optional=True)
+def resolve_jobs(self, info, home_id=None, status=None):
+    """Returns the jobs the caller can see, narrowed by home and status."""
+    return (
+        Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
+        .filter_home_ids([home_id] if home_id else None)
+        .filter_statuses([status] if status else None)
+    )
 ```
 
-## Wiring routes
+- A list without a required parent argument **starts from `visible_to` or `owned_by`**,
+  never from `Model.objects.all()`.
+- `optional=True` skips the check when the argument is omitted. Use it only where the
+  resolver scopes with `visible_to`.
+- A list under a required parent (`quotes(jobId)`) is gated by `@authorize` on that
+  parent, then calls the manager composition.
 
-### Collection routes — `PermissionService.list`
+## User-owned rows
 
-```typescript
-import * as documentWhere from './models/DocumentManager.where';
-
-router.get('/', async (req, res, next) => {
-  try {
-    const { userId } = getUser(req);
-    const items = await PermissionService.list(
-      DocumentManager,
-      userId,
-      documentWhere.filterUser(userId),
-      (visibility) => DocumentManager.listForHome(homeId, visibility),
-    );
-    res.json({ data: items });
-  } catch (err) { next(err); }
-});
+```python
+@owner_required(resource=UserContractor, arg="user_contractor_id")
 ```
 
-`PermissionService.list` applies `where.filterUser(userId)` through the list query and warms the cache for returned rows. It is collection visibility filtering, not single-object authorization.
+The list resolver returns `Model.objects.owned_by(current_user(info))`.
 
-### Single-object routes — `permit` middleware
+## Platform-level
 
-```typescript
-import { permit } from '../permissions/permit';
+The contractor directory is not home-scoped. Reads are `@login_required` and writes are `@admin_required`.
 
-router.get('/:documentId',
-  permit(DocumentManager, (req) => req.params.documentId),
-  async (req, res, next) => {
-    try {
-      const doc = await DocumentManager.get({ id: req.params.documentId });
-      res.json({ data: doc });
-    } catch (err) { next(err); }
-  },
-);
+## Adding a permission
 
-// Same for PATCH and DELETE
-router.patch('/:documentId',
-  permit(DocumentManager, (req) => req.params.documentId),
-  validate(UpdateDocumentSchema),
-  handler,
-);
-```
+Add a member to `Permission`, then decide in `role_permissions` which roles hold it.
+Name it `<area>.<verb>` and keep the set small. A permission should correspond to
+something an owner would recognise as a page or an action.
 
-`permit(...)` delegates to `manager.hasPermission(...)`. This is the authorization gate for `GET /:id`, `PATCH /:id`, `DELETE /:id`, and nested single-object actions.
+## The cache
 
-### Admin-only actions
-
-```typescript
-import { requireRole } from '../middleware/auth.middleware';
-
-router.post('/', requireRole('ADMIN'), validate(CreateSchema), handler);
-```
-
-## Cache invalidation on membership changes
-
-Call from the service layer when ownership or membership changes:
-
-```typescript
-// User gains access to a resource
-await PermissionService.set(userId, resourceId);
-
-// User loses access or resource is deleted
-await PermissionService.invalidate(userId, resourceId);
-```
-
-Common patterns:
-```typescript
-// createHome — creator gets access
-await PermissionService.set(userId, home.id);
-
-// addUserToHome — new member gets access
-await PermissionService.set(targetUserId, homeId);
-
-// removeUserFromHome — member loses access
-await PermissionService.invalidate(targetUserId, homeId);
-
-// deleteHome — all members lose access (call for each member)
-await PermissionService.invalidate(userId, homeId);
-```
+`PermissionService.membership_role(user_id=..., home_id=...)` caches a member's **role** per (user, home)
+for `PERMISSION_CACHE_TIMEOUT` seconds. Non-members are never cached. Any service
+that creates, changes or removes a membership calls
+`PermissionService().invalidate(user_id=..., home_id=...)` for each affected member. If the cache
+is unavailable, checks fall through to the database. A cache miss never means "denied".

@@ -1,5 +1,5 @@
 .PHONY: run run-d stop build build-run restart logs \
-        migrate seed reset-db studio \
+        migrate migrate-deploy seed reset-db shell-db graphql-schema \
         check test test-api test-web \
         shell-api shell-web \
         clean
@@ -37,13 +37,13 @@ logs-web:
 # ── Database ───────────────────────────────────────────────────────────────────
 
 migrate:
-	docker compose exec api npx drizzle-kit generate && docker compose exec api npx drizzle-kit migrate
+	docker compose exec api python manage.py makemigrations && docker compose exec api python manage.py migrate
 
 migrate-deploy:
-	docker compose exec api npx drizzle-kit migrate
+	docker compose exec api python manage.py migrate
 
 seed:
-	docker compose exec api npx tsx src/db/seed.ts
+	docker compose exec api python manage.py seed
 
 reset-db:
 	docker compose stop postgres
@@ -55,8 +55,11 @@ reset-db:
 	$(MAKE) migrate
 	$(MAKE) seed
 
-studio:
-	docker compose exec api npx drizzle-kit studio
+shell-db:
+	docker compose exec api python manage.py dbshell
+
+graphql-schema:
+	docker compose exec api python manage.py graphql_schema --out schema.graphql
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -71,8 +74,8 @@ check:
 test: test-web test-api
 
 test-api:
-	@echo "Running backend integration tests inside container..."
-	docker compose exec api sh -c 'NODE_OPTIONS="--max-old-space-size=3072" npx jest --runInBand --forceExit'
+	@echo "Running backend tests inside container..."
+	docker compose exec -e DJANGO_ENV=test api python manage.py test
 
 test-web:
 	@echo "Running frontend component tests..."

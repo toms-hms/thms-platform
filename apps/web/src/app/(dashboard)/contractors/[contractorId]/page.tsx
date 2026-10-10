@@ -2,7 +2,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { TradeCategory } from '@thms/shared';
+import { TradeCategory } from '@/types/api';
 import { getContractor, getContractorJobs } from '../queries';
 import { updateContractor } from '../mutations';
 import { getStoredUser } from '@/lib/auth';

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { type AiSessionSummary, JobIntent, TradeCategory } from '@thms/shared';
-import { request } from '@/lib/api';
+import { type AiSessionSummary, JobIntent, TradeCategory } from '@/types/api';
+import { answerDiagnose, startDiagnose } from '../mutations';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
 const TITLES: Record<JobIntent, string> = {
@@ -58,7 +58,7 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await request<{ data: TurnResult }>(`/jobs/${jobId}/diagnose/start`, { method: 'POST' });
+      const res = await startDiagnose(jobId);
       applyTurnResult(res.data);
     } catch (err: any) {
       setError(err.message || 'Failed to start. Please try again.');
@@ -87,10 +87,7 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await request<{ data: TurnResult }>(`/jobs/${jobId}/diagnose`, {
-        method: 'POST',
-        body: JSON.stringify({ message: answer }),
-      });
+      const res = await answerDiagnose(jobId, answer);
       applyTurnResult(res.data);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');

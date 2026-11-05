@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 from quotes.models import Quote, QuoteStatus
 
@@ -38,9 +39,14 @@ class QuoteService:
         status: str | Unset = UNSET,
     ) -> Quote:
         """Applies the provided fields. UNSET leaves a field alone; None clears the description."""
-        quote = Quote.objects.get_or_404(pk=quote_id)
+        quote = Quote.objects.find(pk=quote_id)
+        if quote is None:
+            raise NotFoundError("Quote")
         return Quote.objects.apply_updates(quote, amount=amount, description=description, status=status)
 
     def delete(self, *, quote_id: str) -> None:
         """Deletes the quote."""
-        Quote.objects.filter_ids([quote_id]).delete()
+        quote = Quote.objects.find(pk=quote_id)
+        if quote is None:
+            raise NotFoundError("Quote")
+        quote.delete()

@@ -94,9 +94,7 @@ class PermissionService:
         cached = self._cache_get(self._key(user_id, home_id))
         if cached is not None:
             return cached
-        role = (
-            UserHome.objects.filter(user_id=user_id, home_id=home_id).values_list("role", flat=True).first()
-        )
+        role = UserHome.objects.role_for(user_id=user_id, home_id=home_id)
         if role is not None:
             self._cache_set(self._key(user_id, home_id), role)
         return role
@@ -119,9 +117,7 @@ class PermissionService:
         """Returns a subquery of the ids of homes where the user holds the permission."""
         from homes.models import UserHome
 
-        return UserHome.objects.filter(user_id=user.pk, role__in=self.roles_with(permission)).values(
-            "home_id"
-        )
+        return UserHome.objects.home_ids_with_roles(user_id=user.pk, roles=self.roles_with(permission))
 
     def invalidate(self, *, user_id: str, home_id: str) -> None:
         """Drops the user's cached role in the home so the next check re-reads the database."""

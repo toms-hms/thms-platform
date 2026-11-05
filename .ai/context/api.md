@@ -53,8 +53,8 @@ Django owns it: default `<app>_<model>` table names, field-named columns, genera
 
 ## Non-obvious patterns
 
-- Passwords use Django's hashers through `User.set_password` / `check_password`. Refresh tokens are stored as SHA-256 digests (`core.utils.hashing_utils`), and only the latest one is valid.
-- A malformed id (not a UUID) is never an internal error. `get_or_404` raises NOT_FOUND, `home_id_for` / `owner_id_for` return None (so `@authorize` answers FORBIDDEN), and anything else maps to BAD_REQUEST.
+- Passwords use Django's hashers: `make_password` to store, `user.check_password` to verify. Emails are normalised with `normalize_email` before every store and lookup. Refresh tokens are stored as SHA-256 digests (`core.utils.hashing_utils`), and only the latest one is valid.
+- A malformed id (not a UUID) is never an internal error. `find` returns None (the caller raises NOT_FOUND), `home_id_for` / `owner_id_for` return None (so `@authorize` answers FORBIDDEN), and anything else maps to BAD_REQUEST.
 - Auth is stateless JWT, not Django sessions. `core.middleware.JWTAuthenticationMiddleware` sets `request.user`, and it runs **before** `AuditlogMiddleware` so audit entries have an actor.
 - `convert_choices_to_enum = False` on every `DjangoObjectType`: outputs stay plain strings. Inputs use the explicit enums in `core/enums.py`.
 - Foreign keys are exposed only as nested objects (`contractor { id }`). There are no flat `*_id` fields on model types; non-model payloads (`EmailDraftType.contractorId`, job history rows) carry plain ids.

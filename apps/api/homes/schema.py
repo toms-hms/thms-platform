@@ -3,6 +3,7 @@
 import graphene
 
 from core.enums import HomeRoleEnum
+from core.errors import NotFoundError
 from core.graphql import authorize, current_user, login_required
 from core.services.permission_service import Permission
 from homes.models import Home, HomeRole, UserHome
@@ -122,7 +123,10 @@ class HomesQuery(graphene.ObjectType):
     @authorize(Permission.HOME_VIEW, resource=Home, arg="home_id")
     def resolve_home(self, info, home_id: str):
         """Returns one home."""
-        return Home.objects.get_or_404(pk=home_id)
+        home = Home.objects.find(pk=home_id)
+        if home is None:
+            raise NotFoundError("Home")
+        return home
 
     @login_required
     def resolve_home_members(self, info, home_ids: list[str]):

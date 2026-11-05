@@ -27,8 +27,8 @@ class ImageGenerationService:
         metadata: dict[str, Any] | None = None,
     ) -> AIGeneration:
         """Returns the completed generation. On any failure the generation is marked FAILED and the error re-raised."""
-        source_image = JobImage.objects.filter_ids([source_image_id]).first()
-        if not source_image:
+        source_image = JobImage.objects.find(pk=source_image_id)
+        if source_image is None:
             raise NotFoundError("Source image")
 
         generation = AIGeneration.objects.create(
@@ -63,7 +63,9 @@ class ImageGenerationService:
 
     def retry(self, *, generation_id: str, user_id: str) -> AIGeneration:
         """Re-runs a FAILED generation against the job's source image."""
-        generation = AIGeneration.objects.get_or_404(pk=generation_id)
+        generation = AIGeneration.objects.find(pk=generation_id)
+        if generation is None:
+            raise NotFoundError("AIGeneration")
         if generation.status != AIGenerationStatus.FAILED:
             raise BadRequestError("Can only retry failed generations")
         source_image = JobImage.objects.find_source_image(generation.job_id)

@@ -65,7 +65,7 @@ class Logout(graphene.Mutation):
     @login_required
     def mutate(self, info):
         """Clears the stored refresh-token hash for the authenticated user."""
-        AuthService().logout(user_id=current_user(info).pk)
+        AuthService().logout(user=current_user(info))
         return Logout(success=True)
 
 

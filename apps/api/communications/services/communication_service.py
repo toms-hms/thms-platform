@@ -9,6 +9,7 @@ from datetime import datetime
 from django.utils import timezone
 
 from communications.models import Communication, CommunicationChannel, CommunicationDirection
+from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 
 
@@ -53,7 +54,9 @@ class CommunicationService:
         parsed_summary: str | None | Unset = UNSET,
     ) -> Communication:
         """Updates the review flag or parsed summary. UNSET leaves a field alone; None clears it."""
-        communication = Communication.objects.get_or_404(pk=communication_id)
+        communication = Communication.objects.find(pk=communication_id)
+        if communication is None:
+            raise NotFoundError("Communication")
         return Communication.objects.apply_updates(
             communication, needs_review=needs_review, parsed_summary=parsed_summary
         )

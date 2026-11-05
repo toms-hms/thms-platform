@@ -5,7 +5,6 @@ import uuid
 from django.test import TestCase
 
 from accounts.factories import AdminFactory, UserFactory
-from core.errors import NotFoundError
 from core.services.permission_service import Permission
 from homes.factories import HomeFactory
 from homes.models import Home, HomeRole, UserHome
@@ -26,15 +25,6 @@ class HomeIdForTests(TestCase):
     def test_none_for_a_malformed_id(self):
         """An id that is not a UUID resolves to no home rather than raising."""
         self.assertIsNone(Home.objects.home_id_for("not-a-uuid"))
-
-
-class GetOr404Tests(TestCase):
-    """BaseQuerySet.get_or_404()"""
-
-    def test_a_malformed_id_is_not_found(self):
-        """An id that is not a UUID raises NotFoundError rather than a validation error."""
-        with self.assertRaises(NotFoundError):
-            Home.objects.get_or_404(pk="not-a-uuid")
 
 
 class FindTests(TestCase):

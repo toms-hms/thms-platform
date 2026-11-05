@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 
 from contractors.models import Contractor, ContractorZipCode
-from core.errors import ConflictError
+from core.errors import ConflictError, NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 
 
@@ -55,7 +55,9 @@ class ContractorService:
         notes: str | None | Unset = UNSET,
     ) -> Contractor:
         """Applies the provided fields. zip_codes replaces the whole service area; None clears it."""
-        contractor = Contractor.objects.get_or_404(pk=contractor_id)
+        contractor = Contractor.objects.find(pk=contractor_id)
+        if contractor is None:
+            raise NotFoundError("Contractor")
         Contractor.objects.apply_updates(
             contractor,
             name=name,
@@ -71,20 +73,21 @@ class ContractorService:
 
     def promote(self, *, contractor_id: str) -> Contractor:
         """Moves a private contractor into the global directory."""
-        return Contractor.objects.apply_updates(
-            Contractor.objects.get_or_404(pk=contractor_id), is_global=True
-        )
+        contractor = Contractor.objects.find(pk=contractor_id)
+        if contractor is None:
+            raise NotFoundError("Contractor")
+        return Contractor.objects.apply_updates(contractor, is_global=True)
 
     def delete(self, *, contractor_id: str) -> None:
         """Deletes the contractor. Raises ConflictError while quotes reference it."""
         try:
-            Contractor.objects.get_or_404(pk=contractor_id).delete()
+            contractor = Contractor.objects.find(pk=contractor_id)
+            if contractor is None:
+                raise NotFoundError("Contractor")
+            contractor.delete()
         except ProtectedError as err:
             raise ConflictError("Contractor has quotes and cannot be deleted") from err
 
     def _replace_zip_codes(self, *, contractor: Contractor, zip_codes: list[str]) -> None:
         """Replaces the contractor's service area with exactly these ZIP codes."""
-        ContractorZipCode.objects.filter_contractor_ids([contractor.pk]).delete()
-        ContractorZipCode.objects.bulk_create(
-            [ContractorZipCode(contractor=contractor, zip_code=zip_code) for zip_code in zip_codes]
-        )
+        ContractorZipCode.objects.replace_for_contractor(contractor=contractor, zip_codes=zip_codes)

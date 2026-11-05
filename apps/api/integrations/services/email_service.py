@@ -34,13 +34,10 @@ class EmailService:
 
         Raises NotFoundError unless the integration is the user's own Gmail connection.
         """
-        integration = (
-            Integration.objects.filter(user_id=user_id)
-            .filter_ids([integration_id])
-            .filter_providers([IntegrationProvider.GOOGLE])
-            .first()
+        integration = Integration.objects.find(
+            pk=integration_id, user_id=user_id, provider=IntegrationProvider.GOOGLE
         )
-        if not integration:
+        if integration is None:
             raise NotFoundError("Integration")
 
         sent = self._google.send_message(

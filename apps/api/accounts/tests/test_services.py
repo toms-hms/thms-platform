@@ -29,6 +29,21 @@ class RegisterTests(TestCase):
         self.assertNotIn("password123", user.password)
         self.assertTrue(user.check_password("password123"))
 
+    def test_stores_the_email_normalized(self):
+        """The address is trimmed and lower-cased before it is stored."""
+        result = AuthService().register(
+            email="  Pat@Example.COM ", password="password123", first_name="Pat", last_name="B"
+        )
+        self.assertEqual(result["user"].email, "pat@example.com")
+
+    def test_rejects_an_email_that_differs_only_in_case(self):
+        """`Taken@Example.com` is the same account as `taken@example.com`."""
+        UserFactory(email="taken@example.com")
+        with self.assertRaises(ConflictError):
+            AuthService().register(
+                email="Taken@Example.com", password="password123", first_name="A", last_name="B"
+            )
+
     def test_rejects_duplicate_email(self):
         """Registering an email that already exists is a conflict."""
         UserFactory(email="taken@example.com")
@@ -47,6 +62,12 @@ class LoginTests(TestCase):
         result = AuthService().login(email=user.email, password=TEST_PASSWORD)
         self.assertEqual(result["user"].pk, user.pk)
         self.assertTrue(result["tokens"]["access_token"])
+
+    def test_matches_the_email_regardless_of_case(self):
+        """Signing in with different capitalisation finds the same account."""
+        user = UserFactory(email="pat@example.com")
+        result = AuthService().login(email="Pat@Example.com", password=TEST_PASSWORD)
+        self.assertEqual(result["user"].pk, user.pk)
 
     def test_rejects_wrong_password(self):
         """A wrong password is rejected without revealing whether the account exists."""
@@ -79,7 +100,7 @@ class RefreshTokenTests(TestCase):
         """After logout the previously issued refresh token no longer works."""
         user = UserFactory()
         tokens = AuthService().login(email=user.email, password=TEST_PASSWORD)["tokens"]
-        AuthService().logout(user_id=user.pk)
+        AuthService().logout(user=user)
         with self.assertRaises(UnauthorizedError):
             AuthService().refresh(refresh_token=tokens["refresh_token"])
 

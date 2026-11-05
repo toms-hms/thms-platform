@@ -1,6 +1,7 @@
 """Job images: the three-step upload (presign, PUT, confirm) and deletion."""
 
 from ai.models import JobImage, JobImageKind
+from core.errors import NotFoundError
 from core.services.storage_service import StorageService
 
 
@@ -34,6 +35,8 @@ class JobImageService:
 
     def delete(self, *, image_id: str) -> None:
         """Deletes the image row and its stored object. The caller has already checked access."""
-        image = JobImage.objects.get_or_404(pk=image_id)
+        image = JobImage.objects.find(pk=image_id)
+        if image is None:
+            raise NotFoundError("JobImage")
         self._storage.delete(key=image.storage_key)
         image.delete()

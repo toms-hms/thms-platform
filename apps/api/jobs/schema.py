@@ -3,6 +3,7 @@
 import graphene
 
 from core.enums import JobContractorStatusEnum, JobIntentEnum, JobStatusEnum, TradeCategoryEnum
+from core.errors import NotFoundError
 from core.graphql import authorize, current_user, login_required
 from core.services.permission_service import Permission
 from homes.models import Home
@@ -156,7 +157,10 @@ class JobsQuery(graphene.ObjectType):
     @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
     def resolve_job(self, info, job_id: str):
         """Returns one job."""
-        return Job.objects.get_or_404(pk=job_id)
+        job = Job.objects.find(pk=job_id)
+        if job is None:
+            raise NotFoundError("Job")
+        return job
 
     @login_required
     def resolve_job_contractors(self, info, job_ids: list[str]):

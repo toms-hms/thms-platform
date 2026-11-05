@@ -5,6 +5,7 @@ use. The OAuth `state` parameter carries the id of the user who started the
 flow (see THM-28 for signing it).
 """
 
+from core.errors import NotFoundError
 from core.utils.crypto_utils import encrypt
 from integrations.clients.google_client import GoogleClient, GoogleConnection
 from integrations.clients.microsoft_client import MicrosoftClient, MicrosoftConnection
@@ -74,4 +75,7 @@ class IntegrationService:
 
     def disconnect(self, *, integration_id: str) -> None:
         """Removes a connected account. The caller has already checked ownership."""
-        Integration.objects.get_or_404(pk=integration_id).delete()
+        integration = Integration.objects.find(pk=integration_id)
+        if integration is None:
+            raise NotFoundError("Integration")
+        integration.delete()

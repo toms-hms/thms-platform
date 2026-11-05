@@ -4,6 +4,7 @@ from typing import Any
 
 from ai.clients.openai_client import OpenAIClient
 from ai.utils.prompt_utils import DIAGNOSE_MODEL, job_context, read_tool_calls, system_prompt_for, tools_for
+from core.errors import NotFoundError
 from jobs.models import Job
 
 
@@ -28,7 +29,9 @@ class DiagnoseService:
 
     def start(self, *, job_id: str) -> dict[str, Any]:
         """Opens a diagnostic session and returns the assistant's first question."""
-        job = Job.objects.get_or_404(pk=job_id)
+        job = Job.objects.find(pk=job_id)
+        if job is None:
+            raise NotFoundError("Job")
         message = self._ask(job=job, history=[{"role": "user", "content": "Start the diagnostic."}])
         turn = read_tool_calls(message=message, existing_summary=None, intent=job.intent)
         messages = [{"role": "assistant", "content": turn["question"] or ""}]
@@ -37,7 +40,9 @@ class DiagnoseService:
 
     def answer(self, *, job_id: str, message: str) -> dict[str, Any]:
         """Runs one turn of the diagnostic with the user's answer and persists the updated transcript."""
-        job = Job.objects.get_or_404(pk=job_id)
+        job = Job.objects.find(pk=job_id)
+        if job is None:
+            raise NotFoundError("Job")
         session = job.ai_session or {"messages": [], "summary": None}
         history = [*session.get("messages", []), {"role": "user", "content": message}]
         reply = self._ask(job=job, history=[{"role": m["role"], "content": m["content"]} for m in history])

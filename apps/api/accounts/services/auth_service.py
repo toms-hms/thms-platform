@@ -7,8 +7,11 @@ refresh token is accepted and logging out revokes it.
 
 from typing import Any
 
+from django.contrib.auth.hashers import make_password
+
 from accounts.models import User
 from core.errors import ConflictError, UnauthorizedError
+from core.utils.email_utils import normalize_email
 from core.utils.hashing_utils import hash_token, verify_token
 from core.utils.jwt_utils import sign_access_token, sign_refresh_token, verify_refresh_token
 
@@ -25,14 +28,17 @@ class AuthService:
 
     def register(self, *, email: str, password: str, first_name: str, last_name: str) -> dict[str, Any]:
         """Creates a user and returns them with a fresh token pair. Rejects an email already in use."""
-        if User.objects.filter(email=email).exists():
+        email = normalize_email(email)
+        if User.objects.find(email=email):
             raise ConflictError("Email already registered")
-        user = User.objects.create_user(email, password, first_name=first_name, last_name=last_name)
+        user = User.objects.create(
+            email=email, password=make_password(password), first_name=first_name, last_name=last_name
+        )
         return {"user": user, "tokens": self._issue_tokens(user=user)}
 
     def login(self, *, email: str, password: str) -> dict[str, Any]:
         """Returns the user and a fresh token pair, or raises UnauthorizedError for bad credentials."""
-        user = User.objects.find(email=email)
+        user = User.objects.find(email=normalize_email(email))
         if not user or not user.check_password(password):
             raise UnauthorizedError("Invalid credentials")
         return {"user": user, "tokens": self._issue_tokens(user=user)}
@@ -45,6 +51,6 @@ class AuthService:
             raise UnauthorizedError("Invalid refresh token")
         return {"user": user, "tokens": self._issue_tokens(user=user)}
 
-    def logout(self, *, user_id: str) -> None:
-        """Revokes the user's refresh token."""
-        User.objects.apply_updates(User.objects.get_or_404(pk=user_id), refresh_token_hash=None)
+    def logout(self, *, user: User) -> None:
+        """Revokes the user's refresh token. Takes the authenticated user, which the request has already loaded."""
+        User.objects.apply_updates(user, refresh_token_hash=None)

@@ -7,6 +7,7 @@ from django.test import TestCase
 
 from core.errors import UnauthorizedError
 from core.utils.crypto_utils import decrypt, encrypt
+from core.utils.email_utils import normalize_email
 from core.utils.hashing_utils import hash_token, verify_token
 from core.utils.jwt_utils import parse_duration, sign_access_token, sign_refresh_token, verify_access_token
 
@@ -76,3 +77,11 @@ class JwtTests(TestCase):
         self.assertEqual(parse_duration("15m"), timedelta(minutes=15))
         self.assertEqual(parse_duration("7d"), timedelta(days=7))
         self.assertEqual(parse_duration("3600"), timedelta(seconds=3600))
+
+
+class NormalizeEmailTests(TestCase):
+    """email_utils.normalize_email()"""
+
+    def test_trims_and_lower_cases_the_whole_address(self):
+        """Surrounding whitespace goes and both halves of the address are lower-cased."""
+        self.assertEqual(normalize_email("  Pat.Smith@Example.COM "), "pat.smith@example.com")

@@ -10,6 +10,7 @@ from contractors.models import Contractor
 from contractors.services.contractor_service import ContractorService
 from contractors.types import ContractorJobHistoryType, ContractorType
 from core.enums import TradeCategoryEnum
+from core.errors import NotFoundError
 from core.graphql import admin_required, login_required
 
 
@@ -110,7 +111,10 @@ class ContractorsQuery(graphene.ObjectType):
     @login_required
     def resolve_contractor(self, info, contractor_id: str):
         """Returns one contractor by id."""
-        return Contractor.objects.get_or_404(pk=contractor_id)
+        contractor = Contractor.objects.find(pk=contractor_id)
+        if contractor is None:
+            raise NotFoundError("Contractor")
+        return contractor
 
     @login_required
     def resolve_contractor_job_history(self, info, contractor_ids: list[str]):

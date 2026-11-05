@@ -6,6 +6,7 @@ from ai.clients.openai_client import OpenAIClient
 from ai.models import AIGeneration, AIGenerationStatus
 from ai.utils.prompt_utils import EMAIL_MODEL, EMAIL_SYSTEM_PROMPT, outreach_email_prompt
 from contractors.models import Contractor
+from core.errors import NotFoundError
 from jobs.models import Job
 
 
@@ -26,7 +27,9 @@ class EmailDraftService:
         custom_instructions: str | None = None,
     ) -> list[dict[str, str]]:
         """Returns one draft per contractor. A contractor whose reply is empty is skipped."""
-        job = Job.objects.select_related("home").get_or_404(pk=job_id)
+        job = Job.objects.find(pk=job_id)
+        if job is None:
+            raise NotFoundError("Job")
         drafts: list[dict[str, str]] = []
         for contractor in Contractor.objects.filter_ids(contractor_ids):
             user_prompt = outreach_email_prompt(

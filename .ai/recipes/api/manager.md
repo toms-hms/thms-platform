@@ -74,18 +74,24 @@ def filter_contractors(
 ## Writes
 
 - A write touching more than one table is orchestration. It belongs in a service, under `@transaction.atomic` there.
-- Use `get_or_404(pk=...)` where the row must exist. It raises `NotFoundError`.
+- A write on one table that takes more than one queryset call is a manager method, e.g. `ContractorZipCode.objects.replace_for_contractor(...)`, `UserHome.objects.remove(...)`.
 
 ## Single-row lookups
 
 Don't wrap a single lookup in a per-model method (`find_by_id`, `find_by_email`). Use the
-generic methods on `BaseQuerySet`:
+generic `Model.objects.find(**filters)`, which returns the row or `None`. It wraps `.get()`,
+so a lookup that matches several rows still raises, and a malformed id returns `None`.
 
-| A missing row means | Use |
-| --- | --- |
-| NOT_FOUND | `Model.objects.get_or_404(**filters)` |
-| a normal branch (login, refresh) | `Model.objects.find(**filters)`, which returns the row or `None` |
-| a yes/no question | `Model.objects.filter(**filters).exists()` |
+The repo layer never decides that a missing row is an error. The caller does:
+
+```python
+quote = Quote.objects.find(pk=quote_id)
+if quote is None:
+    raise NotFoundError("Quote")
+```
+
+`NotFoundError` is a domain error; `core.graphql.to_graphql_error` turns it into
+`NOT_FOUND` on the wire, so no resolver catches it.
 
 A `find_<thing>` method is only for a lookup that encodes a domain rule, e.g.
 `JobImage.objects.find_source_image(job_id)`.

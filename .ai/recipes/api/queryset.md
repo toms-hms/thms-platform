@@ -23,9 +23,9 @@ other models **inside the method** (`from contractors.models import ContractorZi
 | --- | --- | --- |
 | `HomeScopedQuerySet` | Access comes from membership of a home (homes, jobs, quotes, …) | `filter_home_ids`, `home_id_for`, `visible_to(user, permission)` |
 | `UserOwnedQuerySet` | Each row belongs to one user (rolodex, integrations) | `owner_id_for`, `owned_by(user)` |
-| `BaseQuerySet` | Readable by every authenticated user (the contractor directory) | `filter_ids`, `find`, `get_or_404` |
+| `BaseQuerySet` | Readable by every authenticated user (the contractor directory) | `filter_ids`, `find` |
 
-All three include `filter_ids`, `find` (the row or `None`) and `get_or_404` (the row or NOT_FOUND).
+All three include `filter_ids` and `find` (the row or `None`). There is no `get_or_404`: whether a missing row is an error is the caller's decision (see `manager.md`).
 
 A `HomeScopedQuerySet` subclass **must** set `home_id_path`, the lookup from the
 row to its home's id: `"id"` for Home, `"home_id"` for a direct FK, and

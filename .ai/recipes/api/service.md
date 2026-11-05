@@ -38,7 +38,9 @@ class QuoteService:
         status: str | Unset = UNSET,
     ) -> Quote:
         """Applies the provided fields. UNSET leaves a field alone; None clears the description."""
-        quote = Quote.objects.get_or_404(pk=quote_id)
+        quote = Quote.objects.find(pk=quote_id)
+        if quote is None:
+            raise NotFoundError("Quote")
         return Quote.objects.apply_updates(quote, amount=amount, description=description, status=status)
 ```
 
@@ -89,14 +91,16 @@ class ImageGenerationService:
 
 - Other services, through constructor collaborators.
 - Clients, through constructor collaborators. A vendor SDK is never imported in a service (see `client.md`).
-- Managers and querysets of any app.
+- **One named manager call per lookup or write**, on any app's model: `find`, `create`, `upsert`, `apply_updates`, `filter_existing`, `replace_for_contractor`. A chain (`.filter(...).exists()`, `.filter_x(...).delete()`, `.values_list(...)`) is a manager method, never inline in a service.
+- `instance.delete()` on a row it has loaded.
 - Utils (see `utils.md`).
 
 ## What does not belong here
 
 - **Access checks.** The resolver's decorator (`@authorize`, `@owner_required`) has already decided. A service assumes the caller may act.
 - **Reads for GraphQL.** Queries and type fields read through managers and querysets directly. A service exists for writes and for reads that are part of business logic.
-- **Query construction.** A chain of filters belongs on the queryset or manager.
+- **Query construction.** A chain of queryset calls belongs in a named manager method. Resolvers may chain querysets for reads; services may not.
+- **Deciding a missing row is a 404 in the repo layer.** Load with `find`, and raise `NotFoundError("Quote")` here when the row must exist.
 - **Pure helpers** (prompt building, message encoding, payload shaping). Put them in `utils/`.
 
 ## Permission cache

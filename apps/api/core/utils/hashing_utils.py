@@ -1,7 +1,7 @@
 """Hashing for high-entropy secrets such as refresh tokens.
 
 Passwords do not go through here — they use Django's password hashers via
-`User.set_password` / `User.check_password`. A refresh token is a long random
+`make_password` / `User.check_password`. A refresh token is a long random
 signed value, so a fast digest with a constant-time compare is the right tool;
 a slow password hash would add cost without adding safety.
 """

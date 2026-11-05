@@ -2,6 +2,7 @@
 
 from django.utils import timezone
 
+from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 from jobs.models import CONTACTED_STATUSES, RESPONDED_STATUSES, JobContractor
 
@@ -17,7 +18,9 @@ class JobContractorService:
         self, *, job_contractor_id: str, status: str, notes: str | None | Unset = UNSET
     ) -> JobContractor:
         """Moves the assignment to the status, stamping first contact and first response the first time each happens."""
-        assignment = JobContractor.objects.get_or_404(pk=job_contractor_id)
+        assignment = JobContractor.objects.find(pk=job_contractor_id)
+        if assignment is None:
+            raise NotFoundError("JobContractor")
         now = timezone.now()
         stamps = {}
         if status in CONTACTED_STATUSES and not assignment.last_contacted_at:
@@ -28,4 +31,7 @@ class JobContractorService:
 
     def remove(self, *, job_contractor_id: str) -> None:
         """Removes the contractor from the job."""
-        JobContractor.objects.get_or_404(pk=job_contractor_id).delete()
+        job_contractor = JobContractor.objects.find(pk=job_contractor_id)
+        if job_contractor is None:
+            raise NotFoundError("JobContractor")
+        job_contractor.delete()

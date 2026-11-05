@@ -2,7 +2,7 @@
 
 from contractors.models import Contractor
 from contractors.services.contractor_service import ContractorService
-from core.errors import BadRequestError, ConflictError
+from core.errors import BadRequestError, ConflictError, NotFoundError
 from user_contractors.models import UserContractor
 
 
@@ -31,7 +31,8 @@ class UserContractorService:
         Raises BadRequestError when neither is given, ConflictError when it is already saved.
         """
         if contractor_id:
-            Contractor.objects.get_or_404(pk=contractor_id)
+            if Contractor.objects.find(pk=contractor_id) is None:
+                raise NotFoundError("Contractor")
         elif name:
             contractor_id = self._contractors.create(
                 name=name,
@@ -52,4 +53,7 @@ class UserContractorService:
 
     def remove(self, *, user_contractor_id: str) -> None:
         """Removes an entry from a rolodex. The caller has already checked ownership."""
-        UserContractor.objects.get_or_404(pk=user_contractor_id).delete()
+        user_contractor = UserContractor.objects.find(pk=user_contractor_id)
+        if user_contractor is None:
+            raise NotFoundError("UserContractor")
+        user_contractor.delete()

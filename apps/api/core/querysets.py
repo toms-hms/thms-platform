@@ -14,7 +14,6 @@ from typing import Any, ClassVar, Self
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from core.errors import NotFoundError
 from core.services.permission_service import Permission, PermissionService
 
 
@@ -33,13 +32,6 @@ class BaseQuerySet(models.QuerySet):
             return self.get(**kwargs)
         except (self.model.DoesNotExist, ValidationError):
             return None
-
-    def get_or_404(self, **kwargs: Any):
-        """Returns the single row matching the filters, raising NotFoundError when absent."""
-        try:
-            return self.get(**kwargs)
-        except (self.model.DoesNotExist, ValidationError) as err:
-            raise NotFoundError(self.model.__name__) from err
 
 
 class HomeScopedQuerySet(BaseQuerySet):

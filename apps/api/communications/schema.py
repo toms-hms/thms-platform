@@ -6,6 +6,7 @@ from communications.models import Communication
 from communications.services.communication_service import CommunicationService
 from communications.types import CommunicationType
 from core.enums import CommunicationDirectionEnum
+from core.errors import NotFoundError
 from core.graphql import authorize, current_user, login_required
 from core.services.permission_service import Permission
 
@@ -60,7 +61,10 @@ class CommunicationsQuery(graphene.ObjectType):
     @authorize(Permission.COMMUNICATIONS_VIEW, resource=Communication, arg="communication_id")
     def resolve_communication(self, info, communication_id: str):
         """Returns one message."""
-        return Communication.objects.get_or_404(pk=communication_id)
+        communication = Communication.objects.find(pk=communication_id)
+        if communication is None:
+            raise NotFoundError("Communication")
+        return communication
 
 
 class CommunicationsMutation(graphene.ObjectType):

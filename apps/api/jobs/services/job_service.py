@@ -7,6 +7,7 @@ transition (see .ai/rules/core.md).
 
 from typing import Any
 
+from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset, is_set
 from jobs.models import Job, JobIntent, JobStatus
 from jobs.utils.ai_session_utils import build_ai_session
@@ -61,7 +62,9 @@ class JobService:
         The first confirmed category (from `categories`, else the session's
         confirmedCategories) becomes the job's category, overriding `category`.
         """
-        job = Job.objects.get_or_404(pk=job_id)
+        job = Job.objects.find(pk=job_id)
+        if job is None:
+            raise NotFoundError("Job")
         session = ai_session if is_set(ai_session) else None
         confirmed = (categories if is_set(categories) else None) or (session or {}).get("confirmedCategories")
         primary_category = confirmed[0] if confirmed else category
@@ -79,4 +82,7 @@ class JobService:
 
     def delete(self, *, job_id: str) -> None:
         """Deletes the job and everything cascading from it."""
-        Job.objects.filter_ids([job_id]).delete()
+        job = Job.objects.find(pk=job_id)
+        if job is None:
+            raise NotFoundError("Job")
+        job.delete()

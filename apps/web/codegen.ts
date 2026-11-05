@@ -1,10 +1,11 @@
 /**
- * GraphQL codegen. Every `*.graphql` file under src/ holds one operation or
- * fragment and gets a `*.generated.ts` beside it exporting a typed document
+ * GraphQL codegen. Every `*.graphql` file under src/ holds one operation and lives in a
+ * `queries/` or `mutations/` folder beside the file that uses it. Its generated file goes to
+ * `__generated__/<Operation>.generated.ts` in that folder, exporting a typed document
  * (`QuotesDocument`) and its result and variable types. Shared enums and input
  * types go to src/graphql/types.generated.ts.
  *
- * The schema is the API's checked-in export (`make schema`). Run `npm run codegen`
+ * The schema is the API's checked-in export (`make graphql-schema`). Run `npm run codegen`
  * after editing a .graphql file; generated files are committed.
  */
 import type { CodegenConfig } from '@graphql-codegen/cli';
@@ -26,7 +27,11 @@ const config: CodegenConfig = {
     },
     'src/': {
       preset: 'near-operation-file',
-      presetConfig: { extension: '.generated.ts', baseTypesPath: '~@/graphql/types.generated' },
+      presetConfig: {
+        baseTypesPath: '~@/graphql/types.generated',
+        extension: '.generated.ts',
+        folder: '__generated__',
+      },
       plugins: ['typescript-operations', 'typed-document-node'],
       config: {
         scalars,

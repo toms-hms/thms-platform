@@ -2,8 +2,8 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { HomesDocument } from './Homes.generated';
-import { CreateHomeDocument } from './CreateHome.generated';
+import { HomesDocument } from './queries/__generated__/Homes.generated';
+import { CreateHomeDocument } from './mutations/__generated__/CreateHome.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 

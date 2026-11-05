@@ -3,8 +3,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@apollo/client/react';
-import { HomeDocument } from './Home.generated';
-import { HomeJobsDocument } from './HomeJobs.generated';
+import { HomeDocument } from './queries/__generated__/Home.generated';
+import { HomeJobsDocument } from './queries/__generated__/HomeJobs.generated';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 

@@ -2,10 +2,10 @@
 import { useState, FormEvent } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { QuoteStatus } from '@/graphql/types.generated';
-import { CreateQuoteDocument } from './CreateQuote.generated';
-import { UpdateQuoteDocument } from './UpdateQuote.generated';
-import { DeleteQuoteDocument } from './DeleteQuote.generated';
-import { JobDetailDocument } from './JobDetail.generated';
+import { CreateQuoteDocument } from './mutations/__generated__/CreateQuote.generated';
+import { UpdateQuoteDocument } from './mutations/__generated__/UpdateQuote.generated';
+import { DeleteQuoteDocument } from './mutations/__generated__/DeleteQuote.generated';
+import { JobDetailDocument } from './queries/__generated__/JobDetail.generated';
 import type { JobDetail } from './types';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';

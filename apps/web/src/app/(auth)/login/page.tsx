@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@apollo/client/react';
 import { saveTokens, saveUser } from '@/lib/auth';
-import { LoginDocument } from './Login.generated';
+import { LoginDocument } from './mutations/__generated__/Login.generated';
 
 export default function LoginPage() {
   const router = useRouter();

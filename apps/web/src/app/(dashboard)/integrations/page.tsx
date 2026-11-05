@@ -1,11 +1,11 @@
 'use client';
 import { useState, FormEvent } from 'react';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
-import { IntegrationsDocument } from './Integrations.generated';
-import { GoogleAuthUrlDocument } from './GoogleAuthUrl.generated';
-import { MicrosoftAuthUrlDocument } from './MicrosoftAuthUrl.generated';
-import { CreateAiIntegrationDocument } from './CreateAiIntegration.generated';
-import { DeleteIntegrationDocument } from './DeleteIntegration.generated';
+import { IntegrationsDocument } from './queries/__generated__/Integrations.generated';
+import { GoogleAuthUrlDocument } from './queries/__generated__/GoogleAuthUrl.generated';
+import { MicrosoftAuthUrlDocument } from './queries/__generated__/MicrosoftAuthUrl.generated';
+import { CreateAiIntegrationDocument } from './mutations/__generated__/CreateAiIntegration.generated';
+import { DeleteIntegrationDocument } from './mutations/__generated__/DeleteIntegration.generated';
 
 export default function IntegrationsPage() {
   const client = useApolloClient();

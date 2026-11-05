@@ -4,12 +4,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { JobIntent, JobStatus, TradeCategory } from '@/graphql/types.generated';
-import { WizardHomeDocument } from './WizardHome.generated';
-import { CreateJobDocument } from './CreateJob.generated';
-import { WizardUploadUrlDocument } from './WizardUploadUrl.generated';
-import { WizardCreateJobImageDocument } from './WizardCreateJobImage.generated';
-import { WizardCreateJobContractorDocument } from './WizardCreateJobContractor.generated';
-import { WizardUpdateJobDocument } from './WizardUpdateJob.generated';
+import { WizardHomeDocument } from './queries/__generated__/WizardHome.generated';
+import { CreateJobDocument } from './mutations/__generated__/CreateJob.generated';
+import { WizardUploadUrlDocument } from './mutations/__generated__/WizardUploadUrl.generated';
+import { WizardCreateJobImageDocument } from './mutations/__generated__/WizardCreateJobImage.generated';
+import { WizardCreateJobContractorDocument } from './mutations/__generated__/WizardCreateJobContractor.generated';
+import { WizardUpdateJobDocument } from './mutations/__generated__/WizardUpdateJob.generated';
 
 import WizardProgress from './_components/WizardProgress';
 import Step1Intent from './_components/Step1Intent';

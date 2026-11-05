@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 import type { AiSessionSummary } from '@/types/api';
-import { StartDiagnoseDocument, type StartDiagnoseMutation } from '../StartDiagnose.generated';
-import { DiagnoseJobDocument } from '../DiagnoseJob.generated';
+import { StartDiagnoseDocument, type StartDiagnoseMutation } from '../mutations/__generated__/StartDiagnose.generated';
+import { DiagnoseJobDocument } from '../mutations/__generated__/DiagnoseJob.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
 const TITLES: Record<JobIntent, string> = {

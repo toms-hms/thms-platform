@@ -2,11 +2,11 @@
 import { useState, useRef, FormEvent } from 'react';
 import Image from 'next/image';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { JobImagesDocument } from './JobImages.generated';
-import { RequestUploadUrlDocument } from './RequestUploadUrl.generated';
-import { CreateJobImageDocument } from './CreateJobImage.generated';
-import { DeleteJobImageDocument } from './DeleteJobImage.generated';
-import { CreateAiGenerationDocument } from './CreateAiGeneration.generated';
+import { JobImagesDocument } from './queries/__generated__/JobImages.generated';
+import { RequestUploadUrlDocument } from './mutations/__generated__/RequestUploadUrl.generated';
+import { CreateJobImageDocument } from './mutations/__generated__/CreateJobImage.generated';
+import { DeleteJobImageDocument } from './mutations/__generated__/DeleteJobImage.generated';
+import { CreateAiGenerationDocument } from './mutations/__generated__/CreateAiGeneration.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 

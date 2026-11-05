@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { LogoutDocument } from './Logout.generated';
+import { LogoutDocument } from './mutations/__generated__/Logout.generated';
 import { clearTokens, getStoredUser } from '@/lib/auth';
 import { useState, useEffect } from 'react';
 

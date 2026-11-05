@@ -1,30 +1,39 @@
 ---
 name: web-api-client
-description: Guide for frontend GraphQL operations — one .graphql file per query or mutation colocated with the file that uses it, codegen'd typed documents, and Apollo Client 4 hooks.
+description: Guide for frontend GraphQL operations — one .graphql file per query or mutation in a queries/ or mutations/ folder beside the file that uses it, codegen'd typed documents in __generated__/, and Apollo Client 4 hooks.
 ---
 
 # Web API Client
 
 The API is GraphQL and the web app talks to it through **Apollo Client 4**. Every
-operation is a `.graphql` file next to the page or component that uses it. Codegen
-writes a `.generated.ts` beside it exporting a typed document, and the component
+operation is a `.graphql` file in a `queries/` or `mutations/` folder beside the page or
+component that uses it. Codegen writes `__generated__/<Operation>.generated.ts` in that
+folder, exporting a typed document, and the component
 passes that document to Apollo's `useQuery` / `useMutation`. Result and variable
 types flow from the document; nothing is typed by hand.
 
 ```
 src/app/(dashboard)/contractors/
   page.tsx
-  Contractors.graphql              ← one operation, written by hand
-  Contractors.generated.ts         ← ContractorsDocument, ContractorsQuery, ContractorsQueryVariables
-  CreateContractor.graphql
-  CreateContractor.generated.ts
+  queries/
+    Contractors.graphql                    ← one operation, written by hand
+    __generated__/
+      Contractors.generated.ts             ← ContractorsDocument, ContractorsQuery, ContractorsQueryVariables
+  mutations/
+    CreateContractor.graphql
+    DeleteContractor.graphql
+    __generated__/
+      CreateContractor.generated.ts
+      DeleteContractor.generated.ts
 ```
 
 ## One operation per file, owned by the file that uses it
 
 - **One query or mutation per `.graphql` file**, named after the operation
   (`Contractors.graphql` holds `query Contractors`).
-- **It lives next to the file that calls it.** If two files need similar data, each owns
+- **Queries go in `queries/`, mutations in `mutations/`,** beside the file that calls them.
+  Generated files go in that folder's `__generated__/`; codegen puts them there.
+- **It belongs to the file that calls it.** If two files need similar data, each owns
   its own operation with its own name (`JobContractorPicker`, `WizardContractors`).
   Operation names are global, so prefix by owner when they would collide.
 - **Select only what that file renders.** No shared field lists and no shared
@@ -38,8 +47,8 @@ src/app/(dashboard)/contractors/
 
 ```typescript
 import { useMutation, useQuery } from '@apollo/client/react';
-import { ContractorsDocument } from './Contractors.generated';
-import { DeleteContractorDocument } from './DeleteContractor.generated';
+import { ContractorsDocument } from './queries/__generated__/Contractors.generated';
+import { DeleteContractorDocument } from './mutations/__generated__/DeleteContractor.generated';
 
 const { data, loading: fetching, refetch } = useQuery(ContractorsDocument, {
   variables: { tradeCategories: category ? [category] : undefined },

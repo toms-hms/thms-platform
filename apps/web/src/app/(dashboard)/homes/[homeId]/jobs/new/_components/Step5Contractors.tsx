@@ -1,6 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { JobIntent, TradeCategory } from '@/graphql/types.generated';
-import { WizardContractorsDocument } from '../WizardContractors.generated';
+import { WizardContractorsDocument } from '../queries/__generated__/WizardContractors.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
 interface Props {

@@ -1,21 +1,25 @@
 ---
 name: web-page
-description: Guide for creating Next.js App Router dashboard pages — 'use client', colocated .graphql operations loaded with Apollo useQuery/useMutation, and UI patterns.
+description: Guide for creating Next.js App Router dashboard pages — 'use client', .graphql operations in queries/ and mutations/ folders beside the page, loaded with Apollo useQuery/useMutation, and UI patterns.
 ---
 
 # Web Page (Next.js App Router)
 
 All dashboard pages live under `src/app/(dashboard)/`. They are client components that
 load data with Apollo's `useQuery` and write with `useMutation`, using the typed
-documents codegen generates from the `.graphql` files beside them.
+documents codegen generates from the `.graphql` files in their `queries/` and `mutations/` folders.
 
 ## File layout
 
 ```
 src/app/(dashboard)/{route}/
   page.tsx                      — the page component ('use client')
-  {Operation}.graphql           — one query or mutation per file, owned by this page
-  {Operation}.generated.ts      — written by `npm run codegen`; never edited
+  queries/
+    {Operation}.graphql         — one query per file, owned by this page
+    __generated__/              — written by `npm run codegen`; never edited
+  mutations/
+    {Operation}.graphql         — one mutation per file
+    __generated__/
   _components/                  — page-local components (not shared)
     SomeSubForm.tsx
 ```
@@ -23,7 +27,7 @@ src/app/(dashboard)/{route}/
 ## Steps to add a new page
 
 1. Create `src/app/(dashboard)/{route}/page.tsx` with `'use client'` at the top.
-2. Write one `.graphql` file per operation the page runs, selecting only the fields it renders.
+2. Write one `.graphql` file per operation the page runs, in `queries/` or `mutations/`, selecting only the fields it renders.
 3. Run `npm run codegen` in `apps/web`.
 4. Load with `useQuery(XDocument, { variables })`; show a loading state while `loading && !data`.
 5. Write with `useMutation(YDocument)`; after a create or delete, `refetch()` the list.
@@ -33,7 +37,7 @@ src/app/(dashboard)/{route}/
 ## Realistic example — contractors page
 
 ```graphql
-# apps/web/src/app/(dashboard)/contractors/Contractors.graphql
+# apps/web/src/app/(dashboard)/contractors/queries/Contractors.graphql
 query Contractors($search: String, $tradeCategories: [TradeCategory!], $zipCodes: [String!]) {
   contractors(search: $search, tradeCategories: $tradeCategories, zipCodes: $zipCodes) {
     id
@@ -44,7 +48,7 @@ query Contractors($search: String, $tradeCategories: [TradeCategory!], $zipCodes
 ```
 
 ```graphql
-# apps/web/src/app/(dashboard)/contractors/CreateContractor.graphql
+# apps/web/src/app/(dashboard)/contractors/mutations/CreateContractor.graphql
 mutation CreateContractor($name: String!, $categories: [TradeCategory!]!, $zipCodes: [String!]) {
   createContractor(name: $name, categories: $categories, zipCodes: $zipCodes) {
     contractor {
@@ -62,8 +66,8 @@ import Link from 'next/link';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { TradeCategory } from '@/graphql/types.generated';
 import { UserRole } from '@/types/api';
-import { ContractorsDocument } from './Contractors.generated';
-import { CreateContractorDocument } from './CreateContractor.generated';
+import { ContractorsDocument } from './queries/__generated__/Contractors.generated';
+import { CreateContractorDocument } from './mutations/__generated__/CreateContractor.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import { getStoredUser } from '@/lib/auth';

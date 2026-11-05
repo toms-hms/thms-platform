@@ -15,9 +15,10 @@ src/types/api.ts         Only what the schema leaves untyped: AI-session JSON sh
 codegen.ts               GraphQL codegen config; schema is ../api/schema.graphql
 ```
 
-Every operation is one `.graphql` file colocated with the page or component that
-uses it, selecting only what that file renders. Codegen writes a `.generated.ts`
-beside it with a typed document for `useQuery` / `useMutation`. See
+Every operation is one `.graphql` file in a `queries/` or `mutations/` folder beside the page
+or component that uses it, selecting only what that file renders. Codegen writes
+`__generated__/<Operation>.generated.ts` in that folder with a typed document for
+`useQuery` / `useMutation`. See
 `.ai/recipes/web/api-client.md`.
 
 ## Non-obvious patterns

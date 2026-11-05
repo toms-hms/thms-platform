@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@apollo/client/react';
-import { JobDetailDocument } from '@/components/jobs/JobDetail.generated';
+import { JobDetailDocument } from '@/components/jobs/queries/__generated__/JobDetail.generated';
 import JobOverview from '@/components/jobs/JobOverview';
 import JobContractorsTab from '@/components/jobs/JobContractorsTab';
 import CommunicationsTab from '@/components/communications/CommunicationsTab';

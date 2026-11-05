@@ -3,7 +3,7 @@ import { useState, FormEvent } from 'react';
 import { useMutation } from '@apollo/client/react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { JobStatus, TradeCategory } from '@/graphql/types.generated';
-import { UpdateJobDocument } from './UpdateJob.generated';
+import { UpdateJobDocument } from './mutations/__generated__/UpdateJob.generated';
 import type { JobDetail } from './types';
 
 const JOB_STATUSES = [

@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { CommunicationsDocument } from './Communications.generated';
-import { UpdateCommunicationDocument } from './UpdateCommunication.generated';
+import { CommunicationsDocument } from './queries/__generated__/Communications.generated';
+import { UpdateCommunicationDocument } from './mutations/__generated__/UpdateCommunication.generated';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface Props {

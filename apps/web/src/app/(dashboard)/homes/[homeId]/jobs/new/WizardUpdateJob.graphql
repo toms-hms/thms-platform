@@ -1,0 +1,7 @@
+mutation WizardUpdateJob($jobId: ID!, $category: TradeCategory, $categories: [TradeCategory!], $status: JobStatus) {
+  updateJob(jobId: $jobId, category: $category, categories: $categories, status: $status) {
+    job {
+      id
+    }
+  }
+}

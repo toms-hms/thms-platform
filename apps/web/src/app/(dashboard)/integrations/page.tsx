@@ -1,31 +1,27 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
-import { listIntegrations, startGoogleAuth, startMicrosoftAuth } from './queries';
-import { saveAI, disconnectIntegration } from './mutations';
+import { useState, FormEvent } from 'react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { IntegrationsDocument } from './Integrations.generated';
+import { GoogleAuthUrlDocument } from './GoogleAuthUrl.generated';
+import { MicrosoftAuthUrlDocument } from './MicrosoftAuthUrl.generated';
+import { SaveAiIntegrationDocument } from './SaveAiIntegration.generated';
+import { DisconnectIntegrationDocument } from './DisconnectIntegration.generated';
 
 export default function IntegrationsPage() {
-  const [list, setList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const client = useApolloClient();
+  const { data, loading: fetching, refetch } = useQuery(IntegrationsDocument);
+  const list = data?.integrations ?? [];
+  const loading = fetching && !data;
+  const [saveAi] = useMutation(SaveAiIntegrationDocument);
+  const [disconnectIntegration] = useMutation(DisconnectIntegrationDocument);
   const [aiKey, setAiKey] = useState('');
   const [savingAI, setSavingAI] = useState(false);
   const [aiMsg, setAiMsg] = useState('');
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
-    try {
-      const res = await listIntegrations();
-      setList(res.data);
-    } catch {}
-    setLoading(false);
-  }
-
   async function handleConnectGoogle() {
     try {
-      const res = await startGoogleAuth();
-      window.location.href = res.data.authorizationUrl;
+      const { data } = await client.query({ query: GoogleAuthUrlDocument, fetchPolicy: 'network-only' });
+      if (data) window.location.href = data.googleAuthUrl;
     } catch (err: any) {
       alert(err.message || 'Failed to start Google auth');
     }
@@ -33,8 +29,8 @@ export default function IntegrationsPage() {
 
   async function handleConnectMicrosoft() {
     try {
-      const res = await startMicrosoftAuth();
-      window.location.href = res.data.authorizationUrl;
+      const { data } = await client.query({ query: MicrosoftAuthUrlDocument, fetchPolicy: 'network-only' });
+      if (data) window.location.href = data.microsoftAuthUrl;
     } catch (err: any) {
       alert(err.message || 'Failed to start Microsoft auth');
     }
@@ -43,8 +39,8 @@ export default function IntegrationsPage() {
   async function handleDisconnect(id: string) {
     if (!confirm('Disconnect this integration?')) return;
     try {
-      await disconnectIntegration(id);
-      setList((prev) => prev.filter((i) => i.id !== id));
+      await disconnectIntegration({ variables: { integrationId: id } });
+      await refetch();
     } catch {}
   }
 
@@ -53,10 +49,10 @@ export default function IntegrationsPage() {
     setSavingAI(true);
     setAiMsg('');
     try {
-      await saveAI({ provider: 'openai', apiKey: aiKey });
+      await saveAi({ variables: { provider: 'openai', apiKey: aiKey } });
       setAiMsg('API key saved successfully');
       setAiKey('');
-      load();
+      await refetch();
     } catch (err: any) {
       setAiMsg(err.message || 'Failed to save');
     }

@@ -1,0 +1,7 @@
+mutation SaveAiIntegration($provider: String!, $apiKey: String!) {
+  saveAiIntegration(provider: $provider, apiKey: $apiKey) {
+    integration {
+      id
+    }
+  }
+}

@@ -1,8 +1,12 @@
 'use client';
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useRef, FormEvent } from 'react';
 import Image from 'next/image';
-import { listImages } from './queries';
-import { getUploadUrl, confirmUpload, deleteImage, createAIGeneration } from './mutations';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { JobImagesDocument } from './JobImages.generated';
+import { RequestUploadUrlDocument } from './RequestUploadUrl.generated';
+import { ConfirmUploadDocument } from './ConfirmUpload.generated';
+import { DeleteImageDocument } from './DeleteImage.generated';
+import { CreateAiGenerationDocument } from './CreateAiGeneration.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 
@@ -11,39 +15,33 @@ interface Props {
 }
 
 export default function ImagesTab({ jobId }: Props) {
-  const [imagesList, setImagesList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading: fetching, refetch } = useQuery(JobImagesDocument, { variables: { jobIds: [jobId] } });
+  const imagesList = data?.jobImages ?? [];
+  const loading = fetching && !data;
+  const [requestUploadUrl] = useMutation(RequestUploadUrlDocument);
+  const [confirmUpload] = useMutation(ConfirmUploadDocument);
+  const [deleteImage] = useMutation(DeleteImageDocument);
+  const [createAiGeneration] = useMutation(CreateAiGenerationDocument);
   const [uploading, setUploading] = useState(false);
   const [showAIGen, setShowAIGen] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [genForm, setGenForm] = useState({ sourceImageId: '', prompt: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    load();
-  }, [jobId]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await listImages({ jobIds: [jobId] });
-      setImagesList(res.data);
-    } catch {}
-    setLoading(false);
-  }
-
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      const urlRes = await getUploadUrl({
+      const { data: urlData } = await requestUploadUrl({ variables: {
         jobId,
         fileName:    file.name,
         contentType: file.type,
         kind:        'SOURCE',
-      });
-      const { uploadUrl, key } = urlRes.data;
+      } });
+      const upload = urlData?.requestUploadUrl?.upload;
+      if (!upload) throw new Error('Upload failed');
+      const { uploadUrl, key } = upload;
 
       await fetch(uploadUrl, {
         method: 'PUT',
@@ -51,13 +49,13 @@ export default function ImagesTab({ jobId }: Props) {
         headers: { 'Content-Type': file.type },
       });
 
-      const confirmRes = await confirmUpload({
+      await confirmUpload({ variables: {
         jobId,
         key,
         kind:  'SOURCE',
         label: file.name,
-      });
-      setImagesList((prev) => [confirmRes.data, ...prev]);
+      } });
+      await refetch();
     } catch (err: any) {
       alert(err.message || 'Upload failed');
     }
@@ -69,15 +67,15 @@ export default function ImagesTab({ jobId }: Props) {
     e.preventDefault();
     setGenLoading(true);
     try {
-      const res = await createAIGeneration({
+      await createAiGeneration({ variables: {
         jobId,
         sourceImageId: genForm.sourceImageId,
         prompt:        genForm.prompt,
         provider:      'openai',
-      });
+      } });
       alert('AI generation started! Refresh in a moment to see the result.');
       setShowAIGen(false);
-      setTimeout(() => load(), 3000);
+      setTimeout(() => refetch(), 3000);
     } catch (err: any) {
       alert(err.message || 'Generation failed');
     }
@@ -87,8 +85,8 @@ export default function ImagesTab({ jobId }: Props) {
   async function handleDelete(imageId: string) {
     if (!confirm('Delete this image?')) return;
     try {
-      await deleteImage(imageId);
-      setImagesList((prev) => prev.filter((i) => i.id !== imageId));
+      await deleteImage({ variables: { imageId } });
+      await refetch();
     } catch {}
   }
 

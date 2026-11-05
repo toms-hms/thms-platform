@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getJob } from './queries';
+import { useQuery } from '@apollo/client/react';
+import { JobDetailDocument } from '@/components/jobs/JobDetail.generated';
 import JobOverview from '@/components/jobs/JobOverview';
 import JobContractorsTab from '@/components/jobs/JobContractorsTab';
 import CommunicationsTab from '@/components/communications/CommunicationsTab';
@@ -21,26 +22,15 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function JobDetailPage() {
   const { homeId, jobId } = useParams<{ homeId: string; jobId: string }>();
-  const [job, setJob] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
-
-  useEffect(() => {
-    if (jobId) loadJob();
-  }, [jobId]);
-
-  async function loadJob() {
-    try {
-      const res = await getJob(jobId);
-      setJob(res.data);
-    } catch {}
-    setLoading(false);
-  }
+  const { data, loading: fetching } = useQuery(JobDetailDocument, { variables: { jobId } });
+  const job = data?.job;
+  const loading = fetching && !data;
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
   if (!job) return <div className="text-center py-12 text-gray-500">Job not found</div>;
 
-  const needsReviewCount = job.communications?.filter((c: any) => c.needsReview).length || 0;
+  const needsReviewCount = job.communications.filter((c) => c.needsReview).length;
 
   return (
     <div>
@@ -75,7 +65,7 @@ export default function JobDetailPage() {
 
       <div className="card p-6">
         {activeTab === 'overview' && (
-          <JobOverview job={job} onUpdated={(updated) => setJob({ ...job, ...updated })} />
+          <JobOverview job={job} />
         )}
         {activeTab === 'contractors' && <JobContractorsTab job={job} />}
         {activeTab === 'communications' && <CommunicationsTab jobId={jobId} />}

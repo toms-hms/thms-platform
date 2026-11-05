@@ -1,0 +1,23 @@
+mutation SendEmail(
+  $jobId: ID!
+  $integrationId: ID!
+  $to: String!
+  $subject: String!
+  $bodyText: String!
+  $bodyHtml: String
+  $contractorId: ID
+) {
+  sendEmail(
+    jobId: $jobId
+    integrationId: $integrationId
+    to: $to
+    subject: $subject
+    bodyText: $bodyText
+    bodyHtml: $bodyHtml
+    contractorId: $contractorId
+  ) {
+    communication {
+      id
+    }
+  }
+}

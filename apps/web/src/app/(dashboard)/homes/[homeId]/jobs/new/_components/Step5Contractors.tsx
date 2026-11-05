@@ -1,16 +1,7 @@
-import { useState, useEffect } from 'react';
-import { JobIntent, TradeCategory } from '@/types/api';
+import { skipToken, useQuery } from '@apollo/client/react';
+import { JobIntent, TradeCategory } from '@/graphql/types.generated';
+import { WizardContractorsDocument } from '../WizardContractors.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
-
-interface Contractor {
-  id: string;
-  name: string;
-  companyName?: string;
-  email?: string;
-  phone?: string;
-  categories: TradeCategory[];
-  zipCodes: string[];
-}
 
 interface Props {
   categories: TradeCategory[];
@@ -26,41 +17,17 @@ interface Props {
 export default function Step5Contractors({
   categories, zipCodes, selectedIds, onToggle, onSubmit, onBack, submitting, error,
 }: Props) {
-  const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const tradeCategoryKey = categories.join('|');
-  const zipKey = zipCodes.join('|');
-
   const categoryLabels = categories.map(cat =>
     CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === cat)?.label ?? cat
   );
 
-  useEffect(() => {
-    const tradeCategoriesForRequest = tradeCategoryKey
-      ? tradeCategoryKey.split('|') as TradeCategory[]
-      : [];
-    const zipCodesForRequest = zipKey
-      ? zipKey.split('|')
-      : [];
-    if (tradeCategoriesForRequest.length === 0 || zipCodesForRequest.length === 0) {
-      setContractors([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const qs = new URLSearchParams();
-    tradeCategoriesForRequest.forEach((tradeCategory) =>
-      qs.append('tradeCategories', tradeCategory)
-    );
-    zipCodesForRequest.forEach((zipCode) => qs.append('zipCodes', zipCode));
-    fetch(`/contractors?${qs}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-    })
-      .then(r => r.json())
-      .then(result => setContractors(result.data ?? []))
-      .catch(() => setContractors([]))
-      .finally(() => setLoading(false));
-  }, [tradeCategoryKey, zipKey]);
+  const canSearch = categories.length > 0 && zipCodes.length > 0;
+  const { data, loading: fetching } = useQuery(
+    WizardContractorsDocument,
+    canSearch ? { variables: { tradeCategories: categories, zipCodes } } : skipToken
+  );
+  const contractors = data?.contractors ?? [];
+  const loading = canSearch && fetching && !data;
 
   const MAX = 3;
   const canSelect = (id: string) => selectedIds.includes(id) || selectedIds.length < MAX;

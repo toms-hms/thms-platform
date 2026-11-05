@@ -1,23 +1,14 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { listHomes, listJobs } from './queries';
-import { createHome } from './mutations';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { JobsDocument } from './Jobs.generated';
+import { JobsHomesDocument } from './JobsHomes.generated';
+import { JobsCreateHomeDocument } from './JobsCreateHome.generated';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
-
-interface Home { id: string; name: string; fullAddress: string; }
-interface JobWithHome {
-  id: string;
-  title: string;
-  category: string;
-  status: string;
-  createdAt: string;
-  homeId: string;
-  homeName: string;
-}
 
 const JOB_STATUSES = [
   'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
@@ -26,9 +17,14 @@ const JOB_STATUSES = [
 
 export default function JobsPage() {
   const router = useRouter();
-  const [jobs, setJobs] = useState<JobWithHome[]>([]);
-  const [homes, setHomes] = useState<Home[]>([]);
-  const [loading, setLoading] = useState(true);
+  const homesQuery = useQuery(JobsHomesDocument);
+  const jobsQuery = useQuery(JobsDocument);
+  const [createHome] = useMutation(JobsCreateHomeDocument);
+  const homes = homesQuery.data?.homes ?? [];
+  const jobs = (jobsQuery.data?.jobs ?? [])
+    .map((job) => ({ ...job, homeId: job.home.id, homeName: job.home.name }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const loading = (homesQuery.loading && !homesQuery.data) || (jobsQuery.loading && !jobsQuery.data);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
 
@@ -37,27 +33,6 @@ export default function JobsPage() {
   const [addForm, setAddForm] = useState({ name: '', address1: '', city: '', state: '', zipCode: '' });
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState('');
-
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    try {
-      const homesRes = await listHomes();
-      const loadedHomes: Home[] = homesRes.data;
-      setHomes(loadedHomes);
-      const jobsPerHome = await Promise.all(
-        loadedHomes.map((home) =>
-          listJobs({ homeIds: [home.id] })
-            .then((r) => r.data.map((job) => ({ ...job, homeId: home.id, homeName: home.name })))
-            .catch(() => [] as JobWithHome[])
-        )
-      );
-      setJobs(
-        jobsPerHome.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      );
-    } catch {}
-    setLoading(false);
-  }
 
   function openModal() {
     setModalState('pick');
@@ -71,9 +46,11 @@ export default function JobsPage() {
     setAddSaving(true);
     setAddError('');
     try {
-      const res = await createHome({ ...addForm, country: 'US' });
+      const { data } = await createHome({ variables: { ...addForm, country: 'US' } });
+      const home = data?.createHome?.home;
+      if (!home) throw new Error('Failed to create home');
       setShowModal(false);
-      router.push(`/homes/${res.data.id}/jobs/new`);
+      router.push(`/homes/${home.id}/jobs/new`);
     } catch (err: any) {
       setAddError(err.message || 'Failed to create home');
     } finally {

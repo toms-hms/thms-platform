@@ -2,10 +2,12 @@
 
 from unittest.mock import patch
 
-from django.test import override_settings
+from django.conf import settings
+from django.test import TestCase, override_settings
 
 from accounts.factories import TEST_PASSWORD, UserFactory
 from accounts.services.auth_service import AuthService
+from config.schema import schema
 from core.testing import GraphQLTestCase
 
 ME = "query { me { id email } }"
@@ -72,3 +74,14 @@ class ErrorShapeTests(GraphQLTestCase):
         """A query the schema cannot parse comes back as an error, not a crash."""
         body = self.execute("query { thisFieldDoesNotExist }")
         self.assertTrue(body.get("errors"))
+
+
+class SchemaSnapshotTests(TestCase):
+    """schema.graphql, the checked-in copy of the schema the web client generates its types from."""
+
+    def test_the_checked_in_schema_is_current(self):
+        """A schema change must be re-exported with `make graphql-schema`, so the web types never drift."""
+        checked_in = (settings.BASE_DIR / "schema.graphql").read_text().strip()
+        self.assertEqual(
+            checked_in, str(schema).strip(), "schema.graphql is stale; run `make graphql-schema`"
+        )

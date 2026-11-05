@@ -1,0 +1,8 @@
+query EmailIntegrations {
+  integrations {
+    id
+    type
+    provider
+    email
+  }
+}

@@ -1,14 +1,17 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import { listHomes } from './queries';
-import { createHome } from './mutations';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { HomesDocument } from './Homes.generated';
+import { CreateHomeDocument } from './CreateHome.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 
 export default function HomesPage() {
-  const [homesList, setHomesList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading: fetching, refetch } = useQuery(HomesDocument);
+  const homesList = data?.homes ?? [];
+  const loading = fetching && !data;
+  const [createHome] = useMutation(CreateHomeDocument);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -22,18 +25,6 @@ export default function HomesPage() {
     notes: '',
   });
 
-  useEffect(() => {
-    loadHomes();
-  }, []);
-
-  async function loadHomes() {
-    try {
-      const res = await listHomes();
-      setHomesList(res.data);
-    } catch {}
-    setLoading(false);
-  }
-
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
@@ -43,8 +34,8 @@ export default function HomesPage() {
     setSaving(true);
     setError('');
     try {
-      const res = await createHome(form);
-      setHomesList((prev) => [res.data, ...prev]);
+      await createHome({ variables: form });
+      await refetch();
       setShowCreate(false);
       setForm({ name: '', address1: '', address2: '', city: '', state: '', zipCode: '', notes: '' });
     } catch (err: any) {

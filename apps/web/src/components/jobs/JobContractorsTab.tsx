@@ -1,8 +1,16 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
-import { JobContractorStatus } from '@/types/api';
-import { listContractors, listIntegrations } from './queries';
-import { assignContractor, updateJobContractorStatus, removeJobContractor, draftEmail, sendEmail } from './mutations';
+import { useState, FormEvent } from 'react';
+import { useMutation, useQuery } from '@apollo/client/react';
+import type { JobContractorStatus } from '@/graphql/types.generated';
+import { JobContractorPickerDocument } from './JobContractorPicker.generated';
+import { EmailIntegrationsDocument } from './EmailIntegrations.generated';
+import { AssignContractorDocument } from './AssignContractor.generated';
+import { UpdateJobContractorDocument } from './UpdateJobContractor.generated';
+import { RemoveJobContractorDocument } from './RemoveJobContractor.generated';
+import { DraftEmailDocument, type DraftEmailMutation } from './DraftEmail.generated';
+import { SendEmailDocument } from './SendEmail.generated';
+import { JobDetailDocument } from './JobDetail.generated';
+import type { JobDetail } from './types';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
@@ -13,28 +21,31 @@ const CONTRACTOR_STATUSES = [
   'WORK_IN_PROGRESS', 'WORK_COMPLETED', 'PAID',
 ];
 
+type EmailDraft = NonNullable<DraftEmailMutation['draftEmail']>['drafts'][number];
+
 interface Props {
-  job: any;
+  job: JobDetail;
 }
 
 export default function JobContractorsTab({ job }: Props) {
-  const [jcs, setJcs] = useState<any[]>(job.contractors || []);
-  const [allContractors, setAllContractors] = useState<any[]>([]);
+  const jcs = job.contractors;
+  const allContractors = useQuery(JobContractorPickerDocument).data?.contractors ?? [];
+  const integrationsList = useQuery(EmailIntegrationsDocument).data?.integrations ?? [];
+  const refetchQueries = [JobDetailDocument];
+  const [assignContractor] = useMutation(AssignContractorDocument, { refetchQueries });
+  const [updateJobContractor] = useMutation(UpdateJobContractorDocument);
+  const [removeJobContractor] = useMutation(RemoveJobContractorDocument, { refetchQueries });
+  const [draftEmail] = useMutation(DraftEmailDocument);
+  const [sendEmail] = useMutation(SendEmailDocument, { refetchQueries });
   const [showAdd, setShowAdd] = useState(false);
   const [showEmailDraft, setShowEmailDraft] = useState(false);
   const [selectedContractorId, setSelectedContractorId] = useState('');
   const [saving, setSaving] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
-  const [emailDrafts, setEmailDrafts] = useState<any[]>([]);
-  const [integrationsList, setIntegrationsList] = useState<any[]>([]);
+  const [emailDrafts, setEmailDrafts] = useState<EmailDraft[]>([]);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [selectedIntegration, setSelectedIntegration] = useState('');
   const [emailNotes, setEmailNotes] = useState('');
-
-  useEffect(() => {
-    listContractors().then((r) => setAllContractors(r.data)).catch(() => {});
-    listIntegrations().then((r) => setIntegrationsList(r.data)).catch(() => {});
-  }, []);
 
   const attachedIds = new Set(jcs.map((jc) => jc.contractor.id));
   const available = allContractors.filter((c) => !attachedIds.has(c.id));
@@ -44,26 +55,23 @@ export default function JobContractorsTab({ job }: Props) {
     if (!selectedContractorId) return;
     setSaving(true);
     try {
-      const res = await assignContractor({ jobId: job.id, contractorId: selectedContractorId });
-      setJcs((prev) => [...prev, res.data]);
+      await assignContractor({ variables: { jobId: job.id, contractorId: selectedContractorId } });
       setShowAdd(false);
       setSelectedContractorId('');
     } catch {}
     setSaving(false);
   }
 
-  async function handleStatusChange(jc: any, status: string) {
+  async function handleStatusChange(jc: JobDetail['contractors'][number], status: string) {
     try {
-      const res = await updateJobContractorStatus(jc.id, { status: status as JobContractorStatus });
-      setJcs((prev) => prev.map((j) => (j.id === jc.id ? res.data : j)));
+      await updateJobContractor({ variables: { jobContractorId: jc.id, status: status as JobContractorStatus } });
     } catch {}
   }
 
   async function handleRemove(jcId: string) {
     if (!confirm('Remove contractor from this job?')) return;
     try {
-      await removeJobContractor(jcId);
-      setJcs((prev) => prev.filter((j) => j.id !== jcId));
+      await removeJobContractor({ variables: { jobContractorId: jcId } });
     } catch {}
   }
 
@@ -75,13 +83,14 @@ export default function JobContractorsTab({ job }: Props) {
     }
     setDraftLoading(true);
     try {
-      const res = await draftEmail(job.id, {
+      const { data } = await draftEmail({ variables: {
+        jobId: job.id,
         contractorIds: selected.map((jc) => jc.contractor.id),
         tone: 'professional',
         includeImages: false,
         customInstructions: emailNotes,
-      });
-      setEmailDrafts(res.data);
+      } });
+      setEmailDrafts(data?.draftEmail?.drafts ?? []);
       setShowEmailDraft(true);
     } catch (err: any) {
       alert(err.message || 'Failed to generate drafts');
@@ -89,7 +98,7 @@ export default function JobContractorsTab({ job }: Props) {
     setDraftLoading(false);
   }
 
-  async function sendDraft(draft: any) {
+  async function sendDraft(draft: EmailDraft) {
     if (!selectedIntegration) {
       alert('Select an email integration first');
       return;
@@ -97,14 +106,15 @@ export default function JobContractorsTab({ job }: Props) {
     const jc = jcs.find((j) => j.contractor.id === draft.contractorId);
     setSendingEmail(draft.contractorId);
     try {
-      await sendEmail(job.id, {
+      await sendEmail({ variables: {
+        jobId: job.id,
         contractorId: draft.contractorId,
         integrationId: selectedIntegration,
         to: jc?.contractor?.email || '',
         subject: draft.subject,
         bodyText: draft.bodyText,
         bodyHtml: draft.bodyHtml,
-      });
+      } });
       alert('Email sent!');
       setEmailDrafts((prev) => prev.filter((d) => d.contractorId !== draft.contractorId));
     } catch (err: any) {
@@ -224,7 +234,7 @@ export default function JobContractorsTab({ job }: Props) {
                 onChange={(e) => setSelectedIntegration(e.target.value)}
               >
                 <option value="">-- Select integration --</option>
-                {emailIntegrations.map((i: any) => (
+                {emailIntegrations.map((i) => (
                   <option key={i.id} value={i.id}>
                     {i.provider} – {i.email}
                   </option>

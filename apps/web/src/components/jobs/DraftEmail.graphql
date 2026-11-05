@@ -1,0 +1,22 @@
+mutation DraftEmail(
+  $jobId: ID!
+  $contractorIds: [ID!]!
+  $tone: String
+  $includeImages: Boolean
+  $customInstructions: String
+) {
+  draftEmail(
+    jobId: $jobId
+    contractorIds: $contractorIds
+    tone: $tone
+    includeImages: $includeImages
+    customInstructions: $customInstructions
+  ) {
+    drafts {
+      contractorId
+      subject
+      bodyText
+      bodyHtml
+    }
+  }
+}

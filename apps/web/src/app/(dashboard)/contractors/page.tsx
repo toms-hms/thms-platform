@@ -1,11 +1,15 @@
 'use client';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import { TradeCategory, UserRole } from '@/types/api';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { TradeCategory } from '@/graphql/types.generated';
+import { UserRole } from '@/types/api';
 import { useRouter } from 'next/navigation';
-import { listContractors } from './queries';
-import { createContractor, updateContractor, deleteContractor } from './mutations';
-import { createUserContractor } from '@/app/(dashboard)/my-rolodex/mutations';
+import { ContractorsDocument, type ContractorsQuery } from './Contractors.generated';
+import { CreateContractorDocument } from './CreateContractor.generated';
+import { UpdateContractorDocument } from './UpdateContractor.generated';
+import { DeleteContractorDocument } from './DeleteContractor.generated';
+import { AddContractorToRolodexDocument } from './AddContractorToRolodex.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Selector, { SelectorOption } from '@/components/ui/Selector';
@@ -31,46 +35,33 @@ const CATEGORY_OPTIONS: SelectorOption[] = [
   ...Object.values(TradeCategory).map((v) => ({ value: v, label: CATEGORY_LABELS[v] })),
 ];
 
-type Contractor = {
-  id: string;
-  name: string;
-  companyName?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  categories: TradeCategory[];
-  zipCodes: string[];
-  notes?: string | null;
-};
+type Contractor = ContractorsQuery['contractors'][number];
 
 export default function ContractorsPage() {
   const isAdmin = getStoredUser()?.role === UserRole.ADMIN;
   const router = useRouter();
-  const [list, setList] = useState<Contractor[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedTradeCategory, setSelectedTradeCategory] = useState('');
   const [zipFilter, setZipFilter] = useState('');
+  const { data, loading: fetching, refetch } = useQuery(ContractorsDocument, {
+    variables: {
+      search: search || undefined,
+      tradeCategories: selectedTradeCategory ? [selectedTradeCategory as TradeCategory] : undefined,
+      zipCodes: zipFilter.trim() ? [zipFilter.trim()] : undefined,
+    },
+  });
+  const list = data?.contractors ?? [];
+  const loading = fetching && !data;
+  const [createContractor] = useMutation(CreateContractorDocument);
+  const [updateContractor] = useMutation(UpdateContractorDocument);
+  const [deleteContractor] = useMutation(DeleteContractorDocument);
+  const [createUserContractor] = useMutation(AddContractorToRolodexDocument);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Contractor | null>(null);
   const [saving, setSaving] = useState(false);
   const [addingId, setAddingId] = useState('');
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', companyName: '', email: '', phone: '', category: '', zipCodes: '', notes: '' });
-
-  useEffect(() => { load(); }, [search, selectedTradeCategory, zipFilter]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await listContractors({
-        search: search || undefined,
-        tradeCategories: selectedTradeCategory ? [selectedTradeCategory] : undefined,
-        zipCodes: zipFilter.trim() ? [zipFilter.trim()] : undefined,
-      });
-      setList(res.data);
-    } catch {}
-    setLoading(false);
-  }
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -116,11 +107,10 @@ export default function ContractorsPage() {
     setError('');
     try {
       if (editing) {
-        const res = await updateContractor(editing.id, payloadFromForm());
-        setList((prev) => prev.map((c) => (c.id === editing.id ? res.data : c)));
+        await updateContractor({ variables: { contractorId: editing.id, ...payloadFromForm() } });
       } else {
-        const res = await createContractor(payloadFromForm());
-        setList((prev) => [res.data, ...prev]);
+        await createContractor({ variables: payloadFromForm() });
+        await refetch();
       }
       setShowCreate(false);
     } catch (err: any) {
@@ -133,16 +123,16 @@ export default function ContractorsPage() {
   async function handleAddToMyVendors(contractor: Contractor) {
     setAddingId(contractor.id);
     try {
-      await createUserContractor({
+      await createUserContractor({ variables: {
         contractorId: contractor.id,
         name: contractor.name,
         companyName: contractor.companyName || undefined,
         email: contractor.email || undefined,
         phone: contractor.phone || undefined,
-        categories: contractor.categories,
+        categories: contractor.categories as TradeCategory[],
         zipCodes: contractor.zipCodes.length ? contractor.zipCodes : undefined,
         notes: contractor.notes || undefined,
-      });
+      } });
     } catch {
     } finally {
       setAddingId('');
@@ -152,8 +142,8 @@ export default function ContractorsPage() {
   async function handleDelete(contractorId: string, name: string) {
     if (!confirm(`Delete ${name}?`)) return;
     try {
-      await deleteContractor(contractorId);
-      setList((prev) => prev.filter((c) => c.id !== contractorId));
+      await deleteContractor({ variables: { contractorId } });
+      await refetch();
     } catch {}
   }
 
@@ -231,7 +221,7 @@ export default function ContractorsPage() {
                     <div className="flex flex-wrap gap-1">
                       {contractor.categories.map((value) => (
                         <span key={value} className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                          {CATEGORY_LABELS[value] ?? value}
+                          {CATEGORY_LABELS[value as TradeCategory] ?? value}
                         </span>
                       ))}
                     </div>

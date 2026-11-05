@@ -1,0 +1,8 @@
+query JobImages($jobIds: [ID!]!) {
+  jobImages(jobIds: $jobIds) {
+    id
+    kind
+    label
+    url
+  }
+}

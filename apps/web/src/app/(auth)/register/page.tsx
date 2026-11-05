@@ -2,8 +2,9 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { register } from '@/lib/auth-api';
+import { useMutation } from '@apollo/client/react';
 import { saveTokens, saveUser } from '@/lib/auth';
+import { RegisterDocument } from './Register.generated';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [register] = useMutation(RegisterDocument);
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -25,9 +27,11 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await register(form);
-      saveTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
-      saveUser(res.data.user);
+      const { data } = await register({ variables: form });
+      const auth = data?.register;
+      if (!auth?.tokens || !auth.user) throw new Error('Registration failed');
+      saveTokens(auth.tokens.accessToken, auth.tokens.refreshToken);
+      saveUser(auth.user);
       router.push('/homes');
     } catch (err: any) {
       setError(err.message || 'Registration failed');

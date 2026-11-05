@@ -1,0 +1,10 @@
+mutation UpdateQuote($quoteId: ID!, $amount: Float, $description: String, $status: QuoteStatus) {
+  updateQuote(quoteId: $quoteId, amount: $amount, description: $description, status: $status) {
+    quote {
+      id
+      amount
+      description
+      status
+    }
+  }
+}

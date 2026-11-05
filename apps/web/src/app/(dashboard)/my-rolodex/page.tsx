@@ -1,9 +1,11 @@
 'use client';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { TradeCategory, type UserContractorDto } from '@/types/api';
-import { createUserContractor, deleteUserContractor } from './mutations';
-import { listUserContractors } from './queries';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { TradeCategory } from '@/graphql/types.generated';
+import { UserContractorsDocument } from './UserContractors.generated';
+import { CreateUserContractorDocument } from './CreateUserContractor.generated';
+import { DeleteUserContractorDocument } from './DeleteUserContractor.generated';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Selector from '@/components/ui/Selector';
@@ -24,8 +26,11 @@ const CATEGORY_LABELS: Record<TradeCategory, string> = {
 };
 
 export default function MyRolodexPage() {
-  const [entries, setEntries] = useState<UserContractorDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading: fetching, refetch } = useQuery(UserContractorsDocument);
+  const entries = data?.userContractors ?? [];
+  const loading = fetching && !data;
+  const [createUserContractor] = useMutation(CreateUserContractorDocument);
+  const [deleteUserContractor] = useMutation(DeleteUserContractorDocument);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -33,17 +38,6 @@ export default function MyRolodexPage() {
     name: '', companyName: '', email: '', phone: '',
     category: '', zipCode: '', notes: '', note: '',
   });
-
-  useEffect(() => { loadEntries(); }, []);
-
-  async function loadEntries() {
-    setLoading(true);
-    try {
-      const res = await listUserContractors();
-      setEntries(res.data);
-    } catch {}
-    setLoading(false);
-  }
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -60,7 +54,7 @@ export default function MyRolodexPage() {
     setSaving(true);
     setError('');
     try {
-      const res = await createUserContractor({
+      await createUserContractor({ variables: {
         name:        form.name || undefined,
         companyName: form.companyName || undefined,
         email:       form.email || undefined,
@@ -69,8 +63,8 @@ export default function MyRolodexPage() {
         zipCodes:    form.zipCode ? [form.zipCode] : undefined,
         notes:       form.notes || undefined,
         note:        form.note || undefined,
-      });
-      setEntries((prev) => [res.data, ...prev]);
+      } });
+      await refetch();
       setShowCreate(false);
     } catch (err: any) {
       setError(err.message || 'Failed to add contractor');
@@ -82,8 +76,8 @@ export default function MyRolodexPage() {
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Remove ${name} from your rolodex?`)) return;
     try {
-      await deleteUserContractor(id);
-      setEntries((prev) => prev.filter((e) => e.id !== id));
+      await deleteUserContractor({ variables: { userContractorId: id } });
+      await refetch();
     } catch {}
   }
 
@@ -129,7 +123,7 @@ export default function MyRolodexPage() {
                 <div className="mt-3 flex flex-wrap gap-1">
                   {c.categories.map((value) => (
                     <span key={value} className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                      {CATEGORY_LABELS[value] ?? value}
+                      {CATEGORY_LABELS[value as TradeCategory] ?? value}
                     </span>
                   ))}
                 </div>

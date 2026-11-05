@@ -1,0 +1,27 @@
+mutation CreateJob(
+  $homeId: ID!
+  $title: String!
+  $category: TradeCategory!
+  $intent: JobIntent
+  $categories: [TradeCategory!]
+  $description: String
+  $notes: String
+  $status: JobStatus
+  $aiSession: JSONString
+) {
+  createJob(
+    homeId: $homeId
+    title: $title
+    category: $category
+    intent: $intent
+    categories: $categories
+    description: $description
+    notes: $notes
+    status: $status
+    aiSession: $aiSession
+  ) {
+    job {
+      id
+    }
+  }
+}

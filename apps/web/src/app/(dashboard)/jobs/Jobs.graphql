@@ -1,0 +1,13 @@
+query Jobs($homeIds: [ID!], $statuses: [JobStatus!], $tradeCategories: [TradeCategory!]) {
+  jobs(homeIds: $homeIds, statuses: $statuses, tradeCategories: $tradeCategories) {
+    id
+    title
+    status
+    category
+    createdAt
+    home {
+      id
+      name
+    }
+  }
+}

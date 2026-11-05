@@ -34,7 +34,7 @@ Every argument to a list query is a plural array: ids (`homeIds`, `jobIds`, incl
 Always use the defined enum member instead of a raw string.
 
 - Python: `JobIntent.ISSUE`, `TradeCategory.HVAC`, `JobStatus.DRAFT`, `UserRole.ADMIN` — defined as `TextChoices` in the owning app's `models.py`, exposed to GraphQL through `core/enums.py`.
-- TypeScript: the same names from `@/types/api`.
+- TypeScript: the same names from `@/graphql/types.generated` (generated from the schema).
 
 ## State transitions
 
@@ -109,6 +109,6 @@ Never push directly to `main` or any default branch. Always create a feature bra
 
 Code inside `apps/web` may only import from `apps/web` (via `@/`) and node_modules. Code inside `apps/api` may only import from `apps/api`.
 
-The web and api deploy to separate servers — they cannot share runtime code. Types that cross the boundary are declared in `apps/web/src/types/api.ts`, which mirrors the GraphQL schema and is updated in the same change as the schema.
+The web and api deploy to separate servers — they cannot share runtime code. The contract between them is the GraphQL schema: the API exports it to `apps/api/schema.graphql` (a test fails when it is stale), and the web generates its types from that file (`make graphql-schema`). A schema file is data, not runtime code, so reading it across the boundary at build time is allowed.
 
 This is a hard rule. Cross-app imports break independent deployment.

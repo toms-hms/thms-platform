@@ -1,7 +1,10 @@
 'use client';
 import { useState, FormEvent } from 'react';
+import { useMutation } from '@apollo/client/react';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { updateJob } from './mutations';
+import type { JobStatus, TradeCategory } from '@/graphql/types.generated';
+import { UpdateJobDocument } from './UpdateJob.generated';
+import type { JobDetail } from './types';
 
 const JOB_STATUSES = [
   'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
@@ -9,11 +12,11 @@ const JOB_STATUSES = [
 ];
 
 interface Props {
-  job: any;
-  onUpdated: (job: any) => void;
+  job: JobDetail;
 }
 
-export default function JobOverview({ job, onUpdated }: Props) {
+export default function JobOverview({ job }: Props) {
+  const [updateJob] = useMutation(UpdateJobDocument);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -32,8 +35,14 @@ export default function JobOverview({ job, onUpdated }: Props) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await updateJob(job.id, form);
-      onUpdated(res.data);
+      await updateJob({
+        variables: {
+          jobId: job.id,
+          ...form,
+          category: form.category as TradeCategory,
+          status: form.status as JobStatus,
+        },
+      });
       setEditing(false);
     } catch {}
     setSaving(false);
@@ -105,11 +114,11 @@ export default function JobOverview({ job, onUpdated }: Props) {
 
       <div className="pt-2 border-t border-gray-100">
         <h4 className="text-sm font-semibold text-gray-700 mb-2">Contractor Summary</h4>
-        {job.contractors?.length === 0 ? (
+        {job.contractors.length === 0 ? (
           <p className="text-sm text-gray-400">No contractors attached yet.</p>
         ) : (
           <div className="space-y-2">
-            {job.contractors?.map((jc: any) => (
+            {job.contractors.map((jc) => (
               <div key={jc.id} className="flex items-center justify-between text-sm">
                 <span className="text-gray-700">{jc.contractor.name}</span>
                 <StatusBadge status={jc.status} type="contractor" />

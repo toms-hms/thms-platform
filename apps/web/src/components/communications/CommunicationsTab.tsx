@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { listCommunications } from './queries';
-import { updateCommunication } from './mutations';
+import { useState } from 'react';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { CommunicationsDocument } from './Communications.generated';
+import { UpdateCommunicationDocument } from './UpdateCommunication.generated';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface Props {
@@ -9,34 +10,18 @@ interface Props {
 }
 
 export default function CommunicationsTab({ jobId }: Props) {
-  const [comms, setComms] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'needsReview'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
-
-  useEffect(() => {
-    load();
-  }, [jobId, filter]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const params =
-        filter === 'needsReview'
-          ? { jobIds: [jobId], needsReview: true }
-          : { jobIds: [jobId] };
-      const res = await listCommunications(params);
-      setComms(res.data);
-    } catch {}
-    setLoading(false);
-  }
+  const { data, loading: fetching } = useQuery(CommunicationsDocument, {
+    variables: { jobIds: [jobId], needsReview: filter === 'needsReview' ? true : undefined },
+  });
+  const comms = data?.communications ?? [];
+  const loading = fetching && !data;
+  const [updateCommunication] = useMutation(UpdateCommunicationDocument);
 
   async function markReviewed(commId: string) {
     try {
-      await updateCommunication(commId, { needsReview: false });
-      setComms((prev) =>
-        prev.map((c) => (c.id === commId ? { ...c, needsReview: false } : c))
-      );
+      await updateCommunication({ variables: { communicationId: commId, needsReview: false } });
     } catch {}
   }
 

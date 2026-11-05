@@ -1,4 +1,4 @@
-import { JobIntent, TradeCategory } from '@/types/api';
+import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 
 export interface CategoryTile {
   label: string;

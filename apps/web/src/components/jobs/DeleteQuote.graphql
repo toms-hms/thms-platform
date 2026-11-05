@@ -1,0 +1,5 @@
+mutation DeleteQuote($quoteId: ID!) {
+  deleteQuote(quoteId: $quoteId) {
+    success
+  }
+}

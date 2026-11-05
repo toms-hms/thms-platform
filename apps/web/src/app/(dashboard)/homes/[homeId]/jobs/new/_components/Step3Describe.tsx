@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { JobIntent, TradeCategory } from '@/types/api';
+import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
 interface Props {

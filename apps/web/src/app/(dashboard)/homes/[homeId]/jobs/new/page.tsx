@@ -1,12 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { JobIntent, JobStatus, TradeCategory } from '@/types/api';
-import { uploadJobPhoto } from './mutations';
-import { getHome } from '@/app/(dashboard)/homes/[homeId]/queries';
-import { createJob } from '@/app/(dashboard)/jobs/mutations';
-import { assignContractor, updateJob } from '@/components/jobs/mutations';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { JobIntent, JobStatus, TradeCategory } from '@/graphql/types.generated';
+import { WizardHomeDocument } from './WizardHome.generated';
+import { CreateJobDocument } from './CreateJob.generated';
+import { WizardUploadUrlDocument } from './WizardUploadUrl.generated';
+import { WizardConfirmUploadDocument } from './WizardConfirmUpload.generated';
+import { WizardAssignContractorDocument } from './WizardAssignContractor.generated';
+import { WizardUpdateJobDocument } from './WizardUpdateJob.generated';
 
 import WizardProgress from './_components/WizardProgress';
 import Step1Intent from './_components/Step1Intent';
@@ -48,13 +51,24 @@ export default function NewJobWizardPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [homeZipCodes, setHomeZipCodes] = useState<string[]>([]);
+  const homeZipCode = useQuery(WizardHomeDocument, { variables: { homeId } }).data?.home?.zipCode;
+  const homeZipCodes = homeZipCode ? [homeZipCode] : [];
+  const [createJob] = useMutation(CreateJobDocument);
+  const [updateJob] = useMutation(WizardUpdateJobDocument);
+  const [assignContractor] = useMutation(WizardAssignContractorDocument);
+  const [requestUploadUrl] = useMutation(WizardUploadUrlDocument);
+  const [confirmUpload] = useMutation(WizardConfirmUploadDocument);
 
-  useEffect(() => {
-    getHome(homeId)
-      .then((res) => setHomeZipCodes(res.data.zipCode ? [res.data.zipCode] : []))
-      .catch(() => setHomeZipCodes([]));
-  }, [homeId]);
+  /** Uploads a photo for a job: presigned URL, direct PUT, then confirmation. */
+  async function uploadJobPhoto(jobId: string, file: File) {
+    const { data: urlData } = await requestUploadUrl({
+      variables: { jobId, fileName: file.name, contentType: file.type, kind: 'SOURCE' },
+    });
+    const upload = urlData?.requestUploadUrl?.upload;
+    if (!upload) throw new Error('Upload failed');
+    await fetch(upload.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+    await confirmUpload({ variables: { jobId, key: upload.key, kind: 'SOURCE', label: file.name } });
+  }
 
   function update(fields: Partial<WizardData>) {
     setData((prev) => ({ ...prev, ...fields }));
@@ -84,7 +98,7 @@ export default function NewJobWizardPage() {
     setError('');
     try {
       const effectiveCategory = data.category ?? data.categories[0];
-      const res = await createJob({
+      const { data: created } = await createJob({ variables: {
         homeId,
         title: data.title,
         intent: data.intent ?? undefined,
@@ -92,8 +106,9 @@ export default function NewJobWizardPage() {
         categories: data.categories.length ? data.categories : undefined,
         description: data.description || undefined,
         status: JobStatus.DRAFT,
-      });
-      const jobId = res.data.id;
+      } });
+      const jobId = created?.createJob?.job?.id;
+      if (!jobId) throw new Error('Failed to save. Please try again.');
       update({ jobId });
       for (const file of data.photos) { await uploadJobPhoto(jobId, file); }
       setStep(4);
@@ -116,7 +131,7 @@ export default function NewJobWizardPage() {
       setSubmitting(true);
       setError('');
       try {
-        await updateJob(data.jobId, { category: categoryValues[0], categories: categoryValues });
+        await updateJob({ variables: { jobId: data.jobId, category: categoryValues[0], categories: categoryValues } });
         update({ category: categoryValues[0], categories: categoryValues, categorySuggestions: confirmedCategories });
       } catch (err: any) {
         setError(err.message || 'Failed to update categories.');
@@ -138,12 +153,12 @@ export default function NewJobWizardPage() {
       // Assign each selected contractor
       await Promise.all(
         data.selectedContractorIds.map((contractorId) =>
-          assignContractor({ jobId: data.jobId as string, contractorId })
+          assignContractor({ variables: { jobId: data.jobId as string, contractorId } })
         )
       );
 
       // Transition job to REACHING_OUT
-      await updateJob(data.jobId, { status: JobStatus.REACHING_OUT });
+      await updateJob({ variables: { jobId: data.jobId, status: JobStatus.REACHING_OUT } });
 
       router.push(`/homes/${homeId}/jobs/${data.jobId}`);
     } catch (err: any) {

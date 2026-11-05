@@ -1,0 +1,10 @@
+query ContractorJobHistory($contractorIds: [ID!]!) {
+  contractorJobHistory(contractorIds: $contractorIds) {
+    jobId
+    jobTitle
+    jobStatus
+    homeId
+    homeName
+    contractorStatus
+  }
+}

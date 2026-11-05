@@ -1,0 +1,32 @@
+mutation UpdateJob(
+  $jobId: ID!
+  $title: String
+  $category: TradeCategory
+  $intent: JobIntent
+  $categories: [TradeCategory!]
+  $description: String
+  $notes: String
+  $status: JobStatus
+  $aiSession: JSONString
+) {
+  updateJob(
+    jobId: $jobId
+    title: $title
+    category: $category
+    intent: $intent
+    categories: $categories
+    description: $description
+    notes: $notes
+    status: $status
+    aiSession: $aiSession
+  ) {
+    job {
+      id
+      title
+      category
+      description
+      notes
+      status
+    }
+  }
+}

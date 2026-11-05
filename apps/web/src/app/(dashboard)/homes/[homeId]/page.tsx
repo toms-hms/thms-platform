@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getHome, listJobs } from './queries';
+import { useQuery } from '@apollo/client/react';
+import { HomeDocument } from './Home.generated';
+import { HomeJobsDocument } from './HomeJobs.generated';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 
@@ -19,26 +21,12 @@ const INTENT_LABELS: Record<string, string> = {
 
 export default function HomeDetailPage() {
   const { homeId } = useParams<{ homeId: string }>();
-  const [home, setHome] = useState<any>(null);
-  const [jobsList, setJobsList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-
-  useEffect(() => {
-    if (homeId) loadData();
-  }, [homeId]);
-
-  async function loadData() {
-    try {
-      const [homeRes, jobsRes] = await Promise.all([
-        getHome(homeId),
-        listJobs({ homeIds: [homeId] }),
-      ]);
-      setHome(homeRes.data);
-      setJobsList(jobsRes.data);
-    } catch {}
-    setLoading(false);
-  }
+  const homeQuery = useQuery(HomeDocument, { variables: { homeId } });
+  const jobsQuery = useQuery(HomeJobsDocument, { variables: { homeIds: [homeId] } });
+  const home = homeQuery.data?.home;
+  const jobsList = jobsQuery.data?.jobs ?? [];
+  const loading = (homeQuery.loading && !homeQuery.data) || (jobsQuery.loading && !jobsQuery.data);
 
   const filteredJobs = statusFilter
     ? jobsList.filter((j) => j.status === statusFilter)

@@ -1,0 +1,25 @@
+mutation CreateHome(
+  $name: String!
+  $address1: String!
+  $address2: String
+  $city: String!
+  $state: String!
+  $zipCode: String!
+  $country: String
+  $notes: String
+) {
+  createHome(
+    name: $name
+    address1: $address1
+    address2: $address2
+    city: $city
+    state: $state
+    zipCode: $zipCode
+    country: $country
+    notes: $notes
+  ) {
+    home {
+      id
+    }
+  }
+}

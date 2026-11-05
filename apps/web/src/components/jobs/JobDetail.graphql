@@ -1,0 +1,37 @@
+query JobDetail($jobId: ID!) {
+  job(jobId: $jobId) {
+    id
+    title
+    category
+    description
+    notes
+    status
+    contractors {
+      id
+      status
+      notes
+      lastContactedAt
+      lastResponseAt
+      contractor {
+        id
+        name
+        companyName
+        email
+      }
+    }
+    quotes {
+      id
+      amount
+      description
+      status
+      contractor {
+        id
+        name
+      }
+    }
+    communications {
+      id
+      needsReview
+    }
+  }
+}

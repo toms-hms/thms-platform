@@ -1,7 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { type AiSessionSummary, JobIntent, TradeCategory } from '@/types/api';
-import { answerDiagnose, startDiagnose } from '../mutations';
+import { useMutation } from '@apollo/client/react';
+import { JobIntent, TradeCategory } from '@/graphql/types.generated';
+import type { AiSessionSummary } from '@/types/api';
+import { StartDiagnoseDocument, type StartDiagnoseMutation } from '../StartDiagnose.generated';
+import { DiagnoseJobDocument } from '../DiagnoseJob.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
 
 const TITLES: Record<JobIntent, string> = {
@@ -21,6 +24,21 @@ interface TurnResult {
   summary: AiSessionSummary | null;
   suggestedCategories: CategorySuggestion[] | null;
   messages: { role: string; content: string }[];
+}
+
+type DiagnoseResult = NonNullable<StartDiagnoseMutation['startDiagnose']>['result'];
+
+/** Parses the JSON-encoded fields of one assistant turn. */
+function toTurnResult(result: DiagnoseResult | null | undefined): TurnResult {
+  if (!result) throw new Error('Something went wrong. Please try again.');
+  return {
+    question: result.question,
+    options: result.options,
+    summary: result.summary ? JSON.parse(result.summary) : null,
+    suggestedCategories:
+      result.suggestedCategories?.map((s) => ({ category: s.category as TradeCategory, reason: s.reason })) ?? null,
+    messages: result.messages ? JSON.parse(result.messages) : [],
+  };
 }
 
 interface HistoryEntry {
@@ -50,6 +68,8 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
   const [confirmedCategories, setConfirmedCategories] = useState<CategorySuggestion[]>([]);
   const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [startDiagnose] = useMutation(StartDiagnoseDocument);
+  const [diagnoseJob] = useMutation(DiagnoseJobDocument);
 
   useEffect(() => { startSession(); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [history, currentQuestion]);
@@ -58,8 +78,8 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await startDiagnose(jobId);
-      applyTurnResult(res.data);
+      const { data } = await startDiagnose({ variables: { jobId } });
+      applyTurnResult(toTurnResult(data?.startDiagnose?.result));
     } catch (err: any) {
       setError(err.message || 'Failed to start. Please try again.');
     } finally {
@@ -87,8 +107,8 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
     setLoading(true);
     setError('');
     try {
-      const res = await answerDiagnose(jobId, answer);
-      applyTurnResult(res.data);
+      const { data } = await diagnoseJob({ variables: { jobId, message: answer } });
+      applyTurnResult(toTurnResult(data?.diagnoseJob?.result));
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
       setCurrentQuestion(question);

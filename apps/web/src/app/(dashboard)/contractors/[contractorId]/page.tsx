@@ -2,9 +2,11 @@
 import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { TradeCategory } from '@/types/api';
-import { getContractor, getContractorJobs } from '../queries';
-import { updateContractor } from '../mutations';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { TradeCategory } from '@/graphql/types.generated';
+import { ContractorDocument } from './Contractor.generated';
+import { ContractorJobHistoryDocument } from './ContractorJobHistory.generated';
+import { UpdateContractorDetailsDocument } from './UpdateContractorDetails.generated';
 import { getStoredUser } from '@/lib/auth';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
@@ -27,9 +29,13 @@ const CATEGORY_LABELS: Record<TradeCategory, string> = {
 
 export default function ContractorDetailPage() {
   const { contractorId } = useParams<{ contractorId: string }>();
-  const [contractor, setContractor] = useState<any>(null);
-  const [jobHistory, setJobHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const contractorQuery = useQuery(ContractorDocument, { variables: { contractorId } });
+  const historyQuery = useQuery(ContractorJobHistoryDocument, { variables: { contractorIds: [contractorId] } });
+  const [updateContractor] = useMutation(UpdateContractorDetailsDocument);
+  const contractor = contractorQuery.data?.contractor;
+  const jobHistory = historyQuery.data?.contractorJobHistory ?? [];
+  const loading =
+    (contractorQuery.loading && !contractorQuery.data) || (historyQuery.loading && !historyQuery.data);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,28 +53,16 @@ export default function ContractorDetailPage() {
   useEffect(() => {
     const user = getStoredUser();
     setIsAdmin(user?.role === 'ADMIN');
-    if (contractorId) loadData();
-  }, [contractorId]);
-
-  async function loadData() {
-    try {
-      const [cRes, jRes] = await Promise.all([
-        getContractor(contractorId),
-        getContractorJobs([contractorId]),
-      ]);
-      setContractor(cRes.data);
-      setJobHistory(jRes.data);
-    } catch {}
-    setLoading(false);
-  }
+  }, []);
 
   function openEdit() {
+    if (!contractor) return;
     setForm({
       name: contractor.name,
       companyName: contractor.companyName || '',
       email: contractor.email || '',
       phone: contractor.phone || '',
-      categories: contractor.categories || [],
+      categories: (contractor.categories || []) as TradeCategory[],
       zipCodes: contractor.zipCodes || [],
       notes: contractor.notes || '',
     });
@@ -90,8 +84,7 @@ export default function ContractorDetailPage() {
     setSaving(true);
     setEditError('');
     try {
-      const res = await updateContractor(contractorId, form);
-      setContractor(res.data);
+      await updateContractor({ variables: { contractorId, ...form } });
       setShowEdit(false);
     } catch (err: any) {
       setEditError(err.message || 'Failed to save');

@@ -1,0 +1,9 @@
+query WizardContractors($tradeCategories: [TradeCategory!], $zipCodes: [String!]) {
+  contractors(tradeCategories: $tradeCategories, zipCodes: $zipCodes) {
+    id
+    name
+    companyName
+    email
+    phone
+  }
+}

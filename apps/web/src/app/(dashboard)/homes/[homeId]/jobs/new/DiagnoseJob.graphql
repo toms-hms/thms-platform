@@ -1,0 +1,14 @@
+mutation DiagnoseJob($jobId: ID!, $message: String!) {
+  diagnoseJob(jobId: $jobId, message: $message) {
+    result {
+      question
+      options
+      summary
+      suggestedCategories {
+        category
+        reason
+      }
+      messages
+    }
+  }
+}

@@ -1,0 +1,8 @@
+query Homes {
+  homes {
+    id
+    name
+    notes
+    fullAddress
+  }
+}

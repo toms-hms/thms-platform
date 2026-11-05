@@ -58,8 +58,10 @@ reset-db:
 shell-db:
 	docker compose exec api python manage.py dbshell
 
+# Re-export the API schema and regenerate the web client's typed documents from it.
 graphql-schema:
 	docker compose exec api python manage.py graphql_schema --out schema.graphql
+	cd apps/web && npm run codegen
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 

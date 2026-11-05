@@ -2,8 +2,9 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { login } from '@/lib/auth-api';
+import { useMutation } from '@apollo/client/react';
 import { saveTokens, saveUser } from '@/lib/auth';
+import { LoginDocument } from './Login.generated';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,15 +12,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [login] = useMutation(LoginDocument);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await login({ email, password });
-      saveTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
-      saveUser(res.data.user);
+      const { data } = await login({ variables: { email, password } });
+      const auth = data?.login;
+      if (!auth?.tokens || !auth.user) throw new Error('Login failed');
+      saveTokens(auth.tokens.accessToken, auth.tokens.refreshToken);
+      saveUser(auth.user);
       router.push('/homes');
     } catch (err: any) {
       setError(err.message || 'Login failed');

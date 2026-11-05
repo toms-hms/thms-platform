@@ -1,0 +1,12 @@
+query Contractor($contractorId: ID!) {
+  contractor(contractorId: $contractorId) {
+    id
+    name
+    companyName
+    email
+    phone
+    categories
+    zipCodes
+    notes
+  }
+}

@@ -7,21 +7,25 @@ Next.js 14 App Router + Tailwind CSS.
 src/app/(auth)/          Login + register (no nav)
 src/app/(dashboard)/     Protected pages (Navbar, auth redirect)
 src/components/ui/       Modal, StatusBadge, EmptyState, Navbar
-src/lib/graphql.ts       The GraphQL client — every API call goes through gqlRequest
-src/lib/auth-api.ts      Auth operations (login, register, logout, me)
+src/components/ApolloWrapper.tsx   Provides the Apollo client (wraps the root layout)
+src/lib/apollo.ts        Apollo client + link chain (bearer token, session end on UNAUTHORIZED), errorCode()
 src/lib/auth.ts          Token helpers (localStorage)
-src/types/api.ts         Types mirroring the GraphQL schema — the app's only API contract
+src/graphql/types.generated.ts     Schema enums and input types (codegen)
+src/types/api.ts         Only what the schema leaves untyped: AI-session JSON shapes, UserRole
+codegen.ts               GraphQL codegen config; schema is ../api/schema.graphql
 ```
 
-Reads live in `queries.ts` and writes in `mutations.ts`, colocated with the page or
-component that uses them. Both return `{ data }` so callers read `res.data`.
+Every operation is one `.graphql` file colocated with the page or component that
+uses it, selecting only what that file renders. Codegen writes a `.generated.ts`
+beside it with a typed document for `useQuery` / `useMutation`. See
+`.ai/recipes/web/api-client.md`.
 
 ## Non-obvious patterns
-- All pages are `'use client'` — data fetching via the colocated `queries.ts` in `useEffect`
-- The API is GraphQL: one `POST /graphql`, operations built as documents with variables
-- Errors arrive as `ApiError` with a `code` (`FORBIDDEN`, `NOT_FOUND`, …); `UNAUTHORIZED` clears the session and redirects to `/login`
+- All pages are `'use client'` — data loads with Apollo `useQuery`; writes with `useMutation`
+- The API is GraphQL: one `POST /graphql`. Edit a `.graphql` file → `npm run codegen`; generated files are committed
+- A failed operation throws an Apollo error whose message is the server's; `errorCode(err)` gives `FORBIDDEN`, `NOT_FOUND`, …; `UNAUTHORIZED` clears the session and redirects to `/login`
 - `JSONString` fields (`aiSession`, `metadata`) are strings on the wire — parse in, stringify out
-- No imports from `apps/api`: types are declared in `src/types/api.ts` and updated alongside the schema
+- No imports from `apps/api`: types are generated from the checked-in `apps/api/schema.graphql` (`make graphql-schema`)
 - Tailwind utilities: `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.input`, `.card`, `.badge`
 - Token stored in `localStorage` — no auto-refresh on 401 yet
 - Image uploads: get pre-signed URL → PUT to MinIO → confirm with API

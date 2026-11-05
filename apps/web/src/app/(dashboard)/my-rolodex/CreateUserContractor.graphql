@@ -1,0 +1,27 @@
+mutation CreateUserContractor(
+  $contractorId: ID
+  $note: String
+  $name: String
+  $companyName: String
+  $email: String
+  $phone: String
+  $categories: [TradeCategory!]
+  $zipCodes: [String!]
+  $notes: String
+) {
+  createUserContractor(
+    contractorId: $contractorId
+    note: $note
+    name: $name
+    companyName: $companyName
+    email: $email
+    phone: $phone
+    categories: $categories
+    zipCodes: $zipCodes
+    notes: $notes
+  ) {
+    userContractor {
+      id
+    }
+  }
+}

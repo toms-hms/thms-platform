@@ -1,0 +1,7 @@
+query Home($homeId: ID!) {
+  home(homeId: $homeId) {
+    id
+    name
+    fullAddress
+  }
+}

@@ -1,4 +1,4 @@
-import { JobIntent } from '@/types/api';
+import { JobIntent } from '@/graphql/types.generated';
 
 const INTENTS = [
   {

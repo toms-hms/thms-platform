@@ -1,0 +1,12 @@
+query Contractors($search: String, $tradeCategories: [TradeCategory!], $zipCodes: [String!]) {
+  contractors(search: $search, tradeCategories: $tradeCategories, zipCodes: $zipCodes) {
+    id
+    name
+    companyName
+    email
+    phone
+    categories
+    zipCodes
+    notes
+  }
+}

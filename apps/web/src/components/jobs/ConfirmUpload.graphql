@@ -1,0 +1,7 @@
+mutation ConfirmUpload($jobId: ID!, $key: String!, $kind: String, $label: String) {
+  confirmUpload(jobId: $jobId, key: $key, kind: $kind, label: $label) {
+    image {
+      id
+    }
+  }
+}

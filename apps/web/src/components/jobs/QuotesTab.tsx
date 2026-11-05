@@ -1,16 +1,25 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import { QuoteStatus } from '@/types/api';
-import { createQuote, updateQuote, deleteQuote } from './mutations';
+import { useMutation } from '@apollo/client/react';
+import { QuoteStatus } from '@/graphql/types.generated';
+import { CreateQuoteDocument } from './CreateQuote.generated';
+import { UpdateQuoteDocument } from './UpdateQuote.generated';
+import { DeleteQuoteDocument } from './DeleteQuote.generated';
+import { JobDetailDocument } from './JobDetail.generated';
+import type { JobDetail } from './types';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 
 interface Props {
-  job: any;
+  job: JobDetail;
 }
 
 export default function QuotesTab({ job }: Props) {
-  const [quotesList, setQuotesList] = useState<any[]>(job.quotes || []);
+  const quotesList = job.quotes;
+  const refetchQueries = [JobDetailDocument];
+  const [createQuote] = useMutation(CreateQuoteDocument, { refetchQueries });
+  const [updateQuote] = useMutation(UpdateQuoteDocument);
+  const [deleteQuote] = useMutation(DeleteQuoteDocument, { refetchQueries });
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -28,38 +37,35 @@ export default function QuotesTab({ job }: Props) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await createQuote({
+      await createQuote({ variables: {
         jobId:        job.id,
         contractorId: form.contractorId,
         amount:       parseFloat(form.amount),
         description:  form.description,
         status:       form.status as QuoteStatus,
-      });
-      setQuotesList((prev) => [res.data, ...prev]);
+      } });
       setShowAdd(false);
       setForm({ contractorId: '', amount: '', description: '', status: 'DRAFT' });
     } catch {}
     setSaving(false);
   }
 
-  async function handleConfirm(quote: any) {
+  async function handleConfirm(quote: JobDetail['quotes'][number]) {
     try {
-      const res = await updateQuote(quote.id, { status: QuoteStatus.CONFIRMED });
-      setQuotesList((prev) => prev.map((q) => (q.id === quote.id ? res.data : q)));
+      await updateQuote({ variables: { quoteId: quote.id, status: QuoteStatus.CONFIRMED } });
     } catch {}
   }
 
   async function handleDelete(quoteId: string) {
     if (!confirm('Delete this quote?')) return;
     try {
-      await deleteQuote(quoteId);
-      setQuotesList((prev) => prev.filter((q) => q.id !== quoteId));
+      await deleteQuote({ variables: { quoteId } });
     } catch {}
   }
 
   const confirmed = quotesList.filter((q) => q.status === 'CONFIRMED');
   const drafts = quotesList.filter((q) => q.status === 'DRAFT');
-  const contractors = job.contractors || [];
+  const contractors = job.contractors;
 
   return (
     <div>
@@ -143,7 +149,7 @@ export default function QuotesTab({ job }: Props) {
               required
             >
               <option value="">-- Select contractor --</option>
-              {contractors.map((jc: any) => (
+              {contractors.map((jc) => (
                 <option key={jc.contractor.id} value={jc.contractor.id}>
                   {jc.contractor?.name}
                 </option>

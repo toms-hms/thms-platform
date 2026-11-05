@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
 import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
 
 interface Props {
   intent: JobIntent;
@@ -48,33 +52,38 @@ export default function Step3Describe({
       <p className="text-gray-500 mb-8">The more detail you provide, the better contractors can quote without a site visit.</p>
 
       <div className="space-y-6 max-w-2xl">
-        <div>
-          <label className="label">Title <span className="text-red-500">*</span></label>
-          <input
-            className="input"
+        <Field
+          label={
+            <>
+              Title <span className="text-red-500">*</span>
+            </>
+          }
+        >
+          <Input
             value={title}
             onChange={e => onUpdate({ title: e.target.value })}
             placeholder="e.g. Fix leaking kitchen faucet"
             maxLength={100}
           />
-        </div>
+        </Field>
 
-        <div>
-          <label className="label">Description</label>
-          <textarea
-            className="input"
+        <Field label="Description">
+          <Textarea
             rows={4}
             value={description}
             onChange={e => onUpdate({ description: e.target.value })}
             placeholder="Describe what's happening, when it started, any relevant details..."
           />
-        </div>
+        </Field>
 
-        <div>
-          <label className="label">
-            Photos
-            <span className="text-gray-400 font-normal ml-1">({photos.length}/8) — strongly recommended</span>
-          </label>
+        <Field
+          label={
+            <>
+              Photos
+              <span className="text-gray-400 font-normal ml-1">({photos.length}/8) — strongly recommended</span>
+            </>
+          }
+        >
 
           {photos.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
@@ -85,13 +94,13 @@ export default function Step3Describe({
                     alt={file.name}
                     className="w-full h-full object-cover rounded-lg border border-gray-200"
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="bare"
                     onClick={() => removePhoto(i)}
                     className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                   >
                     ✕
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -110,7 +119,7 @@ export default function Step3Describe({
               <div className="text-3xl mb-2">📷</div>
               <p className="text-sm font-medium text-gray-600">Drop photos here or click to browse</p>
               <p className="text-xs text-gray-400 mt-1">JPEG, PNG, HEIC up to 20 MB each</p>
-              <input
+              <Input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -120,7 +129,7 @@ export default function Step3Describe({
               />
             </div>
           )}
-        </div>
+        </Field>
 
         {error && (
           <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -129,16 +138,17 @@ export default function Step3Describe({
         )}
 
         <div className="flex items-center justify-between pt-2">
-          <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700">
+          <Button variant="muted" onClick={onBack}>
             ← Back
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={onNext}
             disabled={!title.trim() || submitting}
-            className="btn-primary min-w-[120px]"
+            className="min-w-[120px]"
           >
             {submitting ? 'Saving...' : 'Next →'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

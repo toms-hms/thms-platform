@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { JobIntent, JobStatus, TradeCategory } from '@/graphql/types.generated';
 import { WizardHomeDocument } from './queries/__generated__/WizardHome.generated';
@@ -183,8 +183,8 @@ export default function NewJobWizardPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <Link
+          variant="subtle"
           href={`/homes/${homeId}`}
-          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
         >
           ← Cancel
         </Link>

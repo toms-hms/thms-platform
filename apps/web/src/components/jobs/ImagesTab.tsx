@@ -9,6 +9,13 @@ import { DeleteJobImageDocument } from './mutations/__generated__/DeleteJobImage
 import { CreateAiGenerationDocument } from './mutations/__generated__/CreateAiGeneration.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
+import { buttonVariants } from '@/components/ui/Button';
+import { cn } from '@/lib/cn';
 
 interface Props {
   jobId: string;
@@ -98,17 +105,19 @@ export default function ImagesTab({ jobId }: Props) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-gray-800">Photos &amp; AI Concepts</h3>
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setShowAIGen(true)}
             disabled={sourceImages.length === 0}
-            className="btn-secondary text-sm"
+            className="text-sm"
             title={sourceImages.length === 0 ? 'Upload a photo first' : undefined}
           >
             Generate AI Concept
-          </button>
-          <label className="btn-primary text-sm cursor-pointer">
+          </Button>
+          {/* eslint-disable-next-line react/forbid-elements -- a <label> wrapping the hidden file input is what opens the picker */}
+          <label className={cn(buttonVariants({ variant: 'primary' }), 'text-sm cursor-pointer')}>
             {uploading ? 'Uploading...' : 'Upload Photo'}
-            <input
+            <Input
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -145,12 +154,13 @@ export default function ImagesTab({ jobId }: Props) {
                       className="w-full h-40 object-cover rounded-lg"
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg" />
-                    <button
+                    <Button
+                      variant="bare"
                       onClick={() => handleDelete(img.id)}
                       className="absolute top-2 right-2 bg-white rounded-full w-6 h-6 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center justify-center"
                     >
                       ✕
-                    </button>
+                    </Button>
                     {img.label && (
                       <p className="text-xs text-gray-500 mt-1 truncate">{img.label}</p>
                     )}
@@ -185,10 +195,8 @@ export default function ImagesTab({ jobId }: Props) {
 
       <Modal title="Generate AI Concept" open={showAIGen} onClose={() => setShowAIGen(false)}>
         <form onSubmit={handleGenerate} className="space-y-4">
-          <div>
-            <label className="label">Source Photo</label>
-            <select
-              className="input"
+          <Field label="Source Photo">
+            <Select
               value={genForm.sourceImageId}
               onChange={(e) => setGenForm((f) => ({ ...f, sourceImageId: e.target.value }))}
               required
@@ -199,27 +207,25 @@ export default function ImagesTab({ jobId }: Props) {
                   {img.label || img.id}
                 </option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Prompt</label>
-            <textarea
-              className="input"
+            </Select>
+          </Field>
+          <Field label="Prompt">
+            <Textarea
               rows={4}
               value={genForm.prompt}
               onChange={(e) => setGenForm((f) => ({ ...f, prompt: e.target.value }))}
               placeholder="Add a cedar deck in the back yard. Keep the house structure unchanged."
               required
             />
-          </div>
+          </Field>
           <p className="text-xs text-gray-400">
             Results are conceptual only. Generation may take 20–30 seconds.
           </p>
           <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setShowAIGen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={genLoading} className="btn-primary">
+            <Button variant="secondary" onClick={() => setShowAIGen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={genLoading}>
               {genLoading ? 'Generating...' : 'Generate'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

@@ -1,12 +1,14 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@apollo/client/react';
 import { HomeDocument } from './queries/__generated__/Home.generated';
 import { HomeJobsDocument } from './queries/__generated__/HomeJobs.generated';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
+import Select from '@/components/ui/Select';
+import PageHeader from '@/components/ui/PageHeader';
 
 const JOB_STATUSES = [
   'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
@@ -37,19 +39,13 @@ export default function HomeDetailPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link href="/homes" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-          ← My Homes
-        </Link>
-        <h1 className="text-2xl font-bold text-ink mt-1">{home.name}</h1>
-        <p className="text-gray-400 text-sm">{home.fullAddress}</p>
-      </div>
+      <PageHeader back={{ href: '/homes', label: 'My Homes' }} subtitle={home.fullAddress} title={home.name} />
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-gray-800">Jobs</h2>
-          <select
-            className="input w-auto py-1 text-sm"
+          <Select
+            className="w-auto py-1 text-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -57,9 +53,9 @@ export default function HomeDetailPage() {
             {JOB_STATUSES.map((s) => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
-          </select>
+          </Select>
         </div>
-        <Link href={`/homes/${homeId}/jobs/new`} className="btn-primary">
+        <Link variant="primary" href={`/homes/${homeId}/jobs/new`}>
           + New Request
         </Link>
       </div>
@@ -69,7 +65,7 @@ export default function HomeDetailPage() {
           title="No jobs yet"
           description="Start a new request to get quotes from contractors."
           action={
-            <Link href={`/homes/${homeId}/jobs/new`} className="btn-primary">
+            <Link variant="primary" href={`/homes/${homeId}/jobs/new`}>
               New Request
             </Link>
           }
@@ -78,9 +74,10 @@ export default function HomeDetailPage() {
         <div className="space-y-3">
           {filteredJobs.map((job) => (
             <Link
+              variant="card"
               key={job.id}
               href={`/homes/${homeId}/jobs/${job.id}`}
-              className="card p-4 flex items-start justify-between hover:shadow-md transition-shadow block"
+              className="p-4 flex items-start justify-between"
             >
               <div>
                 <div className="flex items-center gap-2">

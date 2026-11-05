@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
+import Button from '@/components/ui/Button';
 
 const INTENT_LABELS: Record<JobIntent, string> = {
   [JobIntent.ISSUE]:          'What needs fixing?',
@@ -40,7 +41,8 @@ export default function Step2Category({ intent, onSelect, onSelectMultiple, onBa
         {tiles.map((tile) => {
           const isSelected = isMulti && selected.includes(tile.tradeCategory);
           return (
-            <button
+            <Button
+              variant="bare"
               key={tile.tradeCategory}
               onClick={() =>
                 isMulti
@@ -60,23 +62,23 @@ export default function Step2Category({ intent, onSelect, onSelectMultiple, onBa
                 {tile.label}
               </div>
               <div className="text-xs text-gray-400 mt-0.5 leading-snug">{tile.description}</div>
-            </button>
+            </Button>
           );
         })}
       </div>
 
       <div className="flex items-center justify-between mt-8">
-        <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700">
+        <Button variant="muted" onClick={onBack}>
           ← Back
-        </button>
+        </Button>
         {isMulti && (
-          <button
+          <Button
+            variant="primary"
             onClick={() => onSelectMultiple?.(selected)}
             disabled={selected.length === 0}
-            className="btn-primary"
           >
             Next →
-          </button>
+          </Button>
         )}
       </div>
     </div>

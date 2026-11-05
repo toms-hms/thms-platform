@@ -1,6 +1,6 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { TradeCategory } from '@/graphql/types.generated';
 import { UserRole } from '@/types/api';
@@ -14,6 +14,11 @@ import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Selector, { SelectorOption } from '@/components/ui/Selector';
 import { getStoredUser } from '@/lib/auth';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import PageHeader from '@/components/ui/PageHeader';
 
 const CATEGORY_LABELS: Record<TradeCategory, string> = {
   [TradeCategory.PLUMBING]:            'Plumbing',
@@ -149,20 +154,20 @@ export default function ContractorsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/my-rolodex" className="btn-secondary">My Rolodex</Link>
-          {isAdmin && <button onClick={openCreate} className="btn-primary">+ Add Vendor</button>}
-        </div>
-      </div>
+      <PageHeader
+        actions={
+          <>
+            <Link href="/my-rolodex" variant="secondary">My Rolodex</Link>
+            {isAdmin && <Button onClick={openCreate} variant="primary">+ Add Vendor</Button>}
+          </>
+        }
+        title="Vendors"
+      />
 
       <div className="flex flex-wrap gap-3 mb-5">
-        <input
+        <Input
           type="text"
-          className="input max-w-xs"
+          className="max-w-xs"
           placeholder="Search by name, company, email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -175,9 +180,9 @@ export default function ContractorsPage() {
             placeholder="All categories"
           />
         </div>
-        <input
+        <Input
           type="text"
-          className="input max-w-32"
+          className="max-w-32"
           placeholder="ZIP"
           value={zipFilter}
           onChange={(e) => setZipFilter(e.target.value)}
@@ -190,7 +195,7 @@ export default function ContractorsPage() {
         <EmptyState
           title="No vendors found"
           description="Clear filters or add a vendor to the global list."
-          action={isAdmin ? <button onClick={openCreate} className="btn-primary">Add Vendor</button> : undefined}
+          action={isAdmin ? <Button variant="primary" onClick={openCreate}>Add Vendor</Button> : undefined}
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -233,19 +238,19 @@ export default function ContractorsPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        className="btn-secondary text-xs py-1 px-2"
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); handleAddToMyVendors(contractor); }}
                         disabled={addingId === contractor.id}
                         aria-label="Add to my vendors"
                       >
                         {addingId === contractor.id ? 'Adding...' : '☆ Add to my vendors'}
-                      </button>
+                      </Button>
                       {isAdmin && (
                         <>
-                          <button type="button" className="btn-secondary text-xs py-1 px-2" onClick={(e) => { e.stopPropagation(); openEdit(contractor); }}>Edit</button>
-                          <button type="button" className="btn-danger text-xs py-1 px-2" onClick={(e) => { e.stopPropagation(); handleDelete(contractor.id, contractor.name); }}>Delete</button>
+                          <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(contractor); }}>Edit</Button>
+                          <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(contractor.id, contractor.name); }}>Delete</Button>
                         </>
                       )}
                     </div>
@@ -267,45 +272,38 @@ export default function ContractorsPage() {
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Name</label>
-              <input className="input" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="John Smith" required />
-            </div>
-            <div>
-              <label className="label">Company</label>
-              <input className="input" value={form.companyName} onChange={(e) => update('companyName', e.target.value)} placeholder="Smith Decks" />
-            </div>
+            <Field label="Name">
+              <Input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="John Smith" required />
+            </Field>
+            <Field label="Company">
+              <Input value={form.companyName} onChange={(e) => update('companyName', e.target.value)} placeholder="Smith Decks" />
+            </Field>
           </div>
-          <div>
-            <label className="label">Category</label>
+          <Field label="Category">
             <Selector
               options={Object.values(TradeCategory).map((v) => ({ value: v, label: CATEGORY_LABELS[v] }))}
               value={form.category}
               onChange={(v) => update('category', v)}
               placeholder="Select a category"
             />
-          </div>
-          <div>
-            <label className="label">ZIP codes</label>
-            <input className="input" value={form.zipCodes} onChange={(e) => update('zipCodes', e.target.value)} placeholder="78701, 78702" />
-          </div>
+          </Field>
+          <Field label="ZIP codes">
+            <Input value={form.zipCodes} onChange={(e) => update('zipCodes', e.target.value)} placeholder="78701, 78702" />
+          </Field>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Email</label>
-              <input type="email" className="input" value={form.email} onChange={(e) => update('email', e.target.value)} placeholder="john@company.com" />
-            </div>
-            <div>
-              <label className="label">Phone</label>
-              <input className="input" value={form.phone} onChange={(e) => update('phone', e.target.value)} placeholder="5125551212" />
-            </div>
+            <Field label="Email">
+              <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} placeholder="john@company.com" />
+            </Field>
+            <Field label="Phone">
+              <Input value={form.phone} onChange={(e) => update('phone', e.target.value)} placeholder="5125551212" />
+            </Field>
           </div>
-          <div>
-            <label className="label">Notes</label>
-            <textarea className="input" rows={3} value={form.notes} onChange={(e) => update('notes', e.target.value)} placeholder="Recommended by neighbor..." />
-          </div>
+          <Field label="Notes">
+            <Textarea rows={3} value={form.notes} onChange={(e) => update('notes', e.target.value)} placeholder="Recommended by neighbor..." />
+          </Field>
           <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : (editing ? 'Save Changes' : 'Add Vendor')}</button>
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : (editing ? 'Save Changes' : 'Add Vendor')}</Button>
           </div>
         </form>
       </Modal>

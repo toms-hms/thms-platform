@@ -1,11 +1,16 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { HomesDocument } from './queries/__generated__/Homes.generated';
 import { CreateHomeDocument } from './mutations/__generated__/CreateHome.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function HomesPage() {
   const { data, loading: fetching, refetch } = useQuery(HomesDocument);
@@ -47,12 +52,14 @@ export default function HomesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Homes</h1>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">
-          + Add Home
-        </button>
-      </div>
+      <PageHeader
+        actions={
+          <Button onClick={() => setShowCreate(true)} variant="primary">
+            + Add Home
+          </Button>
+        }
+        title="My Homes"
+      />
 
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading...</div>
@@ -61,18 +68,19 @@ export default function HomesPage() {
           title="No homes yet"
           description="Add your first home to start managing projects."
           action={
-            <button onClick={() => setShowCreate(true)} className="btn-primary">
+            <Button variant="primary" onClick={() => setShowCreate(true)}>
               Add Home
-            </button>
+            </Button>
           }
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {homesList.map((home) => (
             <Link
+              variant="card"
               key={home.id}
               href={`/homes/${home.id}`}
-              className="card p-5 hover:shadow-md transition-shadow"
+              className="p-5"
             >
               <h2 className="font-semibold text-gray-900">{home.name}</h2>
               <p className="text-sm text-gray-500 mt-1">{home.fullAddress}</p>
@@ -91,85 +99,71 @@ export default function HomesPage() {
               {error}
             </div>
           )}
-          <div>
-            <label className="label">Home Name</label>
-            <input
-              className="input"
+          <Field label="Home Name">
+            <Input
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
               placeholder="Primary Residence"
               required
             />
-          </div>
-          <div>
-            <label className="label">Address Line 1</label>
-            <input
-              className="input"
+          </Field>
+          <Field label="Address Line 1">
+            <Input
               value={form.address1}
               onChange={(e) => update('address1', e.target.value)}
               placeholder="123 Main St"
               required
             />
-          </div>
-          <div>
-            <label className="label">Address Line 2</label>
-            <input
-              className="input"
+          </Field>
+          <Field label="Address Line 2">
+            <Input
               value={form.address2}
               onChange={(e) => update('address2', e.target.value)}
               placeholder="Apt 2 (optional)"
             />
-          </div>
+          </Field>
           <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-1">
-              <label className="label">City</label>
-              <input
-                className="input"
+            <Field className="col-span-1" label="City">
+              <Input
                 value={form.city}
                 onChange={(e) => update('city', e.target.value)}
                 placeholder="Austin"
                 required
               />
-            </div>
-            <div>
-              <label className="label">State</label>
-              <input
-                className="input"
+            </Field>
+            <Field label="State">
+              <Input
                 value={form.state}
                 onChange={(e) => update('state', e.target.value.toUpperCase())}
                 placeholder="TX"
                 maxLength={2}
                 required
               />
-            </div>
-            <div>
-              <label className="label">ZIP</label>
-              <input
-                className="input"
+            </Field>
+            <Field label="ZIP">
+              <Input
                 value={form.zipCode}
                 onChange={(e) => update('zipCode', e.target.value)}
                 placeholder="78745"
                 required
               />
-            </div>
+            </Field>
           </div>
-          <div>
-            <label className="label">Notes</label>
-            <textarea
-              className="input"
+          <Field label="Notes">
+            <Textarea
               rows={3}
               value={form.notes}
               onChange={(e) => update('notes', e.target.value)}
               placeholder="Any notes about this property..."
             />
-          </div>
+          </Field>
           <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>
               Cancel
-            </button>
-            <button type="submit" disabled={saving} className="btn-primary">
+            </Button>
+            <Button variant="primary" type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Create Home'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

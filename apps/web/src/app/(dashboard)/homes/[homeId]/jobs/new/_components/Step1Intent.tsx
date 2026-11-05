@@ -1,4 +1,5 @@
 import { JobIntent } from '@/graphql/types.generated';
+import Button from '@/components/ui/Button';
 
 const INTENTS = [
   {
@@ -36,7 +37,8 @@ export default function Step1Intent({ onSelect }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {INTENTS.map((intent) => (
-          <button
+          <Button
+            variant="bare"
             key={intent.value}
             onClick={() => onSelect(intent.value)}
             className="group text-left p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-brand-400 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
@@ -47,7 +49,7 @@ export default function Step1Intent({ onSelect }: Props) {
             </h3>
             <p className="text-sm text-gray-500 mb-3">{intent.description}</p>
             <p className="text-xs text-gray-400">{intent.examples}</p>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

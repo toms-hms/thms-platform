@@ -4,6 +4,9 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import { CommunicationsDocument } from './queries/__generated__/Communications.generated';
 import { UpdateCommunicationDocument } from './mutations/__generated__/UpdateCommunication.generated';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import { cn } from '@/lib/cn';
 
 interface Props {
   jobId: string;
@@ -32,7 +35,8 @@ export default function CommunicationsTab({ jobId }: Props) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <button
+        <Button
+          variant="bare"
           onClick={() => setFilter('all')}
           className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors ${
             filter === 'all'
@@ -41,8 +45,9 @@ export default function CommunicationsTab({ jobId }: Props) {
           }`}
         >
           All
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="bare"
           onClick={() => setFilter('needsReview')}
           className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors ${
             filter === 'needsReview'
@@ -51,7 +56,7 @@ export default function CommunicationsTab({ jobId }: Props) {
           }`}
         >
           Needs Review {needsReviewCount > 0 && <span className="ml-1">({needsReviewCount})</span>}
-        </button>
+        </Button>
       </div>
 
       {comms.length === 0 ? (
@@ -62,9 +67,9 @@ export default function CommunicationsTab({ jobId }: Props) {
       ) : (
         <div className="space-y-3">
           {comms.map((comm) => (
-            <div
+            <Card
               key={comm.id}
-              className={`card p-4 ${comm.needsReview ? 'border-yellow-300 bg-yellow-50/50' : ''}`}
+              className={cn('p-4', comm.needsReview && 'border-yellow-300 bg-yellow-50/50')}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -100,19 +105,21 @@ export default function CommunicationsTab({ jobId }: Props) {
               )}
 
               <div className="flex items-center gap-3 mt-3">
-                <button
+                <Button
+                  variant="bare"
                   onClick={() => setExpanded(expanded === comm.id ? null : comm.id)}
                   className="text-xs text-brand-600 hover:text-brand-700"
                 >
                   {expanded === comm.id ? 'Hide' : 'View full message'}
-                </button>
+                </Button>
                 {comm.needsReview && (
-                  <button
+                  <Button
+                    variant="bare"
                     onClick={() => markReviewed(comm.id)}
                     className="text-xs text-gray-500 hover:text-gray-700"
                   >
                     Mark reviewed
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -121,7 +128,7 @@ export default function CommunicationsTab({ jobId }: Props) {
                   {comm.bodyText || comm.bodyHtml?.replace(/<[^>]+>/g, '') || '(empty)'}
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@apollo/client/react';
 import { JobDetailDocument } from '@/components/jobs/queries/__generated__/JobDetail.generated';
@@ -9,6 +9,8 @@ import JobContractorsTab from '@/components/jobs/JobContractorsTab';
 import CommunicationsTab from '@/components/communications/CommunicationsTab';
 import QuotesTab from '@/components/jobs/QuotesTab';
 import ImagesTab from '@/components/jobs/ImagesTab';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 
 type Tab = 'overview' | 'contractors' | 'communications' | 'quotes' | 'images';
 
@@ -35,7 +37,7 @@ export default function JobDetailPage() {
   return (
     <div>
       <div className="mb-6">
-        <Link href={`/homes/${homeId}`} className="text-sm text-gray-500 hover:text-gray-700">
+        <Link variant="muted" href={`/homes/${homeId}`}>
           ← Back to Home
         </Link>
       </div>
@@ -43,7 +45,8 @@ export default function JobDetailPage() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex gap-6">
           {TABS.map((tab) => (
-            <button
+            <Button
+              variant="bare"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
@@ -58,12 +61,12 @@ export default function JobDetailPage() {
                   {needsReviewCount}
                 </span>
               )}
-            </button>
+            </Button>
           ))}
         </nav>
       </div>
 
-      <div className="card p-6">
+      <Card className="p-6">
         {activeTab === 'overview' && (
           <JobOverview job={job} />
         )}
@@ -71,7 +74,7 @@ export default function JobDetailPage() {
         {activeTab === 'communications' && <CommunicationsTab jobId={jobId} />}
         {activeTab === 'quotes' && <QuotesTab job={job} />}
         {activeTab === 'images' && <ImagesTab jobId={jobId} />}
-      </div>
+      </Card>
     </div>
   );
 }

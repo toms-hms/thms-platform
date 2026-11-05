@@ -9,6 +9,11 @@ import { JobDetailDocument } from './queries/__generated__/JobDetail.generated';
 import type { JobDetail } from './types';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Card from '@/components/ui/Card';
 
 interface Props {
   job: JobDetail;
@@ -71,9 +76,9 @@ export default function QuotesTab({ job }: Props) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-gray-800">Quotes</h3>
-        <button onClick={() => setShowAdd(true)} className="btn-primary text-sm">
+        <Button variant="primary" onClick={() => setShowAdd(true)} className="text-sm">
           + Add Quote
-        </button>
+        </Button>
       </div>
 
       {quotesList.length === 0 ? (
@@ -88,7 +93,7 @@ export default function QuotesTab({ job }: Props) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Confirmed Quotes</h4>
               <div className="space-y-2">
                 {confirmed.map((q) => (
-                  <div key={q.id} className="card p-4 flex items-start justify-between">
+                  <Card key={q.id} className="p-4 flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-gray-900">
                         ${q.amount.toLocaleString()}
@@ -98,10 +103,10 @@ export default function QuotesTab({ job }: Props) {
                         <p className="text-xs text-gray-400 mt-1">{q.description}</p>
                       )}
                     </div>
-                    <button onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
+                    <Button variant="bare" onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
                       ✕
-                    </button>
-                  </div>
+                    </Button>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -112,7 +117,7 @@ export default function QuotesTab({ job }: Props) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Draft Quotes</h4>
               <div className="space-y-2">
                 {drafts.map((q) => (
-                  <div key={q.id} className="card p-4 border-dashed border-gray-300">
+                  <Card key={q.id} className="p-4 border-dashed border-gray-300">
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-semibold text-gray-900">${q.amount.toLocaleString()}</p>
@@ -122,15 +127,15 @@ export default function QuotesTab({ job }: Props) {
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => handleConfirm(q)} className="btn-primary text-xs py-1 px-2">
+                        <Button variant="primary" size="sm" onClick={() => handleConfirm(q)}>
                           Confirm
-                        </button>
-                        <button onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
+                        </Button>
+                        <Button variant="bare" onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
                           ✕
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -140,10 +145,8 @@ export default function QuotesTab({ job }: Props) {
 
       <Modal title="Add Quote" open={showAdd} onClose={() => setShowAdd(false)}>
         <form onSubmit={handleAdd} className="space-y-4">
-          <div>
-            <label className="label">Contractor</label>
-            <select
-              className="input"
+          <Field label="Contractor">
+            <Select
               value={form.contractorId}
               onChange={(e) => update('contractorId', e.target.value)}
               required
@@ -154,40 +157,35 @@ export default function QuotesTab({ job }: Props) {
                   {jc.contractor?.name}
                 </option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Amount ($)</label>
-            <input
+            </Select>
+          </Field>
+          <Field label="Amount ($)">
+            <Input
               type="number"
               min="0"
               step="0.01"
-              className="input"
               value={form.amount}
               onChange={(e) => update('amount', e.target.value)}
               placeholder="12000"
               required
             />
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <input
-              className="input"
+          </Field>
+          <Field label="Description">
+            <Input
               value={form.description}
               onChange={(e) => update('description', e.target.value)}
               placeholder="Cedar deck estimate"
             />
-          </div>
-          <div>
-            <label className="label">Status</label>
-            <select className="input" value={form.status} onChange={(e) => update('status', e.target.value)}>
+          </Field>
+          <Field label="Status">
+            <Select value={form.status} onChange={(e) => update('status', e.target.value)}>
               <option value="DRAFT">Draft</option>
               <option value="CONFIRMED">Confirmed</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
           <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Add Quote'}</button>
+            <Button variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Add Quote'}</Button>
           </div>
         </form>
       </Modal>

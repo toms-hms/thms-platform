@@ -14,6 +14,10 @@ import type { JobDetail } from './types';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Select from '@/components/ui/Select';
+import Card from '@/components/ui/Card';
 
 const CONTRACTOR_STATUSES = [
   'NOT_CONTACTED', 'CONTACTED', 'RESPONDED', 'VISIT_REQUESTED', 'VISIT_SCHEDULED',
@@ -130,16 +134,17 @@ export default function JobContractorsTab({ job }: Props) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-gray-800">Contractors</h3>
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="secondary"
             onClick={handleGenerateDrafts}
             disabled={draftLoading}
-            className="btn-secondary text-sm"
+            className="text-sm"
           >
             {draftLoading ? 'Generating...' : 'Draft Outreach Emails'}
-          </button>
-          <button onClick={() => setShowAdd(true)} className="btn-primary text-sm">
+          </Button>
+          <Button variant="primary" onClick={() => setShowAdd(true)} className="text-sm">
             + Add Contractor
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -151,7 +156,7 @@ export default function JobContractorsTab({ job }: Props) {
       ) : (
         <div className="space-y-3">
           {jcs.map((jc) => (
-            <div key={jc.id} className="card p-4">
+            <Card key={jc.id} className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-medium text-gray-900">{jc.contractor?.name}</p>
@@ -163,21 +168,22 @@ export default function JobContractorsTab({ job }: Props) {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <select
+                  <Select
                     value={jc.status}
                     onChange={(e) => handleStatusChange(jc, e.target.value)}
-                    className="input text-xs py-1 w-auto"
+                    className="text-xs py-1 w-auto"
                   >
                     {CONTRACTOR_STATUSES.map((s) => (
                       <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                     ))}
-                  </select>
-                  <button
+                  </Select>
+                  <Button
+                    variant="bare"
                     onClick={() => handleRemove(jc.id)}
                     className="text-gray-400 hover:text-red-500 text-sm"
                   >
                     ✕
-                  </button>
+                  </Button>
                 </div>
               </div>
               {jc.notes && <p className="text-xs text-gray-400 mt-2">{jc.notes}</p>}
@@ -189,17 +195,15 @@ export default function JobContractorsTab({ job }: Props) {
                   <span>Responded: {new Date(jc.lastResponseAt).toLocaleDateString()}</span>
                 )}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
 
       <Modal title="Add Contractor to Job" open={showAdd} onClose={() => setShowAdd(false)}>
         <form onSubmit={handleAdd} className="space-y-4">
-          <div>
-            <label className="label">Select Contractor</label>
-            <select
-              className="input"
+          <Field label="Select Contractor">
+            <Select
               value={selectedContractorId}
               onChange={(e) => setSelectedContractorId(e.target.value)}
               required
@@ -210,11 +214,11 @@ export default function JobContractorsTab({ job }: Props) {
                   {c.name}{c.companyName ? ` (${c.companyName})` : ''}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
           <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Adding...' : 'Add'}</button>
+            <Button variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Adding...' : 'Add'}</Button>
           </div>
         </form>
       </Modal>
@@ -226,10 +230,8 @@ export default function JobContractorsTab({ job }: Props) {
       >
         <div className="space-y-4">
           {emailIntegrations.length > 0 && (
-            <div>
-              <label className="label">Send via</label>
-              <select
-                className="input"
+            <Field label="Send via">
+              <Select
                 value={selectedIntegration}
                 onChange={(e) => setSelectedIntegration(e.target.value)}
               >
@@ -239,8 +241,8 @@ export default function JobContractorsTab({ job }: Props) {
                     {i.provider} – {i.email}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           )}
 
           {emailDrafts.map((draft) => {
@@ -250,13 +252,14 @@ export default function JobContractorsTab({ job }: Props) {
                 <p className="font-medium text-gray-900">To: {ctr?.name}</p>
                 <p className="text-sm font-medium text-gray-700">{draft.subject}</p>
                 <p className="text-xs text-gray-500 whitespace-pre-wrap line-clamp-5">{draft.bodyText}</p>
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => sendDraft(draft)}
                   disabled={sendingEmail === draft.contractorId || !selectedIntegration}
-                  className="btn-primary text-sm"
+                  className="text-sm"
                 >
                   {sendingEmail === draft.contractorId ? 'Sending...' : 'Send Email'}
-                </button>
+                </Button>
               </div>
             );
           })}

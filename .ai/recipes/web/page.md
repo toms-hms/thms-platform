@@ -62,7 +62,9 @@ mutation CreateContractor($name: String!, $categories: [TradeCategory!]!, $zipCo
 // apps/web/src/app/(dashboard)/contractors/page.tsx
 'use client';
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { TradeCategory } from '@/graphql/types.generated';
 import { UserRole } from '@/types/api';
@@ -113,12 +115,16 @@ export default function ContractorsPage() {
 
   return (
     <div className="p-8">
-      {/* header, filters, list, and <Modal> create form */}
+      <PageHeader
+        actions={isAdmin && <Button onClick={() => setShowCreate(true)}>+ Add Contractor</Button>}
+        title="Contractors"
+      />
+      {/* filters, then the list; the create form is a <Modal> of <Field>s */}
       {list.length === 0 ? (
         <EmptyState title="No contractors found" />
       ) : (
         list.map((c) => (
-          <Link key={c.id} href={`/contractors/${c.id}`} className="card block">{c.name}</Link>
+          <Link className="p-4" href={`/contractors/${c.id}`} key={c.id} variant="card">{c.name}</Link>
         ))
       )}
     </div>
@@ -129,18 +135,12 @@ export default function ContractorsPage() {
 See `.ai/recipes/web/api-client.md` for the full client pattern: where operations live,
 keeping the screen current after a write, and codegen.
 
-## Tailwind utility classes
+## UI components
 
-Use these globals from `globals.css` (do not write your own base button/input styles):
-
-| Class | Use |
-|---|---|
-| `.btn-primary` | Primary action button |
-| `.btn-secondary` | Secondary action |
-| `.btn-danger` | Destructive action |
-| `.input` | Text/select inputs |
-| `.card` | Surface container |
-| `.badge` | Status chip |
+Build pages from `src/components/ui/` (`Button`, `Link`, `Field`, `Input`, `Select`, `Textarea`,
+`Card`, `Badge`, `PageHeader`, `Modal`, `EmptyState`), never raw form elements or copied class
+strings; `next lint` fails on a raw `<button>` / `<input>` / `<label>` / `<select>` / `<textarea>`.
+Start every dashboard page with `<PageHeader>`. See `component.md` for the full list and variants.
 
 ## Key rules
 

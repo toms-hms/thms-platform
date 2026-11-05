@@ -1,10 +1,14 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@apollo/client/react';
 import { saveTokens, saveUser } from '@/lib/auth';
 import { LoginDocument } from './mutations/__generated__/Login.generated';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +37,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="card p-8">
+    <Card className="p-8">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900">Sign in to THMS</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your home projects</p>
@@ -45,41 +49,37 @@ export default function LoginPage() {
             {error}
           </div>
         )}
-        <div>
-          <label htmlFor="email" className="label">Email</label>
-          <input
+        <Field label="Email">
+          <Input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="input"
             placeholder="you@example.com"
             required
           />
-        </div>
-        <div>
-          <label htmlFor="password" className="label">Password</label>
-          <input
+        </Field>
+        <Field label="Password">
+          <Input
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input"
             placeholder="••••••••"
             required
           />
-        </div>
-        <button type="submit" disabled={loading} className="btn-primary w-full">
+        </Field>
+        <Button variant="primary" type="submit" disabled={loading} className="w-full">
           {loading ? 'Signing in...' : 'Sign in'}
-        </button>
+        </Button>
       </form>
 
       <p className="mt-4 text-center text-sm text-gray-600">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-brand-600 hover:text-brand-700 font-medium">
+        <Link variant="brand" href="/register">
           Sign up
         </Link>
       </p>
-    </div>
+    </Card>
   );
 }

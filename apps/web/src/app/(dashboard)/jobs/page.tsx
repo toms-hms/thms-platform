@@ -1,6 +1,6 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { JobsDocument } from './queries/__generated__/Jobs.generated';
@@ -9,6 +9,11 @@ import { JobsCreateHomeDocument } from './mutations/__generated__/JobsCreateHome
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import PageHeader from '@/components/ui/PageHeader';
 
 const JOB_STATUSES = [
   'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
@@ -73,23 +78,22 @@ export default function JobsPage() {
 
   return (
     <div>
-      {/* Row 1: title + button */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-ink">All Jobs</h1>
-        <button onClick={openModal} className="btn-primary">+ New Job</button>
-      </div>
+      <PageHeader
+        actions={<Button onClick={openModal} variant="primary">+ New Job</Button>}
+        title="All Jobs"
+      />
 
       {/* Row 2: search + filter */}
       <div className="flex gap-3 mb-5">
-        <input
+        <Input
           type="text"
-          className="input max-w-xs"
+          className="max-w-xs"
           placeholder="Search jobs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select
-          className="input max-w-xs"
+        <Select
+          className="max-w-xs"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -97,7 +101,7 @@ export default function JobsPage() {
           {JOB_STATUSES.map((s) => (
             <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {loading ? (
@@ -106,15 +110,16 @@ export default function JobsPage() {
         <EmptyState
           title={search || statusFilter ? 'No jobs match your filters' : 'No jobs yet'}
           description={search || statusFilter ? 'Try adjusting your search or filter.' : 'Create a job to get started.'}
-          action={!search && !statusFilter ? <button onClick={openModal} className="btn-primary">New Job</button> : undefined}
+          action={!search && !statusFilter ? <Button variant="primary" onClick={openModal}>New Job</Button> : undefined}
         />
       ) : (
         <div className="space-y-3">
           {filtered.map((job) => (
             <Link
+              variant="card"
               key={job.id}
               href={`/homes/${job.homeId}/jobs/${job.id}`}
-              className="card p-4 flex items-start justify-between hover:shadow-md transition-shadow block"
+              className="p-4 flex items-start justify-between"
             >
               <div>
                 <div className="flex items-center gap-2">
@@ -146,23 +151,25 @@ export default function JobsPage() {
             {homes.length > 0 && (
               <div className="space-y-2 mb-3">
                 {homes.map((home) => (
-                  <button
+                  <Button
+                    variant="bare"
                     key={home.id}
                     onClick={() => { setShowModal(false); router.push(`/homes/${home.id}/jobs/new`); }}
                     className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-brand-400 hover:shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                   >
                     <div className="font-semibold text-ink text-sm">{home.name}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{home.fullAddress}</div>
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
-            <button
+            <Button
+              variant="bare"
               onClick={() => { setModalState('add'); setAddError(''); }}
               className="w-full p-4 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-brand-400 hover:text-brand-700 transition-all text-center"
             >
               + Add a new home
-            </button>
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleCreateHome} className="space-y-4">
@@ -170,40 +177,35 @@ export default function JobsPage() {
             {addError && (
               <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addError}</div>
             )}
-            <div>
-              <label className="label">Home name</label>
-              <input className="input" placeholder="Main Residence" value={addForm.name}
+            <Field label="Home name">
+              <Input placeholder="Main Residence" value={addForm.name}
                 onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} required />
-            </div>
-            <div>
-              <label className="label">Street address</label>
-              <input className="input" placeholder="123 Maple St" value={addForm.address1}
+            </Field>
+            <Field label="Street address">
+              <Input placeholder="123 Maple St" value={addForm.address1}
                 onChange={(e) => setAddForm((f) => ({ ...f, address1: e.target.value }))} required />
-            </div>
+            </Field>
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="label">City</label>
-                <input className="input" placeholder="Austin" value={addForm.city}
+              <Field label="City">
+                <Input placeholder="Austin" value={addForm.city}
                   onChange={(e) => setAddForm((f) => ({ ...f, city: e.target.value }))} required />
-              </div>
-              <div>
-                <label className="label">State</label>
-                <input className="input" placeholder="TX" maxLength={2} value={addForm.state}
+              </Field>
+              <Field label="State">
+                <Input placeholder="TX" maxLength={2} value={addForm.state}
                   onChange={(e) => setAddForm((f) => ({ ...f, state: e.target.value.toUpperCase() }))} required />
-              </div>
-              <div>
-                <label className="label">ZIP</label>
-                <input className="input" placeholder="78701" value={addForm.zipCode}
+              </Field>
+              <Field label="ZIP">
+                <Input placeholder="78701" value={addForm.zipCode}
                   onChange={(e) => setAddForm((f) => ({ ...f, zipCode: e.target.value }))} required />
-              </div>
+              </Field>
             </div>
             <div className="flex items-center gap-3 pt-2">
-              <button type="button" onClick={() => setModalState('pick')} className="text-sm text-gray-500 hover:text-gray-700">
+              <Button variant="muted" onClick={() => setModalState('pick')}>
                 ← Back
-              </button>
-              <button type="submit" disabled={addSaving} className="btn-primary ml-auto">
+              </Button>
+              <Button variant="primary" type="submit" disabled={addSaving} className="ml-auto">
                 {addSaving ? 'Creating...' : 'Create & continue →'}
-              </button>
+              </Button>
             </div>
           </form>
         )}

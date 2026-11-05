@@ -1,3 +1,5 @@
+import Badge from './Badge';
+
 const JOB_STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-700',
   PLANNING: 'bg-blue-100 text-blue-700',
@@ -37,6 +39,6 @@ export default function StatusBadge({ status, type = 'job' }: Props) {
   const colorMap = type === 'contractor' ? CONTRACTOR_STATUS_COLORS : JOB_STATUS_COLORS;
   const color = colorMap[status] || 'bg-gray-100 text-gray-700';
   return (
-    <span className={`badge ${color}`}>{formatLabel(status)}</span>
+    <Badge className={color}>{formatLabel(status)}</Badge>
   );
 }

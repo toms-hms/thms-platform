@@ -6,6 +6,8 @@ import type { AiSessionSummary } from '@/types/api';
 import { StartDiagnoseDocument, type StartDiagnoseMutation } from '../mutations/__generated__/StartDiagnose.generated';
 import { DiagnoseJobDocument } from '../mutations/__generated__/DiagnoseJob.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 
 const TITLES: Record<JobIntent, string> = {
   [JobIntent.ISSUE]:          'AI Diagnosis',
@@ -163,32 +165,33 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {currentOptions.map(option => (
-                    <button
+                    <Button
+                      variant="bare"
                       key={option}
                       onClick={() => answerQuestion(option)}
                       disabled={loading}
                       className="rounded-lg border border-gray-200 px-3 py-2 text-left text-sm text-gray-700 hover:border-brand-400 hover:bg-brand-50 transition-colors"
                     >
                       {option}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     value={customAnswer}
                     onChange={e => setCustomAnswer(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && customAnswer.trim() && answerQuestion(customAnswer.trim())}
-                    className="input flex-1 text-sm"
+                    className="flex-1 text-sm"
                     placeholder="Or type your own answer…"
                     disabled={loading}
                   />
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => answerQuestion(customAnswer.trim())}
                     disabled={!customAnswer.trim() || loading}
-                    className="btn-secondary"
                   >
                     Send
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -223,7 +226,7 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
                         <div className="text-sm font-medium text-ink">{categoryLabel(s.category)}</div>
                         <p className="text-xs text-gray-500 mt-0.5">{s.reason}</p>
                       </div>
-                      <button onClick={() => toggleCategory(s)} className="text-xs text-gray-400 hover:text-red-600">✕</button>
+                      <Button variant="bare" onClick={() => toggleCategory(s)} className="text-xs text-gray-400 hover:text-red-600">✕</Button>
                     </div>
                   </div>
                 ))}
@@ -233,13 +236,14 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
                 <p className="text-xs text-gray-500 mb-2">Add a category</p>
                 <div className="flex flex-wrap gap-1">
                   {allCategories.filter(c => !confirmedCategories.some(s => s.category === c)).map(cat => (
-                    <button
+                    <Button
+                      variant="bare"
                       key={cat}
                       onClick={() => toggleCategory({ category: cat, reason: 'Added manually.' })}
                       className="text-xs rounded border border-gray-200 px-2 py-1 hover:border-brand-400 hover:bg-brand-50"
                     >
                       {categoryLabel(cat)}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -278,15 +282,15 @@ export default function Step4Diagnose({ intent, jobId, onNext, onBack }: Props) 
       </div>
 
       <div className="flex items-center justify-between mt-8">
-        <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+        <Button variant="muted" onClick={onBack}>← Back</Button>
         <div className="flex gap-3">
-          <button onClick={() => onNext(null, null)} className="text-sm text-gray-500 hover:text-gray-700">Skip</button>
-          <button
+          <Button variant="muted" onClick={() => onNext(null, null)}>Skip</Button>
+          <Button
+            variant="primary"
             onClick={() => onNext(summary, suggestedCategories ? confirmedCategories : null)}
-            className="btn-primary"
           >
             {isDone ? 'Continue' : 'Skip for now →'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

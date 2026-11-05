@@ -5,6 +5,11 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import type { JobStatus, TradeCategory } from '@/graphql/types.generated';
 import { UpdateJobDocument } from './mutations/__generated__/UpdateJob.generated';
 import type { JobDetail } from './types';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
 
 const JOB_STATUSES = [
   'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
@@ -52,34 +57,29 @@ export default function JobOverview({ job }: Props) {
     return (
       <form onSubmit={handleSave} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">Title</label>
-            <input className="input" value={form.title} onChange={(e) => update('title', e.target.value)} required />
-          </div>
-          <div>
-            <label className="label">Category</label>
-            <input className="input" value={form.category} onChange={(e) => update('category', e.target.value)} required />
-          </div>
+          <Field label="Title">
+            <Input value={form.title} onChange={(e) => update('title', e.target.value)} required />
+          </Field>
+          <Field label="Category">
+            <Input value={form.category} onChange={(e) => update('category', e.target.value)} required />
+          </Field>
         </div>
-        <div>
-          <label className="label">Status</label>
-          <select className="input" value={form.status} onChange={(e) => update('status', e.target.value)}>
+        <Field label="Status">
+          <Select value={form.status} onChange={(e) => update('status', e.target.value)}>
             {JOB_STATUSES.map((s) => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
-          </select>
-        </div>
-        <div>
-          <label className="label">Description</label>
-          <textarea className="input" rows={4} value={form.description} onChange={(e) => update('description', e.target.value)} />
-        </div>
-        <div>
-          <label className="label">Notes</label>
-          <textarea className="input" rows={3} value={form.notes} onChange={(e) => update('notes', e.target.value)} />
-        </div>
+          </Select>
+        </Field>
+        <Field label="Description">
+          <Textarea rows={4} value={form.description} onChange={(e) => update('description', e.target.value)} />
+        </Field>
+        <Field label="Notes">
+          <Textarea rows={3} value={form.notes} onChange={(e) => update('notes', e.target.value)} />
+        </Field>
         <div className="flex gap-3">
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save'}</button>
-          <button type="button" onClick={() => setEditing(false)} className="btn-secondary">Cancel</button>
+          <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+          <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
         </div>
       </form>
     );
@@ -95,7 +95,7 @@ export default function JobOverview({ job }: Props) {
           </div>
           <p className="text-sm text-gray-500 mt-0.5">Category: {job.category}</p>
         </div>
-        <button onClick={() => setEditing(true)} className="btn-secondary text-xs">Edit</button>
+        <Button variant="secondary" onClick={() => setEditing(true)} className="text-xs">Edit</Button>
       </div>
 
       {job.description && (

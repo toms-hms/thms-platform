@@ -2,6 +2,7 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 import { WizardContractorsDocument } from '../queries/__generated__/WizardContractors.generated';
 import { CATEGORY_CONFIG } from './categoryConfig';
+import Button from '@/components/ui/Button';
 
 interface Props {
   categories: TradeCategory[];
@@ -40,7 +41,7 @@ export default function Step5Contractors({
         <span className="font-medium text-gray-700">{categoryLabels.join(', ')}</span>.
       </p>
       <p className="text-xs text-gray-400 mb-8">
-        Each contractor receives a separate message — they won't see each other.
+        Each contractor receives a separate message — they won&apos;t see each other.
       </p>
 
       {loading ? (
@@ -57,7 +58,8 @@ export default function Step5Contractors({
             const selected = selectedIds.includes(c.id);
             const disabled = !canSelect(c.id);
             return (
-              <button
+              <Button
+                variant="bare"
                 key={c.id}
                 onClick={() => !disabled && onToggle(c.id)}
                 disabled={disabled}
@@ -86,7 +88,7 @@ export default function Step5Contractors({
                     </div>
                   </div>
                 </div>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -101,14 +103,15 @@ export default function Step5Contractors({
       )}
 
       <div className="flex items-center justify-between mt-8">
-        <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
-        <button
+        <Button variant="muted" onClick={onBack}>← Back</Button>
+        <Button
+          variant="primary"
           onClick={onSubmit}
           disabled={selectedIds.length === 0 || submitting}
-          className="btn-primary min-w-[160px]"
+          className="min-w-[160px]"
         >
           {submitting ? 'Sending...' : selectedIds.length > 0 ? `Ask ${selectedIds.length} for quotes →` : 'Select contractors'}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -6,6 +6,10 @@ import { GoogleAuthUrlDocument } from './queries/__generated__/GoogleAuthUrl.gen
 import { MicrosoftAuthUrlDocument } from './queries/__generated__/MicrosoftAuthUrl.generated';
 import { CreateAiIntegrationDocument } from './mutations/__generated__/CreateAiIntegration.generated';
 import { DeleteIntegrationDocument } from './mutations/__generated__/DeleteIntegration.generated';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function IntegrationsPage() {
   const client = useApolloClient();
@@ -68,12 +72,12 @@ export default function IntegrationsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Integrations</h1>
+      <PageHeader className="mb-8" title="Integrations" />
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Email Providers</h2>
         <div className="space-y-3">
-          <div className="card p-4 flex items-center justify-between">
+          <Card className="p-4 flex items-center justify-between">
             <div>
               <p className="font-medium text-gray-900">Gmail (Google)</p>
               <p className="text-sm text-gray-500">Send and receive emails via Gmail</p>
@@ -84,20 +88,21 @@ export default function IntegrationsPage() {
               )}
             </div>
             {googleConnected ? (
-              <button
+              <Button
+                variant="danger"
                 onClick={() => handleDisconnect(emailIntegrations.find((i) => i.provider === 'GOOGLE')!.id)}
-                className="btn-danger text-sm"
+                className="text-sm"
               >
                 Disconnect
-              </button>
+              </Button>
             ) : (
-              <button onClick={handleConnectGoogle} className="btn-primary text-sm">
+              <Button variant="primary" onClick={handleConnectGoogle} className="text-sm">
                 Connect
-              </button>
+              </Button>
             )}
-          </div>
+          </Card>
 
-          <div className="card p-4 flex items-center justify-between">
+          <Card className="p-4 flex items-center justify-between">
             <div>
               <p className="font-medium text-gray-900">Outlook (Microsoft)</p>
               <p className="text-sm text-gray-500">Send and receive emails via Microsoft 365</p>
@@ -108,24 +113,25 @@ export default function IntegrationsPage() {
               )}
             </div>
             {microsoftConnected ? (
-              <button
+              <Button
+                variant="danger"
                 onClick={() => handleDisconnect(emailIntegrations.find((i) => i.provider === 'MICROSOFT')!.id)}
-                className="btn-danger text-sm"
+                className="text-sm"
               >
                 Disconnect
-              </button>
+              </Button>
             ) : (
-              <button onClick={handleConnectMicrosoft} className="btn-secondary text-sm">
+              <Button variant="secondary" onClick={handleConnectMicrosoft} className="text-sm">
                 Connect
-              </button>
+              </Button>
             )}
-          </div>
+          </Card>
         </div>
       </section>
 
       <section>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">AI Provider</h2>
-        <div className="card p-4">
+        <Card className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
               <p className="font-medium text-gray-900">OpenAI</p>
@@ -133,27 +139,28 @@ export default function IntegrationsPage() {
               {openaiConnected && <p className="text-xs text-green-600 mt-1">API key configured</p>}
             </div>
             {openaiConnected && (
-              <button
+              <Button
+                variant="danger"
                 onClick={() => handleDisconnect(aiIntegrations.find((i) => i.provider === 'OPENAI')!.id)}
-                className="btn-danger text-sm"
+                className="text-sm"
               >
                 Remove
-              </button>
+              </Button>
             )}
           </div>
 
           <form onSubmit={handleSaveAI} className="flex gap-3">
-            <input
+            <Input
               type="password"
-              className="input flex-1"
+              className="flex-1"
               placeholder="sk-..."
               value={aiKey}
               onChange={(e) => setAiKey(e.target.value)}
               required
             />
-            <button type="submit" disabled={savingAI} className="btn-primary text-sm">
+            <Button variant="primary" type="submit" disabled={savingAI} className="text-sm">
               {savingAI ? 'Saving...' : openaiConnected ? 'Update Key' : 'Save Key'}
-            </button>
+            </Button>
           </form>
           {aiMsg && (
             <p className={`text-sm mt-2 ${aiMsg.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
@@ -163,7 +170,7 @@ export default function IntegrationsPage() {
           <p className="text-xs text-gray-400 mt-2">
             Your API key is encrypted at rest. DALL-E 3 is used for image generation, GPT-4o-mini for email drafts.
           </p>
-        </div>
+        </Card>
       </section>
     </div>
   );

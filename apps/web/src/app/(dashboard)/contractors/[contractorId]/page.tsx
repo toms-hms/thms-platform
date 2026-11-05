@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { TradeCategory } from '@/graphql/types.generated';
@@ -11,6 +11,14 @@ import { getStoredUser } from '@/lib/auth';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import Badge, { BADGE_CLASSES } from '@/components/ui/Badge';
+import { cn } from '@/lib/cn';
+import PageHeader from '@/components/ui/PageHeader';
 
 const CATEGORY_LABELS: Record<TradeCategory, string> = {
   [TradeCategory.PLUMBING]:            'Plumbing',
@@ -98,36 +106,30 @@ export default function ContractorDetailPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link href="/contractors" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-          ← Contractors
-        </Link>
-        <div className="flex items-start justify-between mt-2">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{contractor.name}</h1>
-            {contractor.companyName && (
-              <p className="text-gray-500 text-sm mt-0.5">{contractor.companyName}</p>
-            )}
-          </div>
-          {isAdmin && (
-            <button onClick={openEdit} className="btn-secondary text-sm">
+      <PageHeader
+        actions={
+          isAdmin && (
+            <Button className="text-sm" onClick={openEdit} variant="secondary">
               Edit
-            </button>
-          )}
-        </div>
-      </div>
+            </Button>
+          )
+        }
+        back={{ href: '/contractors', label: 'Contractors' }}
+        subtitle={contractor.companyName}
+        title={contractor.name}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="card p-5">
+        <Card className="p-5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Details</h2>
           <div className="space-y-4">
             <div>
               <span className="text-xs text-gray-400 block mb-1.5">Categories</span>
               <div className="flex flex-wrap gap-1.5">
                 {(contractor.categories || []).map((cat: string) => (
-                  <span key={cat} className="badge bg-blue-50 text-blue-700">
+                  <Badge key={cat} className="bg-blue-50 text-blue-700">
                     {CATEGORY_LABELS[cat as TradeCategory] ?? cat}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -136,15 +138,15 @@ export default function ContractorDetailPage() {
                 <span className="text-xs text-gray-400 block mb-1.5">Zip Codes Serviced</span>
                 <div className="flex flex-wrap gap-1.5">
                   {contractor.zipCodes.map((z: string) => (
-                    <span key={z} className="badge bg-gray-100 text-gray-600">{z}</span>
+                    <Badge key={z} className="bg-gray-100 text-gray-600">{z}</Badge>
                   ))}
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        <div className="card p-5">
+        <Card className="p-5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact</h2>
           <div className="space-y-2 text-sm">
             {contractor.email && (
@@ -171,7 +173,7 @@ export default function ContractorDetailPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       <div>
@@ -185,9 +187,10 @@ export default function ContractorDetailPage() {
           <div className="space-y-3">
             {jobHistory.map((j) => (
               <Link
+                variant="card"
                 key={j.jobId}
                 href={`/homes/${j.homeId}/jobs/${j.jobId}`}
-                className="card p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+                className="p-4 flex items-center justify-between"
               >
                 <div>
                   <h3 className="font-medium text-gray-900">{j.jobTitle}</h3>
@@ -211,76 +214,67 @@ export default function ContractorDetailPage() {
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Name</label>
-              <input
-                className="input"
+            <Field label="Name">
+              <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
               />
-            </div>
-            <div>
-              <label className="label">Company</label>
-              <input
-                className="input"
+            </Field>
+            <Field label="Company">
+              <Input
                 value={form.companyName}
                 onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))}
               />
-            </div>
+            </Field>
           </div>
-          <div>
-            <label className="label">Categories</label>
+          <Field label="Categories">
             <div className="flex flex-wrap gap-2 mt-1">
               {Object.values(TradeCategory).map((cat) => (
-                <button
+                <Button
+                  variant="bare"
                   key={cat}
-                  type="button"
                   onClick={() => toggleCategory(cat)}
-                  className={`badge cursor-pointer transition-colors ${
+                  className={cn(
+                    BADGE_CLASSES,
+                    'cursor-pointer transition-colors',
                     form.categories.includes(cat)
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
+                  )}
                 >
                   {CATEGORY_LABELS[cat]}
-                </button>
+                </Button>
               ))}
             </div>
-          </div>
+          </Field>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Email</label>
-              <input
+            <Field label="Email">
+              <Input
                 type="email"
-                className="input"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               />
-            </div>
-            <div>
-              <label className="label">Phone</label>
-              <input
-                className="input"
+            </Field>
+            <Field label="Phone">
+              <Input
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               />
-            </div>
+            </Field>
           </div>
-          <div>
-            <label className="label">Notes</label>
-            <textarea
-              className="input"
+          <Field label="Notes">
+            <Textarea
               rows={3}
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             />
-          </div>
+          </Field>
           <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setShowEdit(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">
+            <Button variant="secondary" onClick={() => setShowEdit(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

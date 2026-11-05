@@ -1,10 +1,14 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@apollo/client/react';
 import { saveTokens, saveUser } from '@/lib/auth';
 import { RegisterDocument } from './mutations/__generated__/Register.generated';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Field from '@/components/ui/Field';
+import Input from '@/components/ui/Input';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -41,7 +45,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="card p-8">
+    <Card className="p-8">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
         <p className="text-sm text-gray-500 mt-1">Start managing your home projects</p>
@@ -54,63 +58,55 @@ export default function RegisterPage() {
           </div>
         )}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">First name</label>
-            <input
+          <Field label="First name">
+            <Input
               type="text"
               value={form.firstName}
               onChange={(e) => update('firstName', e.target.value)}
-              className="input"
               placeholder="Jane"
               required
             />
-          </div>
-          <div>
-            <label className="label">Last name</label>
-            <input
+          </Field>
+          <Field label="Last name">
+            <Input
               type="text"
               value={form.lastName}
               onChange={(e) => update('lastName', e.target.value)}
-              className="input"
               placeholder="Smith"
               required
             />
-          </div>
+          </Field>
         </div>
-        <div>
-          <label className="label">Email</label>
-          <input
+        <Field label="Email">
+          <Input
             type="email"
             value={form.email}
             onChange={(e) => update('email', e.target.value)}
-            className="input"
             placeholder="you@example.com"
             required
           />
-        </div>
-        <div>
-          <label className="label">Password</label>
-          <input
+        </Field>
+        <Field label="Password">
+          <Input
             type="password"
             value={form.password}
             onChange={(e) => update('password', e.target.value)}
-            className="input"
             placeholder="At least 8 characters"
             minLength={8}
             required
           />
-        </div>
-        <button type="submit" disabled={loading} className="btn-primary w-full">
+        </Field>
+        <Button variant="primary" type="submit" disabled={loading} className="w-full">
           {loading ? 'Creating account...' : 'Create account'}
-        </button>
+        </Button>
       </form>
 
       <p className="mt-4 text-center text-sm text-gray-600">
         Already have an account?{' '}
-        <Link href="/login" className="text-brand-600 hover:text-brand-700 font-medium">
+        <Link variant="brand" href="/login">
           Sign in
         </Link>
       </p>
-    </div>
+    </Card>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Button from './Button';
 
 export interface Column<T> {
   key: string;
@@ -59,21 +60,25 @@ export default function Table<T>({ columns, rows, getKey, pageSize = 10, emptyMe
         <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
           <span>{rows.length} total</span>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            <Button
+              className="disabled:opacity-40"
               disabled={page === 0}
-              className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              size="sm"
+              variant="secondary"
             >
               ← Prev
-            </button>
+            </Button>
             <span>Page {page + 1} of {totalPages}</span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            <Button
+              className="disabled:opacity-40"
               disabled={page >= totalPages - 1}
-              className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              size="sm"
+              variant="secondary"
             >
               Next →
-            </button>
+            </Button>
           </div>
         </div>
       )}

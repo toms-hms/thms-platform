@@ -94,16 +94,35 @@ src/app/(dashboard)/jobs/new/
 
 These components receive state from the parent page via props and call back with `onChange` handlers. They do not fetch data themselves.
 
-## Tailwind utility classes (from globals.css)
+## UI components: never raw elements
 
-| Class | Element |
-|---|---|
-| `.btn-primary` | Primary button |
-| `.btn-secondary` | Secondary / outline button |
-| `.btn-danger` | Destructive button |
-| `.input` | Text, select, textarea inputs |
-| `.card` | Container surface |
-| `.badge` | Inline status chip |
+Pages and feature components build with `src/components/ui/`, never with raw form elements or
+copied Tailwind strings. ESLint enforces it (`.eslintrc.json`): a raw `<button>`, `<input>`,
+`<select>`, `<textarea>` or `<label>`, or an import of `next/link`, outside `components/ui/` fails
+`next lint` and therefore `next build`.
+
+| Component | Use for | Props |
+|---|---|---|
+| `Button` | every button | `variant`: `primary` (default) · `secondary` · `danger` · `muted` (text-only) · `bare` (bespoke UI styled by `className`); `size`: `md` · `sm`; `loading`, `loadingText`. Defaults to `type="button"`. |
+| `Link` | every internal link | `variant`: `plain` (default) · `brand` · `muted` · `subtle` · `card` (a whole card that links) · `primary` / `secondary` (button-styled) |
+| `Field` | a labelled control | `label` (text or JSX), `hint`, `error`; links the label to its single child control |
+| `Input`, `Textarea`, `Select` | form controls | the native props; style overrides via `className` |
+| `Selector` | a searchable select | `options`, `value`, `onChange` |
+| `Card` | a white bordered surface | add padding and layout with `className` |
+| `Badge` / `StatusBadge` | pills / job and contractor statuses | colour with `className` / `status`, `type` |
+| `PageHeader` | the top of a dashboard page | `title`, `subtitle`, `back={{ href, label }}`, `actions` |
+| `Modal`, `EmptyState`, `Table`, `Dropdown` | dialogs, empty lists, paged tables, menus | see each file |
+
+- **`className` overrides, it doesn't fight.** Every component merges with `cn()` (`@/lib/cn`,
+  `clsx` + `tailwind-merge`), so `<Button className="w-full">` or `<Input className="max-w-xs">`
+  wins over the default.
+- **Variants live in the component**, declared with `class-variance-authority`. A new look is a
+  new variant there, not a class string repeated across pages.
+- **Layout stays inline.** `flex gap-2`, `space-y-4`, grids and spacing are written where they
+  are used; only reusable *controls and surfaces* become components.
+- **An exception needs a reason.** The one raw element today is the `<label>` that opens the file
+  picker in `ImagesTab` (styled with `buttonVariants`), marked
+  `eslint-disable-next-line react/forbid-elements -- <why>`.
 
 ## Rules
 

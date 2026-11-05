@@ -58,55 +58,42 @@ async function handleCreate(e: FormEvent) {
 
 ```tsx
 // JSX
-<button className="btn-primary" onClick={() => {
+<Button onClick={() => {
   setForm({ name: '', companyName: '', email: '', phone: '', category: '', zipCodes: '', notes: '' });
   setError('');
   setShowCreate(true);
 }}>
   Add Contractor
-</button>
+</Button>
 
 <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add Contractor">
   <form onSubmit={handleCreate} className="space-y-4">
     {error && <p className="text-red-500 text-sm">{error}</p>}
 
-    <div>
-      <label className="block text-sm font-medium mb-1">Name *</label>
-      <input
-        className="input w-full"
-        value={form.name}
-        onChange={(e) => update('name', e.target.value)}
-        required
-      />
-    </div>
+    <Field label="Name *">
+      <Input value={form.name} onChange={(e) => update('name', e.target.value)} required />
+    </Field>
 
-    <div>
-      <label className="block text-sm font-medium mb-1">Trade Category</label>
-      <select
-        className="input w-full"
-        value={form.category}
-        onChange={(e) => update('category', e.target.value)}
-      >
+    <Field label="Trade Category">
+      <Select value={form.category} onChange={(e) => update('category', e.target.value)}>
         <option value="">Select category</option>
         {Object.values(TradeCategory).map((c) => (
           <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
         ))}
-      </select>
-    </div>
+      </Select>
+    </Field>
 
-    <div>
-      <label className="block text-sm font-medium mb-1">ZIP Codes (comma-separated)</label>
-      <input
-        className="input w-full"
+    <Field hint="Comma-separated" label="ZIP Codes">
+      <Input
         placeholder="78701, 78702"
         value={form.zipCodes}
         onChange={(e) => update('zipCodes', e.target.value)}
       />
-    </div>
+    </Field>
 
-    <button type="submit" className="btn-primary w-full" disabled={saving}>
-      {saving ? 'Saving…' : 'Save'}
-    </button>
+    <Button className="w-full" loading={saving} loadingText="Saving…" type="submit">
+      Save
+    </Button>
   </form>
 </Modal>
 ```
@@ -157,5 +144,5 @@ async function handleUpdate(e: FormEvent) {
 - Always call `e.preventDefault()` in form submit handlers.
 - Reset `error` to `''` at the start of each submit attempt.
 - Empty optional string fields should be sent as `undefined`, not `''` — use `field || undefined`.
-- Use the `.input` class for all inputs; `.btn-primary`/`.btn-danger` for buttons.
+- Every control is a `Field` around an `Input` / `Select` / `Textarea`, and every button a `Button` (`type="submit"` for the submit; it defaults to `"button"`). See `component.md`.
 - Enum values come from `@/graphql/types.generated` (schema enums) — never hardcode string literals for category/status values.

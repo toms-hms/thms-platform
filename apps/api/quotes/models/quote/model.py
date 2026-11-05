@@ -5,6 +5,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 from quotes.models.quote.manager import QuoteManager
 
 
@@ -15,7 +16,7 @@ class QuoteStatus(models.TextChoices):
     CONFIRMED = "CONFIRMED", "Confirmed"
 
 
-class Quote(models.Model):
+class Quote(BaseModel):
     """A price a contractor has given for a job."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -38,6 +39,3 @@ class Quote(models.Model):
 
     class Meta:
         ordering = ["created_at"]
-
-    def __str__(self) -> str:
-        return f"{self.contractor_id}: {self.amount}"

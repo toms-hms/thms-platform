@@ -5,6 +5,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 from homes.models.user_home.manager import UserHomeManager
 
 
@@ -15,7 +16,7 @@ class HomeRole(models.TextChoices):
     MEMBER = "MEMBER", "Member"
 
 
-class UserHome(models.Model):
+class UserHome(BaseModel):
     """Membership of a user in a home. A user holds at most one membership per home."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -28,6 +29,3 @@ class UserHome(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["user", "home"], name="userhome_user_home_unique")]
-
-    def __str__(self) -> str:
-        return f"{self.user_id}@{self.home_id}"

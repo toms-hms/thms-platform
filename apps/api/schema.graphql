@@ -46,7 +46,6 @@ type AuditLogEntryType {
 
   """The user who made the change, when one was authenticated."""
   actorId: ID
-  actorEmail: String
 
   """Field-level before/after values."""
   changes: JSONString!

@@ -6,6 +6,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 from integrations.models.integration.manager import IntegrationManager
 
 
@@ -24,7 +25,7 @@ class IntegrationProvider(models.TextChoices):
     OPENAI = "OPENAI", "OpenAI"
 
 
-class Integration(models.Model):
+class Integration(BaseModel):
     """A connected third-party account belonging to one user."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -45,6 +46,3 @@ class Integration(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "provider"], name="integration_user_provider_unique")
         ]
-
-    def __str__(self) -> str:
-        return f"{self.provider}:{self.email or self.user_id}"

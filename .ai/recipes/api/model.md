@@ -9,13 +9,13 @@ Django owns the schema: table and column names are Django's defaults, and migrat
 
 Each model lives in `models/<model_name>/model.py`. The model folder's `queryset.py` and
 `manager.py` sit next to it. The app's `models/__init__.py` re-exports it (see
-`file-structure.md`). `model.py` imports only its own manager
+`file-structure.md`). `model.py` imports only `core.models.BaseModel` and its own manager
 (`from jobs.models.job.manager import JobManager`). Foreign keys name other models as strings.
 
 ## The shape of a model
 
 ```python
-class Job(models.Model):
+class Job(BaseModel):
     """A piece of work on a home."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -50,7 +50,8 @@ class Job(models.Model):
 - **Constraint names are lowercase `<model>_<fields>_unique`.**
 - **Nullable text columns keep `null=True`.** The API distinguishes null from empty string, so the usual Django advice does not apply here (ruff's DJ001 is disabled for this reason).
 - **Store ids in JSON as strings.** A UUID in a `JSONField` or JWT claim raises at serialization time, so use `str(obj.pk)`.
-- **A model declares fields, `Meta`, its choices and `__str__`, and nothing else.** No `@property` and no methods of our own. A value computed from a row lives where its kind of work lives:
+- **Every model extends `core.models.BaseModel`** (`User` lists it before `AbstractBaseUser`). It supplies a uniform `__str__` of `"<Model> - <id>"`. Never define `__str__` on a model: django-auditlog stores it in every log entry, so it must not carry personal or free-text data (emails, names, titles).
+- **A model declares fields, `Meta` and its choices, and nothing else.** No `__str__`, no `@property` and no methods of our own. A value computed from a row lives where its kind of work lives:
   - Lookups and related-row reads go in the manager: `ContractorZipCode.objects.zip_codes_for(contractor_id=...)`.
   - Display formatting goes in a util, called by the GraphQL type: `homes.utils.address_utils.format_address(...)`.
   - Role and access checks go in `PermissionService`: `PermissionService().is_admin(user)`.

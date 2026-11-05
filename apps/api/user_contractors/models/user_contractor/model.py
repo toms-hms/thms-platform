@@ -5,10 +5,11 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 from user_contractors.models.user_contractor.manager import UserContractorManager
 
 
-class UserContractor(models.Model):
+class UserContractor(BaseModel):
     """A link between a user and a contractor they have saved."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -26,6 +27,3 @@ class UserContractor(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-
-    def __str__(self) -> str:
-        return f"{self.user_id}->{self.contractor_id}"

@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from contractors.models.contractor.manager import ContractorManager
+from core.models import BaseModel
 
 
 class TradeCategory(models.TextChoices):
@@ -26,7 +27,7 @@ class TradeCategory(models.TextChoices):
     POOL_AND_SPA = "POOL_AND_SPA", "Pool and spa"
 
 
-class Contractor(models.Model):
+class Contractor(BaseModel):
     """A tradesperson or company that can be assigned to a job."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -41,6 +42,3 @@ class Contractor(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     objects = ContractorManager()
-
-    def __str__(self) -> str:
-        return self.company_name or self.name

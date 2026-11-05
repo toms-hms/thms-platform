@@ -5,10 +5,11 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 from homes.models.home.manager import HomeManager
 
 
-class Home(models.Model):
+class Home(BaseModel):
     """A property whose maintenance jobs the platform tracks."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -27,6 +28,3 @@ class Home(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-
-    def __str__(self) -> str:
-        return self.name

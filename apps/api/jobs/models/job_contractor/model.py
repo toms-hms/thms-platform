@@ -5,6 +5,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 from jobs.models.job_contractor.manager import JobContractorManager
 
 
@@ -43,7 +44,7 @@ CONTACTED_STATUSES = frozenset(
 RESPONDED_STATUSES = CONTACTED_STATUSES - {JobContractorStatus.CONTACTED}
 
 
-class JobContractor(models.Model):
+class JobContractor(BaseModel):
     """A contractor's involvement in one job, and how far it has progressed."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -71,6 +72,3 @@ class JobContractor(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["job", "contractor"], name="jobcontractor_job_contractor_unique")
         ]
-
-    def __str__(self) -> str:
-        return f"{self.job_id}:{self.contractor_id}"

@@ -11,7 +11,7 @@ from jobs.models import Job
 AUDIT_LOG = """
 query($objectTypes: [String!], $objectIds: [String!]) {
   auditLog(objectTypes: $objectTypes, objectIds: $objectIds) {
-    action objectType objectId actorEmail changes
+    action objectType objectId actorId changes
   }
 }
 """
@@ -60,6 +60,15 @@ class AuditRecordingTests(GraphQLTestCase):
         entry = LogEntry.objects.get(object_pk=home_id, content_type__model="home")
         self.assertEqual(entry.actor_id, user.pk)
 
+    def test_object_repr_carries_no_personal_data(self):
+        """A user's audit entry names the model and id, never the email address."""
+        user = UserFactory(email="private@example.com")
+        entry = LogEntry.objects.get(
+            object_pk=user.pk, content_type__model="user", action=LogEntry.Action.CREATE
+        )
+        self.assertEqual(entry.object_repr, f"User - {user.pk}")
+        self.assertNotIn("private@example.com", entry.object_repr)
+
     def test_does_not_record_password_hashes(self):
         """Credential fields are excluded from the log."""
         user = UserFactory()
@@ -77,6 +86,11 @@ class AuditLogQueryTests(GraphQLTestCase):
         """Creates a job so there is at least one entry to read."""
         super().setUp()
         self.job = JobFactory()
+
+    def test_the_actor_is_exposed_by_id_only(self):
+        """The log names who acted by user id; it offers no email field to select."""
+        body = self.execute("query { auditLog { actorEmail } }", token=self.token_for(AdminFactory()))
+        self.assertIn("actorEmail", body["errors"][0]["message"])
 
     def test_admin_can_read_the_log(self):
         """An admin reads entries, most recent first."""

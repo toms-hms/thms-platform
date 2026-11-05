@@ -6,6 +6,7 @@ from django.db import models
 from django.utils import timezone
 
 from ai.models.ai_generation.manager import AIGenerationManager
+from core.models import BaseModel
 
 
 class AIGenerationStatus(models.TextChoices):
@@ -17,7 +18,7 @@ class AIGenerationStatus(models.TextChoices):
     FAILED = "FAILED", "Failed"
 
 
-class AIGeneration(models.Model):
+class AIGeneration(BaseModel):
     """One call to an AI provider — an image generation or an email draft."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -42,6 +43,3 @@ class AIGeneration(models.Model):
 
     class Meta:
         ordering = ["created_at"]
-
-    def __str__(self) -> str:
-        return f"{self.provider}:{self.status}"

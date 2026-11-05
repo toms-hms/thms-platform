@@ -27,7 +27,7 @@ class AuditQuery(graphene.ObjectType):
     @admin_required
     def resolve_audit_log(self, info, object_types=None, object_ids=None, actor_ids=None, limit=None):
         """Returns audit entries, most recent first, narrowed by object types, objects or actors."""
-        entries = LogEntry.objects.select_related("content_type", "actor").order_by("-timestamp")
+        entries = LogEntry.objects.select_related("content_type").order_by("-timestamp")
         if object_types is not None:
             entries = entries.filter(content_type__model__in=[t.lower() for t in object_types])
         if object_ids is not None:
@@ -43,7 +43,6 @@ class AuditQuery(graphene.ObjectType):
                 object_id=entry.object_pk,
                 object_repr=entry.object_repr,
                 actor_id=entry.actor_id,
-                actor_email=entry.actor.email if entry.actor else None,
                 changes=entry.changes,
                 remote_addr=str(entry.remote_addr) if entry.remote_addr else None,
                 timestamp=entry.timestamp,

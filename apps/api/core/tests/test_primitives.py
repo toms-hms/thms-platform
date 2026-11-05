@@ -5,11 +5,13 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
+from accounts.factories import UserFactory
 from core.errors import UnauthorizedError
 from core.utils.crypto_utils import decrypt, encrypt
 from core.utils.email_utils import normalize_email
 from core.utils.hashing_utils import hash_token, verify_token
 from core.utils.jwt_utils import parse_duration, sign_access_token, sign_refresh_token, verify_access_token
+from homes.factories import HomeFactory
 
 
 class CryptoTests(TestCase):
@@ -85,3 +87,14 @@ class NormalizeEmailTests(TestCase):
     def test_trims_and_lower_cases_the_whole_address(self):
         """Surrounding whitespace goes and both halves of the address are lower-cased."""
         self.assertEqual(normalize_email("  Pat.Smith@Example.COM "), "pat.smith@example.com")
+
+
+class ModelStrTests(TestCase):
+    """BaseModel.__str__()"""
+
+    def test_names_the_model_and_its_id(self):
+        """Every model renders as `<Model> - <id>`, with no field values in it."""
+        user = UserFactory(email="private@example.com")
+        home = HomeFactory(owner=user, name="Smith residence")
+        self.assertEqual(str(user), f"User - {user.pk}")
+        self.assertEqual(str(home), f"Home - {home.pk}")

@@ -19,7 +19,6 @@ class AuditLogEntryType(graphene.ObjectType):
     object_id = graphene.String(required=True)
     object_repr = graphene.String(required=True)
     actor_id = graphene.ID(description="The user who made the change, when one was authenticated.")
-    actor_email = graphene.String()
     changes = graphene.JSONString(required=True, description="Field-level before/after values.")
     remote_addr = graphene.String()
     timestamp = graphene.DateTime(required=True)

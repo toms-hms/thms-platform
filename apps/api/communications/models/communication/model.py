@@ -6,6 +6,7 @@ from django.db import models
 from django.utils import timezone
 
 from communications.models.communication.manager import CommunicationManager
+from core.models import BaseModel
 
 
 class CommunicationChannel(models.TextChoices):
@@ -21,7 +22,7 @@ class CommunicationDirection(models.TextChoices):
     RECEIVED = "RECEIVED", "Received"
 
 
-class Communication(models.Model):
+class Communication(BaseModel):
     """One message sent to, or received from, a contractor."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -61,6 +62,3 @@ class Communication(models.Model):
 
     class Meta:
         ordering = ["created_at"]
-
-    def __str__(self) -> str:
-        return self.subject or f"{self.direction} {self.id}"

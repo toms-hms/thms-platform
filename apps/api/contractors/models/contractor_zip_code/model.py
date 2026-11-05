@@ -5,9 +5,10 @@ import uuid
 from django.db import models
 
 from contractors.models.contractor_zip_code.manager import ContractorZipCodeManager
+from core.models import BaseModel
 
 
-class ContractorZipCode(models.Model):
+class ContractorZipCode(BaseModel):
     """One ZIP code in a contractor's service area."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -19,6 +20,3 @@ class ContractorZipCode(models.Model):
     zip_code = models.TextField()
 
     objects = ContractorZipCodeManager()
-
-    def __str__(self) -> str:
-        return self.zip_code

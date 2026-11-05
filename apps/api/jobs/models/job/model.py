@@ -6,6 +6,7 @@ from django.db import models
 from django.utils import timezone
 
 from contractors.models import TradeCategory
+from core.models import BaseModel
 from jobs.models.job.manager import JobManager
 
 
@@ -30,7 +31,7 @@ class JobStatus(models.TextChoices):
     COMPLETED = "COMPLETED", "Completed"
 
 
-class Job(models.Model):
+class Job(BaseModel):
     """A piece of work on a home."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -50,6 +51,3 @@ class Job(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-
-    def __str__(self) -> str:
-        return self.title

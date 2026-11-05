@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from accounts.models.user.manager import UserManager
+from core.models import BaseModel
 
 
 class UserRole(models.TextChoices):
@@ -16,7 +17,7 @@ class UserRole(models.TextChoices):
     USER = "USER", "User"
 
 
-class User(AbstractBaseUser):
+class User(BaseModel, AbstractBaseUser):
     """A person with access to the platform."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -36,6 +37,3 @@ class User(AbstractBaseUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
-
-    def __str__(self) -> str:
-        return self.email

@@ -38,14 +38,20 @@ A new model is registered in the same change that adds it.
 
 `AuditlogMiddleware` reads `request.user`, which `JWTAuthenticationMiddleware` set from the bearer token — the order in `MIDDLEWARE` matters. A write from a management command or a migration has no actor, and the entry records `None`, which is correct.
 
+**The API exposes the actor by id only (`actorId`), never an email.** Every entry's
+`object_repr` is the model's `"<Model> - <id>"` (see `model.md`), so it carries no personal
+data either. Note that django-auditlog itself also copies the actor's email into its
+`actor_email` column, with no setting to turn that off; we leave the column alone and
+never read or return it.
+
 ## Reading it
 
 Admin-only, through GraphQL:
 
 ```graphql
 query {
-  auditLog(objectType: "job", objectId: "abc123", limit: 50) {
-    action objectType objectId objectRepr actorEmail changes timestamp
+  auditLog(objectTypes: ["job"], objectIds: ["<job id>"], limit: 50) {
+    action objectType objectId objectRepr actorId changes timestamp
   }
 }
 ```

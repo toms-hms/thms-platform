@@ -7,11 +7,11 @@ from integrations.factories import IntegrationFactory
 INTEGRATIONS = "query { integrations { id provider type email status scopes } }"
 SAVE_AI = """
 mutation($provider: String!, $apiKey: String!) {
-  saveAiIntegration(provider: $provider, apiKey: $apiKey) { integration { id provider status } }
+  createAiIntegration(provider: $provider, apiKey: $apiKey) { integration { id provider status } }
 }
 """
 DISCONNECT = """
-mutation($integrationId: ID!) { disconnectIntegration(integrationId: $integrationId) { success } }
+mutation($integrationId: ID!) { deleteIntegration(integrationId: $integrationId) { success } }
 """
 
 
@@ -45,7 +45,7 @@ class IntegrationsTests(GraphQLTestCase):
         body = self.execute(
             SAVE_AI, {"provider": "openai", "apiKey": "sk-test"}, token=self.token_for(self.user)
         )
-        integration = self.assert_ok(body)["saveAiIntegration"]["integration"]
+        integration = self.assert_ok(body)["createAiIntegration"]["integration"]
         self.assertEqual(integration["provider"], "OPENAI")
 
     def test_cannot_disconnect_another_users_connection(self):

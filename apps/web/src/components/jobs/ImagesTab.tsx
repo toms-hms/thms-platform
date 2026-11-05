@@ -4,8 +4,8 @@ import Image from 'next/image';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { JobImagesDocument } from './JobImages.generated';
 import { RequestUploadUrlDocument } from './RequestUploadUrl.generated';
-import { ConfirmUploadDocument } from './ConfirmUpload.generated';
-import { DeleteImageDocument } from './DeleteImage.generated';
+import { CreateJobImageDocument } from './CreateJobImage.generated';
+import { DeleteJobImageDocument } from './DeleteJobImage.generated';
 import { CreateAiGenerationDocument } from './CreateAiGeneration.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
@@ -19,8 +19,8 @@ export default function ImagesTab({ jobId }: Props) {
   const imagesList = data?.jobImages ?? [];
   const loading = fetching && !data;
   const [requestUploadUrl] = useMutation(RequestUploadUrlDocument);
-  const [confirmUpload] = useMutation(ConfirmUploadDocument);
-  const [deleteImage] = useMutation(DeleteImageDocument);
+  const [createJobImage] = useMutation(CreateJobImageDocument);
+  const [deleteJobImage] = useMutation(DeleteJobImageDocument);
   const [createAiGeneration] = useMutation(CreateAiGenerationDocument);
   const [uploading, setUploading] = useState(false);
   const [showAIGen, setShowAIGen] = useState(false);
@@ -49,7 +49,7 @@ export default function ImagesTab({ jobId }: Props) {
         headers: { 'Content-Type': file.type },
       });
 
-      await confirmUpload({ variables: {
+      await createJobImage({ variables: {
         jobId,
         key,
         kind:  'SOURCE',
@@ -85,7 +85,7 @@ export default function ImagesTab({ jobId }: Props) {
   async function handleDelete(imageId: string) {
     if (!confirm('Delete this image?')) return;
     try {
-      await deleteImage({ variables: { imageId } });
+      await deleteJobImage({ variables: { imageId } });
       await refetch();
     } catch {}
   }

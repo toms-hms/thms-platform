@@ -4,9 +4,9 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import type { JobContractorStatus } from '@/graphql/types.generated';
 import { JobContractorPickerDocument } from './JobContractorPicker.generated';
 import { EmailIntegrationsDocument } from './EmailIntegrations.generated';
-import { AssignContractorDocument } from './AssignContractor.generated';
+import { CreateJobContractorDocument } from './CreateJobContractor.generated';
 import { UpdateJobContractorDocument } from './UpdateJobContractor.generated';
-import { RemoveJobContractorDocument } from './RemoveJobContractor.generated';
+import { DeleteJobContractorDocument } from './DeleteJobContractor.generated';
 import { DraftEmailDocument, type DraftEmailMutation } from './DraftEmail.generated';
 import { SendEmailDocument } from './SendEmail.generated';
 import { JobDetailDocument } from './JobDetail.generated';
@@ -32,9 +32,9 @@ export default function JobContractorsTab({ job }: Props) {
   const allContractors = useQuery(JobContractorPickerDocument).data?.contractors ?? [];
   const integrationsList = useQuery(EmailIntegrationsDocument).data?.integrations ?? [];
   const refetchQueries = [JobDetailDocument];
-  const [assignContractor] = useMutation(AssignContractorDocument, { refetchQueries });
+  const [createJobContractor] = useMutation(CreateJobContractorDocument, { refetchQueries });
   const [updateJobContractor] = useMutation(UpdateJobContractorDocument);
-  const [removeJobContractor] = useMutation(RemoveJobContractorDocument, { refetchQueries });
+  const [deleteJobContractor] = useMutation(DeleteJobContractorDocument, { refetchQueries });
   const [draftEmail] = useMutation(DraftEmailDocument);
   const [sendEmail] = useMutation(SendEmailDocument, { refetchQueries });
   const [showAdd, setShowAdd] = useState(false);
@@ -55,7 +55,7 @@ export default function JobContractorsTab({ job }: Props) {
     if (!selectedContractorId) return;
     setSaving(true);
     try {
-      await assignContractor({ variables: { jobId: job.id, contractorId: selectedContractorId } });
+      await createJobContractor({ variables: { jobId: job.id, contractorId: selectedContractorId } });
       setShowAdd(false);
       setSelectedContractorId('');
     } catch {}
@@ -71,7 +71,7 @@ export default function JobContractorsTab({ job }: Props) {
   async function handleRemove(jcId: string) {
     if (!confirm('Remove contractor from this job?')) return;
     try {
-      await removeJobContractor({ variables: { jobContractorId: jcId } });
+      await deleteJobContractor({ variables: { jobContractorId: jcId } });
     } catch {}
   }
 

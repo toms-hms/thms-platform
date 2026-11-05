@@ -60,7 +60,7 @@ class RequestUploadUrl(graphene.Mutation):
         return RequestUploadUrl(upload=UploadUrlType(**result))
 
 
-class ConfirmUpload(graphene.Mutation):
+class CreateJobImage(graphene.Mutation):
     """Records a completed upload as a job image."""
 
     class Arguments:
@@ -74,13 +74,13 @@ class ConfirmUpload(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, key: str, kind: str | None = None, label: str | None = None):
         """Writes the image row."""
-        image = JobImageService().confirm_upload(
+        image = JobImageService().create(
             job_id=job_id, user_id=current_user(info).pk, key=key, kind=kind, label=label
         )
-        return ConfirmUpload(image=image)
+        return CreateJobImage(image=image)
 
 
-class DeleteImage(graphene.Mutation):
+class DeleteJobImage(graphene.Mutation):
     """Deletes a job image and the object behind it."""
 
     class Arguments:
@@ -92,7 +92,7 @@ class DeleteImage(graphene.Mutation):
     def mutate(self, info, image_id: str):
         """Deletes the image and its stored object."""
         JobImageService().delete(image_id=image_id)
-        return DeleteImage(success=True)
+        return DeleteJobImage(success=True)
 
 
 class CreateAiGeneration(graphene.Mutation):
@@ -191,8 +191,8 @@ class AiMutation(graphene.ObjectType):
     """Image and generation writes."""
 
     request_upload_url = RequestUploadUrl.Field()
-    confirm_upload = ConfirmUpload.Field()
-    delete_image = DeleteImage.Field()
+    create_job_image = CreateJobImage.Field()
+    delete_job_image = DeleteJobImage.Field()
     create_ai_generation = CreateAiGeneration.Field()
     start_diagnose = StartDiagnose.Field()
     diagnose_job = DiagnoseJob.Field()

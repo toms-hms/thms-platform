@@ -4,16 +4,16 @@ import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { IntegrationsDocument } from './Integrations.generated';
 import { GoogleAuthUrlDocument } from './GoogleAuthUrl.generated';
 import { MicrosoftAuthUrlDocument } from './MicrosoftAuthUrl.generated';
-import { SaveAiIntegrationDocument } from './SaveAiIntegration.generated';
-import { DisconnectIntegrationDocument } from './DisconnectIntegration.generated';
+import { CreateAiIntegrationDocument } from './CreateAiIntegration.generated';
+import { DeleteIntegrationDocument } from './DeleteIntegration.generated';
 
 export default function IntegrationsPage() {
   const client = useApolloClient();
   const { data, loading: fetching, refetch } = useQuery(IntegrationsDocument);
   const list = data?.integrations ?? [];
   const loading = fetching && !data;
-  const [saveAi] = useMutation(SaveAiIntegrationDocument);
-  const [disconnectIntegration] = useMutation(DisconnectIntegrationDocument);
+  const [createAiIntegration] = useMutation(CreateAiIntegrationDocument);
+  const [deleteIntegration] = useMutation(DeleteIntegrationDocument);
   const [aiKey, setAiKey] = useState('');
   const [savingAI, setSavingAI] = useState(false);
   const [aiMsg, setAiMsg] = useState('');
@@ -39,7 +39,7 @@ export default function IntegrationsPage() {
   async function handleDisconnect(id: string) {
     if (!confirm('Disconnect this integration?')) return;
     try {
-      await disconnectIntegration({ variables: { integrationId: id } });
+      await deleteIntegration({ variables: { integrationId: id } });
       await refetch();
     } catch {}
   }
@@ -49,7 +49,7 @@ export default function IntegrationsPage() {
     setSavingAI(true);
     setAiMsg('');
     try {
-      await saveAi({ variables: { provider: 'openai', apiKey: aiKey } });
+      await createAiIntegration({ variables: { provider: 'openai', apiKey: aiKey } });
       setAiMsg('API key saved successfully');
       setAiKey('');
       await refetch();

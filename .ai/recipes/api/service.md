@@ -48,7 +48,9 @@ class QuoteService:
 
 - **Every parameter after `self` is keyword-only (`*,`)** and explicitly typed. Never take `data: dict`.
 - **Parameter names match the GraphQL argument names** (snake_case), so the mutation calls `QuoteService().update(quote_id=quote_id, **data)`.
-- **Method names are verbs about the domain area:** `create`, `update`, `delete`, `promote`, `add_member`, `send`. The class already names the noun, so `QuoteService().create`, not `create_quote`.
+- **A model service owns one model** and is named after it: `QuoteService`, `UserHomeService`. Its writes are plain `create`, `update` and `delete` (the class names the noun, so `QuoteService().create`, never `create_quote` and never `add` / `assign` / `record` / `remove`). CRUD on a second model means a second service: `HomeService` creates the owner's membership by calling an injected `UserHomeService`, not by owning member methods.
+- **Real domain actions keep their verb** alongside the CRUD: `promote`, `send`, `connect_google`. A create that comes in variants takes keyword alternatives (`UserHomeService.create(user_id=... | email=...)`) rather than growing a second create.
+- **Services that aren't about one model** (`AuthService`, `DiagnoseService`, `EmailDraftService`, `ImageGenerationService`, `EmailService`, `StorageService`, `PermissionService`) are named for what they do and use action verbs. They may write through a manager's named call (`JobImage.objects.create(...)`) rather than another model's service.
 - **Return the model instance written,** or `None` for a delete.
 - Raise domain errors from `core.errors`. Never return an error value, never raise bare `Exception`.
 

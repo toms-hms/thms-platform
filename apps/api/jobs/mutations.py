@@ -71,7 +71,7 @@ class DeleteJob(graphene.Mutation):
         return DeleteJob(success=True)
 
 
-class AssignContractor(graphene.Mutation):
+class CreateJobContractor(graphene.Mutation):
     """Assigns a contractor to a job."""
 
     class Arguments:
@@ -84,8 +84,8 @@ class AssignContractor(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
     def mutate(self, info, job_id: str, contractor_id: str, notes: str | None = None):
         """Creates or updates the assignment."""
-        return AssignContractor(
-            job_contractor=JobContractorService().assign(
+        return CreateJobContractor(
+            job_contractor=JobContractorService().create(
                 job_id=job_id, contractor_id=contractor_id, notes=notes
             )
         )
@@ -105,13 +105,13 @@ class UpdateJobContractor(graphene.Mutation):
     def mutate(self, info, job_contractor_id: str, status: str, **extra):
         """Applies the status change. Omitting notes leaves them unchanged."""
         return UpdateJobContractor(
-            job_contractor=JobContractorService().update_status(
+            job_contractor=JobContractorService().update(
                 job_contractor_id=job_contractor_id, status=status, **extra
             )
         )
 
 
-class RemoveJobContractor(graphene.Mutation):
+class DeleteJobContractor(graphene.Mutation):
     """Removes a contractor from a job."""
 
     class Arguments:
@@ -122,8 +122,8 @@ class RemoveJobContractor(graphene.Mutation):
     @authorize(Permission.JOBS_EDIT, resource=JobContractor, arg="job_contractor_id")
     def mutate(self, info, job_contractor_id: str):
         """Removes the assignment."""
-        JobContractorService().remove(job_contractor_id=job_contractor_id)
-        return RemoveJobContractor(success=True)
+        JobContractorService().delete(job_contractor_id=job_contractor_id)
+        return DeleteJobContractor(success=True)
 
 
 class JobsMutation(graphene.ObjectType):
@@ -132,6 +132,6 @@ class JobsMutation(graphene.ObjectType):
     create_job = CreateJob.Field()
     update_job = UpdateJob.Field()
     delete_job = DeleteJob.Field()
-    assign_contractor = AssignContractor.Field()
+    create_job_contractor = CreateJobContractor.Field()
     update_job_contractor = UpdateJobContractor.Field()
-    remove_job_contractor = RemoveJobContractor.Field()
+    delete_job_contractor = DeleteJobContractor.Field()

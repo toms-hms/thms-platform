@@ -10,11 +10,11 @@ from jobs.models import CONTACTED_STATUSES, RESPONDED_STATUSES, JobContractor
 class JobContractorService:
     """Assigns contractors to jobs and moves them through the outreach statuses."""
 
-    def assign(self, *, job_id: str, contractor_id: str, notes: str | None = None) -> JobContractor:
+    def create(self, *, job_id: str, contractor_id: str, notes: str | None = None) -> JobContractor:
         """Assigns the contractor to the job, or updates the notes on an existing assignment."""
         return JobContractor.objects.upsert(job_id=job_id, contractor_id=contractor_id, notes=notes)
 
-    def update_status(
+    def update(
         self, *, job_contractor_id: str, status: str, notes: str | None | Unset = UNSET
     ) -> JobContractor:
         """Moves the assignment to the status, stamping first contact and first response the first time each happens."""
@@ -29,7 +29,7 @@ class JobContractorService:
             stamps["last_response_at"] = now
         return JobContractor.objects.apply_updates(assignment, status=status, notes=notes, **stamps)
 
-    def remove(self, *, job_contractor_id: str) -> None:
+    def delete(self, *, job_contractor_id: str) -> None:
         """Removes the contractor from the job."""
         job_contractor = JobContractor.objects.find(pk=job_contractor_id)
         if job_contractor is None:

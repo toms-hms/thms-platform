@@ -54,7 +54,8 @@ class CreateJob(graphene.Mutation):
         return CreateJob(job=JobService().create(home_id=home_id, user_id=current_user(info).pk, **data))
 ```
 
-- Names read as verbs: `createJob`, `assignContractor`, `disconnectIntegration`.
+- **CRUD mutations are `create<Type>` / `update<Type>` / `delete<Type>`**, named for the GraphQL type they return: `createJob`, `createJobContractor`, `deleteHomeMember`, `deleteIntegration`. They call the matching service's `create` / `update` / `delete`.
+- **Real actions keep their verb:** `promoteContractor`, `sendEmail`, `draftEmail`, `requestUploadUrl`, `login`.
 - A mutation returns the object it changed, or `success: Boolean!` for a delete.
 - Arguments are flat, not input objects. They stay readable in GraphiQL and map straight onto service keyword arguments: argument names match the service method's parameter names, so `**data` passes through.
 - **A mutation always calls a service** (`XService().method(...)`) and never writes through a manager itself. It declares access with a decorator, then delegates.

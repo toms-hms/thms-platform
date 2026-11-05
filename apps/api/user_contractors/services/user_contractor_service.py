@@ -12,7 +12,7 @@ class UserContractorService:
     def __init__(self, *, contractors: ContractorService | None = None) -> None:
         self._contractors = contractors or ContractorService()
 
-    def add(
+    def create(
         self,
         *,
         user_id: str,
@@ -51,7 +51,7 @@ class UserContractorService:
             raise ConflictError("Contractor already in your rolodex")
         return UserContractor.objects.create(user_id=user_id, contractor_id=contractor_id, note=note)
 
-    def remove(self, *, user_contractor_id: str) -> None:
+    def delete(self, *, user_contractor_id: str) -> None:
         """Removes an entry from a rolodex. The caller has already checked ownership."""
         user_contractor = UserContractor.objects.find(pk=user_contractor_id)
         if user_contractor is None:

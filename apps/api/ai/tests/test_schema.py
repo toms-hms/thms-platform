@@ -20,13 +20,13 @@ mutation($jobId: ID!, $fileName: String!, $contentType: String!, $kind: String!)
 """
 CONFIRM = """
 mutation($jobId: ID!, $key: String!, $kind: String) {
-  confirmUpload(jobId: $jobId, key: $key, kind: $kind) { image { id storageKey kind } }
+  createJobImage(jobId: $jobId, key: $key, kind: $kind) { image { id storageKey kind } }
 }
 """
 
 
 class JobImagesTests(GraphQLTestCase):
-    """query jobImages / mutation requestUploadUrl / confirmUpload"""
+    """query jobImages / mutation requestUploadUrl / createJobImage"""
 
     def setUp(self):
         """Creates a job with one image, owned by one user."""
@@ -78,5 +78,5 @@ class JobImagesTests(GraphQLTestCase):
             {"jobId": self.job.pk, "key": "jobs/x/source/new.png", "kind": "SOURCE"},
             token=self.token_for(self.user),
         )
-        image = self.assert_ok(body)["confirmUpload"]["image"]
+        image = self.assert_ok(body)["createJobImage"]["image"]
         self.assertTrue(JobImage.objects.filter(pk=image["id"], storage_key="jobs/x/source/new.png").exists())

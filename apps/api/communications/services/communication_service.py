@@ -16,7 +16,7 @@ from core.utils.unset_utils import UNSET, Unset
 class CommunicationService:
     """Writes to the message log."""
 
-    def record(
+    def create(
         self,
         *,
         direction: str,

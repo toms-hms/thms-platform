@@ -46,7 +46,7 @@ class EmailService:
             scopes=list(integration.scopes or []),
             raw_message=build_raw_message(to=to, subject=subject, body_text=body_text, body_html=body_html),
         )
-        return self._communications.record(
+        return self._communications.create(
             direction=CommunicationDirection.SENT,
             job_id=job_id,
             contractor_id=contractor_id,

@@ -1,0 +1,7 @@
+mutation CreateAiIntegration($provider: String!, $apiKey: String!) {
+  createAiIntegration(provider: $provider, apiKey: $apiKey) {
+    integration {
+      id
+    }
+  }
+}

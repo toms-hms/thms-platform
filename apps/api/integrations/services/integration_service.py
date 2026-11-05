@@ -60,7 +60,7 @@ class IntegrationService:
             scopes=connection.scopes,
         )
 
-    def save_ai_key(self, *, user_id: str, provider: str, api_key: str) -> Integration:
+    def create_ai(self, *, user_id: str, provider: str, api_key: str) -> Integration:
         """Stores an AI provider API key as an encrypted integration."""
         return Integration.objects.upsert_by_provider(
             user_id=user_id,
@@ -73,7 +73,7 @@ class IntegrationService:
             scopes=[],
         )
 
-    def disconnect(self, *, integration_id: str) -> None:
+    def delete(self, *, integration_id: str) -> None:
         """Removes a connected account. The caller has already checked ownership."""
         integration = Integration.objects.find(pk=integration_id)
         if integration is None:

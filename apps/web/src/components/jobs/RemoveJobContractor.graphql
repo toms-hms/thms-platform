@@ -1,5 +1,0 @@
-mutation RemoveJobContractor($jobContractorId: ID!) {
-  removeJobContractor(jobContractorId: $jobContractorId) {
-    success
-  }
-}

@@ -32,7 +32,7 @@ class CreateUserContractor(graphene.Mutation):
     @login_required
     def mutate(self, info, **data):
         """Adds the contractor to the caller's rolodex."""
-        entry = UserContractorService().add(user_id=current_user(info).pk, **data)
+        entry = UserContractorService().create(user_id=current_user(info).pk, **data)
         return CreateUserContractor(user_contractor=entry)
 
 
@@ -47,7 +47,7 @@ class DeleteUserContractor(graphene.Mutation):
     @owner_required(resource=UserContractor, arg="user_contractor_id")
     def mutate(self, info, user_contractor_id: str):
         """Deletes the rolodex entry."""
-        UserContractorService().remove(user_contractor_id=user_contractor_id)
+        UserContractorService().delete(user_contractor_id=user_contractor_id)
         return DeleteUserContractor(success=True)
 
 

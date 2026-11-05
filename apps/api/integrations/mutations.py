@@ -12,7 +12,7 @@ from integrations.types import IntegrationType
 from jobs.models import Job
 
 
-class SaveAiIntegration(graphene.Mutation):
+class CreateAiIntegration(graphene.Mutation):
     """Stores an AI provider API key for the caller."""
 
     class Arguments:
@@ -24,13 +24,13 @@ class SaveAiIntegration(graphene.Mutation):
     @login_required
     def mutate(self, info, provider: str, api_key: str):
         """Encrypts and stores the API key."""
-        integration = IntegrationService().save_ai_key(
+        integration = IntegrationService().create_ai(
             user_id=current_user(info).pk, provider=provider, api_key=api_key
         )
-        return SaveAiIntegration(integration=integration)
+        return CreateAiIntegration(integration=integration)
 
 
-class DisconnectIntegration(graphene.Mutation):
+class DeleteIntegration(graphene.Mutation):
     """Removes one of the caller's connected accounts."""
 
     class Arguments:
@@ -41,8 +41,8 @@ class DisconnectIntegration(graphene.Mutation):
     @owner_required(resource=Integration, arg="integration_id")
     def mutate(self, info, integration_id: str):
         """Deletes the integration."""
-        IntegrationService().disconnect(integration_id=integration_id)
-        return DisconnectIntegration(success=True)
+        IntegrationService().delete(integration_id=integration_id)
+        return DeleteIntegration(success=True)
 
 
 class SendEmail(graphene.Mutation):
@@ -69,6 +69,6 @@ class SendEmail(graphene.Mutation):
 class IntegrationsMutation(graphene.ObjectType):
     """Integration writes."""
 
-    save_ai_integration = SaveAiIntegration.Field()
-    disconnect_integration = DisconnectIntegration.Field()
+    create_ai_integration = CreateAiIntegration.Field()
+    delete_integration = DeleteIntegration.Field()
     send_email = SendEmail.Field()

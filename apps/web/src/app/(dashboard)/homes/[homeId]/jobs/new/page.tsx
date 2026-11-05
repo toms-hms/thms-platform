@@ -7,8 +7,8 @@ import { JobIntent, JobStatus, TradeCategory } from '@/graphql/types.generated';
 import { WizardHomeDocument } from './WizardHome.generated';
 import { CreateJobDocument } from './CreateJob.generated';
 import { WizardUploadUrlDocument } from './WizardUploadUrl.generated';
-import { WizardConfirmUploadDocument } from './WizardConfirmUpload.generated';
-import { WizardAssignContractorDocument } from './WizardAssignContractor.generated';
+import { WizardCreateJobImageDocument } from './WizardCreateJobImage.generated';
+import { WizardCreateJobContractorDocument } from './WizardCreateJobContractor.generated';
 import { WizardUpdateJobDocument } from './WizardUpdateJob.generated';
 
 import WizardProgress from './_components/WizardProgress';
@@ -55,9 +55,9 @@ export default function NewJobWizardPage() {
   const homeZipCodes = homeZipCode ? [homeZipCode] : [];
   const [createJob] = useMutation(CreateJobDocument);
   const [updateJob] = useMutation(WizardUpdateJobDocument);
-  const [assignContractor] = useMutation(WizardAssignContractorDocument);
+  const [createJobContractor] = useMutation(WizardCreateJobContractorDocument);
   const [requestUploadUrl] = useMutation(WizardUploadUrlDocument);
-  const [confirmUpload] = useMutation(WizardConfirmUploadDocument);
+  const [createJobImage] = useMutation(WizardCreateJobImageDocument);
 
   /** Uploads a photo for a job: presigned URL, direct PUT, then confirmation. */
   async function uploadJobPhoto(jobId: string, file: File) {
@@ -67,7 +67,7 @@ export default function NewJobWizardPage() {
     const upload = urlData?.requestUploadUrl?.upload;
     if (!upload) throw new Error('Upload failed');
     await fetch(upload.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-    await confirmUpload({ variables: { jobId, key: upload.key, kind: 'SOURCE', label: file.name } });
+    await createJobImage({ variables: { jobId, key: upload.key, kind: 'SOURCE', label: file.name } });
   }
 
   function update(fields: Partial<WizardData>) {
@@ -153,7 +153,7 @@ export default function NewJobWizardPage() {
       // Assign each selected contractor
       await Promise.all(
         data.selectedContractorIds.map((contractorId) =>
-          assignContractor({ variables: { jobId: data.jobId as string, contractorId } })
+          createJobContractor({ variables: { jobId: data.jobId as string, contractorId } })
         )
       );
 

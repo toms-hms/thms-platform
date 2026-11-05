@@ -73,12 +73,12 @@ class UpdateJobTests(TestCase):
 
 
 class UpdateStatusTests(TestCase):
-    """JobContractorService.update_status()"""
+    """JobContractorService.update()"""
 
     def test_stamps_first_contact(self):
         """Moving to CONTACTED records when contact was first made."""
         assignment = JobContractorFactory()
-        updated = JobContractorService().update_status(
+        updated = JobContractorService().update(
             job_contractor_id=assignment.pk, status=JobContractorStatus.CONTACTED
         )
         self.assertIsNotNone(updated.last_contacted_at)
@@ -87,7 +87,7 @@ class UpdateStatusTests(TestCase):
     def test_stamps_first_response(self):
         """Moving to RESPONDED records both first contact and first response."""
         assignment = JobContractorFactory()
-        updated = JobContractorService().update_status(
+        updated = JobContractorService().update(
             job_contractor_id=assignment.pk, status=JobContractorStatus.RESPONDED
         )
         self.assertIsNotNone(updated.last_contacted_at)
@@ -96,11 +96,9 @@ class UpdateStatusTests(TestCase):
     def test_does_not_overwrite_an_existing_stamp(self):
         """A later status change leaves the original first-contact time alone."""
         assignment = JobContractorFactory()
-        JobContractorService().update_status(
-            job_contractor_id=assignment.pk, status=JobContractorStatus.CONTACTED
-        )
+        JobContractorService().update(job_contractor_id=assignment.pk, status=JobContractorStatus.CONTACTED)
         first_contact = JobContractor.objects.get(pk=assignment.pk).last_contacted_at
-        JobContractorService().update_status(
+        JobContractorService().update(
             job_contractor_id=assignment.pk, status=JobContractorStatus.QUOTE_RECEIVED
         )
         self.assertEqual(JobContractor.objects.get(pk=assignment.pk).last_contacted_at, first_contact)
@@ -108,7 +106,7 @@ class UpdateStatusTests(TestCase):
     def test_declined_does_not_count_as_contact(self):
         """DECLINED is outside the contacted set and stamps nothing."""
         assignment = JobContractorFactory()
-        updated = JobContractorService().update_status(
+        updated = JobContractorService().update(
             job_contractor_id=assignment.pk, status=JobContractorStatus.DECLINED
         )
         self.assertIsNone(updated.last_contacted_at)

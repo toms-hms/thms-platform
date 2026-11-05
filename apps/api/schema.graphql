@@ -288,10 +288,10 @@ type HomeMemberType {
 """Every write operation the API exposes."""
 type Mutation {
   """Stores an AI provider API key for the caller."""
-  saveAiIntegration(apiKey: String!, provider: String!): SaveAiIntegration
+  createAiIntegration(apiKey: String!, provider: String!): CreateAiIntegration
 
   """Removes one of the caller's connected accounts."""
-  disconnectIntegration(integrationId: ID!): DisconnectIntegration
+  deleteIntegration(integrationId: ID!): DeleteIntegration
 
   """
   Sends an email through the caller's Gmail connection and records it against the job.
@@ -302,10 +302,10 @@ type Mutation {
   requestUploadUrl(contentType: String!, fileName: String!, jobId: ID!, kind: String!): RequestUploadUrl
 
   """Records a completed upload as a job image."""
-  confirmUpload(jobId: ID!, key: String!, kind: String, label: String): ConfirmUpload
+  createJobImage(jobId: ID!, key: String!, kind: String, label: String): CreateJobImage
 
   """Deletes a job image and the object behind it."""
-  deleteImage(imageId: ID!): DeleteImage
+  deleteJobImage(imageId: ID!): DeleteJobImage
 
   """Generates a visualisation from an uploaded source image."""
   createAiGeneration(jobId: ID!, metadata: JSONString, prompt: String!, provider: String, sourceImageId: ID!): CreateAiGeneration
@@ -341,13 +341,13 @@ type Mutation {
   deleteJob(jobId: ID!): DeleteJob
 
   """Assigns a contractor to a job."""
-  assignContractor(contractorId: ID!, jobId: ID!, notes: String): AssignContractor
+  createJobContractor(contractorId: ID!, jobId: ID!, notes: String): CreateJobContractor
 
   """Moves a contractor assignment to a new status."""
   updateJobContractor(jobContractorId: ID!, notes: String, status: JobContractorStatus!): UpdateJobContractor
 
   """Removes a contractor from a job."""
-  removeJobContractor(jobContractorId: ID!): RemoveJobContractor
+  deleteJobContractor(jobContractorId: ID!): DeleteJobContractor
 
   """
   Saves a contractor to the caller's rolodex.
@@ -382,10 +382,10 @@ type Mutation {
   deleteHome(homeId: ID!): DeleteHome
 
   """Adds another user to a home by email address."""
-  addHomeUser(email: String!, homeId: ID!, role: HomeRole): AddHomeUser
+  createHomeMember(email: String!, homeId: ID!, role: HomeRole): CreateHomeMember
 
   """Removes a user's access to a home."""
-  removeHomeUser(homeId: ID!, userId: ID!): RemoveHomeUser
+  deleteHomeMember(homeId: ID!, userId: ID!): DeleteHomeMember
 
   """Creates an account and signs the new user in."""
   register(email: String!, firstName: String!, lastName: String!, password: String!): Register
@@ -401,12 +401,12 @@ type Mutation {
 }
 
 """Stores an AI provider API key for the caller."""
-type SaveAiIntegration {
+type CreateAiIntegration {
   integration: IntegrationType
 }
 
 """Removes one of the caller's connected accounts."""
-type DisconnectIntegration {
+type DeleteIntegration {
   success: Boolean!
 }
 
@@ -430,12 +430,12 @@ type UploadUrlType {
 }
 
 """Records a completed upload as a job image."""
-type ConfirmUpload {
+type CreateJobImage {
   image: JobImageType
 }
 
 """Deletes a job image and the object behind it."""
-type DeleteImage {
+type DeleteJobImage {
   success: Boolean!
 }
 
@@ -535,7 +535,7 @@ type DeleteJob {
 }
 
 """Assigns a contractor to a job."""
-type AssignContractor {
+type CreateJobContractor {
   jobContractor: JobContractorType
 }
 
@@ -561,7 +561,7 @@ enum JobContractorStatus {
 }
 
 """Removes a contractor from a job."""
-type RemoveJobContractor {
+type DeleteJobContractor {
   success: Boolean!
 }
 
@@ -616,7 +616,7 @@ type DeleteHome {
 }
 
 """Adds another user to a home by email address."""
-type AddHomeUser {
+type CreateHomeMember {
   member: HomeMemberType
 }
 
@@ -627,7 +627,7 @@ enum HomeRole {
 }
 
 """Removes a user's access to a home."""
-type RemoveHomeUser {
+type DeleteHomeMember {
   success: Boolean!
 }
 

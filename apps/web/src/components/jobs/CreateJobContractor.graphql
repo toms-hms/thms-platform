@@ -1,0 +1,7 @@
+mutation CreateJobContractor($jobId: ID!, $contractorId: ID!, $notes: String) {
+  createJobContractor(jobId: $jobId, contractorId: $contractorId, notes: $notes) {
+    jobContractor {
+      id
+    }
+  }
+}

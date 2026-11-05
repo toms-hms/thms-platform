@@ -1,19 +1,21 @@
-"""Homes and their membership.
+"""Homes.
 
-Every change to a membership invalidates that member's cached role, so the next
-permission check re-reads the database.
+Deleting a home drops every member's cached role, so the next permission check
+re-reads the database. Membership itself is `UserHomeService`.
 """
 
-from accounts.models import User
 from core.errors import NotFoundError
 from core.services.permission_service import PermissionService
-from core.utils.email_utils import normalize_email
 from core.utils.unset_utils import UNSET, Unset
 from homes.models import Home, HomeRole, UserHome
+from homes.services.user_home_service import UserHomeService
 
 
 class HomeService:
-    """Creates, edits and deletes homes, and manages who belongs to them."""
+    """Creates, edits and deletes homes."""
+
+    def __init__(self, *, user_homes: UserHomeService | None = None) -> None:
+        self._user_homes = user_homes or UserHomeService()
 
     def create(
         self,
@@ -39,8 +41,7 @@ class HomeService:
             country=country or "US",
             notes=notes,
         )
-        UserHome.objects.create(user_id=user_id, home=home, role=HomeRole.OWNER)
-        PermissionService().invalidate(user_id=user_id, home_id=home.pk)
+        self._user_homes.create(home_id=home.pk, user_id=user_id, role=HomeRole.OWNER)
         return home
 
     def update(
@@ -79,17 +80,3 @@ class HomeService:
         home.delete()
         for member_id in member_ids:
             PermissionService().invalidate(user_id=member_id, home_id=home_id)
-
-    def add_member(self, *, home_id: str, email: str, role: str) -> UserHome:
-        """Adds the user with this email to the home, or changes their role if already a member."""
-        target = User.objects.find(email=normalize_email(email))
-        if target is None:
-            raise NotFoundError("User")
-        membership = UserHome.objects.upsert(user_id=target.pk, home_id=home_id, role=role)
-        PermissionService().invalidate(user_id=target.pk, home_id=home_id)
-        return membership
-
-    def remove_member(self, *, home_id: str, user_id: str) -> None:
-        """Removes the user's membership of the home."""
-        UserHome.objects.remove(user_id=user_id, home_id=home_id)
-        PermissionService().invalidate(user_id=user_id, home_id=home_id)

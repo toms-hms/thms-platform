@@ -1,5 +1,0 @@
-mutation DisconnectIntegration($integrationId: ID!) {
-  disconnectIntegration(integrationId: $integrationId) {
-    success
-  }
-}

@@ -26,11 +26,11 @@ def integration_service(*, google: MagicMock | None = None) -> IntegrationServic
 
 
 class SaveAiKeyTests(TestCase):
-    """IntegrationService.save_ai_key()"""
+    """IntegrationService.create_ai()"""
 
     def test_stores_the_key_encrypted(self):
         """The API key is encrypted at rest and never stored as plaintext."""
-        integration = integration_service().save_ai_key(
+        integration = integration_service().create_ai(
             user_id=UserFactory().pk, provider="openai", api_key="sk-secret-value"
         )
         self.assertNotIn("sk-secret-value", integration.access_token_enc)
@@ -41,8 +41,8 @@ class SaveAiKeyTests(TestCase):
         """Saving again updates the connection rather than adding a second one."""
         user = UserFactory()
         service = integration_service()
-        service.save_ai_key(user_id=user.pk, provider="openai", api_key="first")
-        service.save_ai_key(user_id=user.pk, provider="openai", api_key="second")
+        service.create_ai(user_id=user.pk, provider="openai", api_key="first")
+        service.create_ai(user_id=user.pk, provider="openai", api_key="second")
         integrations = Integration.objects.filter(user=user, provider=IntegrationProvider.OPENAI)
         self.assertEqual(integrations.count(), 1)
         self.assertEqual(decrypt(integrations.first().access_token_enc), "second")
@@ -72,18 +72,18 @@ class ConnectGoogleTests(TestCase):
 
 
 class DisconnectTests(TestCase):
-    """IntegrationService.disconnect()"""
+    """IntegrationService.delete()"""
 
     def test_deletes_the_connection(self):
         """The connection is removed. Ownership is checked by the resolver's @owner_required."""
         integration = IntegrationFactory()
-        integration_service().disconnect(integration_id=integration.pk)
+        integration_service().delete(integration_id=integration.pk)
         self.assertFalse(Integration.objects.filter(pk=integration.pk).exists())
 
     def test_an_unknown_connection_is_not_found(self):
         """Disconnecting an id that does not exist raises NotFoundError."""
         with self.assertRaises(NotFoundError):
-            integration_service().disconnect(integration_id="missing")
+            integration_service().delete(integration_id="missing")
 
 
 class SendEmailTests(TestCase):

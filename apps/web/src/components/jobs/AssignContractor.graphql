@@ -1,7 +1,0 @@
-mutation AssignContractor($jobId: ID!, $contractorId: ID!, $notes: String) {
-  assignContractor(jobId: $jobId, contractorId: $contractorId, notes: $notes) {
-    jobContractor {
-      id
-    }
-  }
-}

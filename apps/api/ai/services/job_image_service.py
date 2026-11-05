@@ -21,7 +21,7 @@ class JobImageService:
             "kind": kind,
         }
 
-    def confirm_upload(
+    def create(
         self, *, job_id: str, user_id: str, key: str, kind: str | None = None, label: str | None = None
     ) -> JobImage:
         """Records an uploaded object as a job image."""

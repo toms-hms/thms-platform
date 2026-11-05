@@ -1,5 +1,0 @@
-mutation DeleteImage($imageId: ID!) {
-  deleteImage(imageId: $imageId) {
-    success
-  }
-}

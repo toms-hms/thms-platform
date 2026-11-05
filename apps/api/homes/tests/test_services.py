@@ -4,11 +4,12 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from accounts.factories import UserFactory
-from core.errors import NotFoundError
+from core.errors import BadRequestError, NotFoundError
 from core.services.permission_service import Permission, PermissionService
 from homes.factories import HomeFactory
 from homes.models import Home, HomeRole, UserHome
 from homes.services.home_service import HomeService
+from homes.services.user_home_service import UserHomeService
 
 HOME_INPUT = {"name": "Test Home", "address1": "1 St", "city": "Austin", "state": "TX", "zip_code": "78701"}
 
@@ -50,28 +51,41 @@ class DeleteHomeTests(TestCase):
             self.assertFalse(PermissionService().can(user, Permission.HOME_VIEW, home.pk))
 
 
-class MembershipServiceTests(TestCase):
-    """HomeService.add_member() and remove_member()"""
+class UserHomeServiceTests(TestCase):
+    """UserHomeService.create() and delete()"""
 
     def test_adds_a_user_by_email(self):
         """A user is added to the home by their email address."""
         owner, invitee = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
-        HomeService().add_member(home_id=home.pk, email=invitee.email, role=HomeRole.MEMBER)
+        UserHomeService().create(home_id=home.pk, email=invitee.email, role=HomeRole.MEMBER)
         self.assertIsNotNone(UserHome.objects.find(user_id=invitee.pk, home_id=home.pk))
 
     def test_unknown_email_is_not_found(self):
         """Adding an email with no account raises NotFoundError."""
         home = HomeFactory(owner=UserFactory())
         with self.assertRaises(NotFoundError):
-            HomeService().add_member(home_id=home.pk, email="nobody@example.com", role=HomeRole.MEMBER)
+            UserHomeService().create(home_id=home.pk, email="nobody@example.com", role=HomeRole.MEMBER)
+
+    def test_adds_a_user_by_id(self):
+        """A user can be added by id, as HomeService does for the owner."""
+        home = HomeFactory(owner=UserFactory())
+        member = UserFactory()
+        UserHomeService().create(home_id=home.pk, user_id=member.pk, role=HomeRole.MEMBER)
+        self.assertEqual(UserHome.objects.role_for(user_id=member.pk, home_id=home.pk), HomeRole.MEMBER)
+
+    def test_requires_a_user_id_or_an_email(self):
+        """Neither identifier is a bad request."""
+        home = HomeFactory(owner=UserFactory())
+        with self.assertRaises(BadRequestError):
+            UserHomeService().create(home_id=home.pk, role=HomeRole.MEMBER)
 
     def test_removes_a_member(self):
         """Removing a member drops their membership row."""
         owner, member = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
         UserHome.objects.upsert(user_id=member.pk, home_id=home.pk, role=HomeRole.MEMBER)
-        HomeService().remove_member(home_id=home.pk, user_id=member.pk)
+        UserHomeService().delete(home_id=home.pk, user_id=member.pk)
         self.assertIsNone(UserHome.objects.find(user_id=member.pk, home_id=home.pk))
 
     def test_changing_a_role_takes_effect_despite_the_cache(self):
@@ -80,5 +94,5 @@ class MembershipServiceTests(TestCase):
         owner = UserFactory()
         home = HomeFactory(owner=owner)
         self.assertTrue(PermissionService().can(owner, Permission.HOME_DELETE, home.pk))
-        HomeService().add_member(home_id=home.pk, email=owner.email, role=HomeRole.MEMBER)
+        UserHomeService().create(home_id=home.pk, email=owner.email, role=HomeRole.MEMBER)
         self.assertFalse(PermissionService().can(owner, Permission.HOME_DELETE, home.pk))

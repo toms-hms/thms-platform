@@ -7,6 +7,7 @@ from core.graphql import authorize, current_user, login_required
 from core.services.permission_service import Permission
 from homes.models import Home, HomeRole
 from homes.services.home_service import HomeService
+from homes.services.user_home_service import UserHomeService
 from homes.types import HomeMemberType, HomeType
 
 
@@ -67,7 +68,7 @@ class DeleteHome(graphene.Mutation):
         return DeleteHome(success=True)
 
 
-class AddHomeUser(graphene.Mutation):
+class CreateHomeMember(graphene.Mutation):
     """Adds another user to a home by email address."""
 
     class Arguments:
@@ -80,12 +81,12 @@ class AddHomeUser(graphene.Mutation):
     @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, email: str, role: str | None = None):
         """Grants the named user access to the home."""
-        return AddHomeUser(
-            member=HomeService().add_member(home_id=home_id, email=email, role=role or HomeRole.MEMBER)
+        return CreateHomeMember(
+            member=UserHomeService().create(home_id=home_id, email=email, role=role or HomeRole.MEMBER)
         )
 
 
-class RemoveHomeUser(graphene.Mutation):
+class DeleteHomeMember(graphene.Mutation):
     """Removes a user's access to a home."""
 
     class Arguments:
@@ -97,8 +98,8 @@ class RemoveHomeUser(graphene.Mutation):
     @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
     def mutate(self, info, home_id: str, user_id: str):
         """Revokes the named user's membership of the home."""
-        HomeService().remove_member(home_id=home_id, user_id=user_id)
-        return RemoveHomeUser(success=True)
+        UserHomeService().delete(home_id=home_id, user_id=user_id)
+        return DeleteHomeMember(success=True)
 
 
 class HomesMutation(graphene.ObjectType):
@@ -107,5 +108,5 @@ class HomesMutation(graphene.ObjectType):
     create_home = CreateHome.Field()
     update_home = UpdateHome.Field()
     delete_home = DeleteHome.Field()
-    add_home_user = AddHomeUser.Field()
-    remove_home_user = RemoveHomeUser.Field()
+    create_home_member = CreateHomeMember.Field()
+    delete_home_member = DeleteHomeMember.Field()

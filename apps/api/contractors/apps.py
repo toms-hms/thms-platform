@@ -14,4 +14,4 @@ class ContractorsConfig(AppConfig):
         from contractors.models import Contractor, ContractorZipCode
 
         auditlog.register(Contractor, exclude_fields=["updated_at"])
-        auditlog.register(ContractorZipCode)
+        auditlog.register(ContractorZipCode, exclude_fields=["updated_at"])

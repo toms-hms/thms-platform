@@ -1,10 +1,7 @@
 """The contractor table."""
 
-import uuid
-
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.utils import timezone
 
 from contractors.models.contractor.manager import ContractorManager
 from core.models import BaseModel
@@ -30,7 +27,6 @@ class TradeCategory(models.TextChoices):
 class Contractor(BaseModel):
     """A tradesperson or company that can be assigned to a job."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField()
     company_name = models.TextField(null=True, blank=True)
     email = models.TextField(null=True, blank=True)
@@ -38,7 +34,5 @@ class Contractor(BaseModel):
     categories = ArrayField(models.CharField(max_length=32, choices=TradeCategory.choices))
     notes = models.TextField(null=True, blank=True)
     is_global = models.BooleanField(default=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = ContractorManager()

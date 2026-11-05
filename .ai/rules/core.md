@@ -81,7 +81,7 @@ Never auto-transition job or contractor status. The user controls all state.
 
 ## Models
 
-Django owns the schema. No `db_table` / `db_column` overrides. Primary keys are `UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`. Choices are `CharField(choices=...)`. Timestamps are timezone-aware `DateTimeField`s. Every foreign key names its `on_delete` deliberately, never `DO_NOTHING`. See `.ai/recipes/api/model.md`.
+Django owns the schema. No `db_table` / `db_column` overrides. Every model extends `core.models.BaseModel`, which supplies the UUID `id`, `created_at` and `updated_at`; models never redeclare them. Choices are `CharField(choices=...)`. Timestamps are timezone-aware `DateTimeField`s. Every foreign key names its `on_delete` deliberately, never `DO_NOTHING`. See `.ai/recipes/api/model.md`.
 
 ## QuerySets and managers
 

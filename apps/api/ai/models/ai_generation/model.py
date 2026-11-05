@@ -1,9 +1,6 @@
 """The ai generation table."""
 
-import uuid
-
 from django.db import models
-from django.utils import timezone
 
 from ai.models.ai_generation.manager import AIGenerationManager
 from core.models import BaseModel
@@ -21,7 +18,6 @@ class AIGenerationStatus(models.TextChoices):
 class AIGeneration(BaseModel):
     """One call to an AI provider — an image generation or an email draft."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     job = models.ForeignKey("jobs.Job", on_delete=models.CASCADE, related_name="ai_generations")
     original_image_url = models.TextField(null=True, blank=True)
     prompt = models.TextField()
@@ -36,8 +32,6 @@ class AIGeneration(BaseModel):
         on_delete=models.PROTECT,
         related_name="ai_generations",
     )
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = AIGenerationManager()
 

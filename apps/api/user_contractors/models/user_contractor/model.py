@@ -1,9 +1,6 @@
 """The user contractor table."""
 
-import uuid
-
 from django.db import models
-from django.utils import timezone
 
 from core.models import BaseModel
 from user_contractors.models.user_contractor.manager import UserContractorManager
@@ -12,7 +9,6 @@ from user_contractors.models.user_contractor.manager import UserContractorManage
 class UserContractor(BaseModel):
     """A link between a user and a contractor they have saved."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="rolodex_entries")
     contractor = models.ForeignKey(
         "contractors.Contractor",
@@ -20,8 +16,6 @@ class UserContractor(BaseModel):
         related_name="rolodex_entries",
     )
     note = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = UserContractorManager()
 

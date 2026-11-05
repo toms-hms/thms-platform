@@ -18,15 +18,12 @@ Each model lives in `models/<model_name>/model.py`. The model folder's `queryset
 class Job(BaseModel):
     """A piece of work on a home."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     home = models.ForeignKey("homes.Home", on_delete=models.CASCADE, related_name="jobs")
     created_by = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name="created_jobs")
     title = models.TextField()
     intent = models.CharField(max_length=32, choices=JobIntent.choices, default=JobIntent.ISSUE)
     description = models.TextField(null=True, blank=True)
     ai_session = models.JSONField(null=True, blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = JobManager()
 
@@ -37,10 +34,10 @@ class Job(BaseModel):
 ## Rules
 
 - **No `db_table` or `db_column`.** Tables are Django's `<app>_<model>` and columns are the field names.
-- **Primary keys are `models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`.** Every model, including join models. GraphQL exposes them as `String!` (see `core/converters.py`).
+- **`id`, `created_at` and `updated_at` come from `BaseModel`; never redeclare them.** `id` is a `UUIDField(primary_key=True, default=uuid.uuid4, editable=False)` on every model, including join models, and GraphQL exposes it as `String!` (see `core/converters.py`). `created_at` is `default=timezone.now`, `updated_at` is `auto_now=True`. `Meta.ordering` stays on each model, because its direction varies.
 - **A join model gets its own UUID `id`** plus a `UniqueConstraint` on the pair. No composite primary keys.
 - **Choices are `models.CharField(max_length=32, choices=X.choices)`** with the `TextChoices` class in the `model.py` of the model that owns it. Add it to `models/__init__.py` and expose it in `core/enums.py`.
-- **Timestamps are `models.DateTimeField`.** `USE_TZ` is on, so values are timezone-aware UTC. Use `default=timezone.now` for `created_at` and `auto_now=True` for `updated_at`. Never use `datetime.now()` / `utcnow()`.
+- **Other timestamps are `models.DateTimeField`.** `USE_TZ` is on, so values are timezone-aware UTC. Never use `datetime.now()` / `utcnow()`; use `timezone.now`.
 - **Foreign keys use a string target** (`"homes.Home"`), including for a model in the same app. This keeps `model.py` files from importing each other.
 - **Every foreign key states its `on_delete` deliberately:**
   - `CASCADE` for children that make no sense without the parent (quotes, images and messages under a job).
@@ -50,7 +47,7 @@ class Job(BaseModel):
 - **Constraint names are lowercase `<model>_<fields>_unique`.**
 - **Nullable text columns keep `null=True`.** The API distinguishes null from empty string, so the usual Django advice does not apply here (ruff's DJ001 is disabled for this reason).
 - **Store ids in JSON as strings.** A UUID in a `JSONField` or JWT claim raises at serialization time, so use `str(obj.pk)`.
-- **Every model extends `core.models.BaseModel`** (`User` lists it before `AbstractBaseUser`). It supplies a uniform `__str__` of `"<Model> - <id>"`. Never define `__str__` on a model: django-auditlog stores it in every log entry, so it must not carry personal or free-text data (emails, names, titles).
+- **Every model extends `core.models.BaseModel`** (`User` lists it before `AbstractBaseUser`). It supplies `id`, `created_at`, `updated_at` and a uniform `__str__` of `"<Model> - <id>"`. Never define `__str__` on a model: django-auditlog stores it in every log entry, so it must not carry personal or free-text data (emails, names, titles).
 - **A model declares fields, `Meta` and its choices, and nothing else.** No `__str__`, no `@property` and no methods of our own. A value computed from a row lives where its kind of work lives:
   - Lookups and related-row reads go in the manager: `ContractorZipCode.objects.zip_codes_for(contractor_id=...)`.
   - Display formatting goes in a util, called by the GraphQL type: `homes.utils.address_utils.format_address(...)`.

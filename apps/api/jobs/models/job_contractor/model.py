@@ -1,9 +1,6 @@
 """The job contractor table."""
 
-import uuid
-
 from django.db import models
-from django.utils import timezone
 
 from core.models import BaseModel
 from jobs.models.job_contractor.manager import JobContractorManager
@@ -47,7 +44,6 @@ RESPONDED_STATUSES = CONTACTED_STATUSES - {JobContractorStatus.CONTACTED}
 class JobContractor(BaseModel):
     """A contractor's involvement in one job, and how far it has progressed."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     job = models.ForeignKey("jobs.Job", on_delete=models.CASCADE, related_name="job_contractors")
     contractor = models.ForeignKey(
         "contractors.Contractor",
@@ -62,8 +58,6 @@ class JobContractor(BaseModel):
     last_contacted_at = models.DateTimeField(null=True, blank=True)
     last_response_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = JobContractorManager()
 

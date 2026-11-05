@@ -14,4 +14,4 @@ class AiConfig(AppConfig):
         from ai.models import AIGeneration, JobImage
 
         auditlog.register(AIGeneration, exclude_fields=["updated_at"])
-        auditlog.register(JobImage)
+        auditlog.register(JobImage, exclude_fields=["updated_at"])

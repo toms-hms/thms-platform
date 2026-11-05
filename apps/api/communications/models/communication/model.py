@@ -1,9 +1,6 @@
 """The communication table."""
 
-import uuid
-
 from django.db import models
-from django.utils import timezone
 
 from communications.models.communication.manager import CommunicationManager
 from core.models import BaseModel
@@ -25,7 +22,6 @@ class CommunicationDirection(models.TextChoices):
 class Communication(BaseModel):
     """One message sent to, or received from, a contractor."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     job = models.ForeignKey(
         "jobs.Job",
         on_delete=models.CASCADE,
@@ -55,8 +51,6 @@ class Communication(BaseModel):
     received_at = models.DateTimeField(null=True, blank=True)
     parsed_summary = models.TextField(null=True, blank=True)
     needs_review = models.BooleanField(default=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = CommunicationManager()
 

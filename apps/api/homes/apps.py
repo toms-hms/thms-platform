@@ -14,4 +14,4 @@ class HomesConfig(AppConfig):
         from homes.models import Home, UserHome
 
         auditlog.register(Home, exclude_fields=["updated_at"])
-        auditlog.register(UserHome)
+        auditlog.register(UserHome, exclude_fields=["updated_at"])

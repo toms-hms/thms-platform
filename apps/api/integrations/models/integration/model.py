@@ -1,10 +1,7 @@
 """The integration table."""
 
-import uuid
-
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.utils import timezone
 
 from core.models import BaseModel
 from integrations.models.integration.manager import IntegrationManager
@@ -28,7 +25,6 @@ class IntegrationProvider(models.TextChoices):
 class Integration(BaseModel):
     """A connected third-party account belonging to one user."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="integrations")
     type = models.CharField(max_length=32, choices=IntegrationType.choices)
     provider = models.CharField(max_length=32, choices=IntegrationProvider.choices)
@@ -37,8 +33,6 @@ class Integration(BaseModel):
     token_expires_at = models.DateTimeField(null=True, blank=True)
     email = models.TextField(null=True, blank=True)
     scopes = ArrayField(models.TextField(), default=list)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = IntegrationManager()
 

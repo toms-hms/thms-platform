@@ -1,9 +1,6 @@
 """The quote table."""
 
-import uuid
-
 from django.db import models
-from django.utils import timezone
 
 from core.models import BaseModel
 from quotes.models.quote.manager import QuoteManager
@@ -19,7 +16,6 @@ class QuoteStatus(models.TextChoices):
 class Quote(BaseModel):
     """A price a contractor has given for a job."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     job = models.ForeignKey("jobs.Job", on_delete=models.CASCADE, related_name="quotes")
     contractor = models.ForeignKey("contractors.Contractor", on_delete=models.PROTECT, related_name="quotes")
     amount = models.FloatField()
@@ -32,8 +28,6 @@ class Quote(BaseModel):
         blank=True,
         related_name="quote",
     )
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
 
     objects = QuoteManager()
 

@@ -73,25 +73,25 @@ A connected third-party account. Encrypted tokens are deliberately not exposed.
 """
 type IntegrationType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   type: String!
   provider: String!
   email: String
   scopes: [String!]!
-  createdAt: DateTime!
-  updatedAt: DateTime!
   status: String!
 }
 
 """An image attached to a job, with a presigned URL to read it."""
 type JobImageType {
   id: String!
+  createdAt: DateTime!
   job: JobType!
   storageKey: String!
   kind: String!
   label: String
   aiGeneration: AIGenerationType
   uploadedBy: UserType!
-  createdAt: DateTime!
 
   """Presigned download URL, valid for one hour."""
   url: String!
@@ -100,6 +100,8 @@ type JobImageType {
 """A piece of work on a home, with everything hanging off it."""
 type JobType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   home: HomeType!
   title: String!
   intent: String!
@@ -108,8 +110,6 @@ type JobType {
   notes: String
   status: String!
   createdBy: UserType!
-  createdAt: DateTime!
-  updatedAt: DateTime!
   aiSession: JSONString
   contractors: [JobContractorType!]!
   images: [JobImageType!]!
@@ -121,6 +121,8 @@ type JobType {
 """A property the user is a member of."""
 type HomeType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   name: String!
   address1: String!
   address2: String
@@ -129,8 +131,6 @@ type HomeType {
   zipCode: String!
   country: String!
   notes: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
 
   """The address rendered as one display line."""
   fullAddress: String!
@@ -139,38 +139,38 @@ type HomeType {
 """A user account. Password and refresh-token hashes are never exposed."""
 type UserType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   email: String!
   firstName: String!
   lastName: String!
   role: String!
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 """A contractor's involvement in a job."""
 type JobContractorType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   job: JobType!
   contractor: ContractorType!
   status: String!
   lastContactedAt: DateTime
   lastResponseAt: DateTime
   notes: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 """A tradesperson or company in the directory."""
 type ContractorType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   name: String!
   companyName: String
   email: String
   phone: String
   notes: String
   isGlobal: Boolean!
-  createdAt: DateTime!
-  updatedAt: DateTime!
   zipCodes: [String!]!
   categories: [String!]!
 }
@@ -178,19 +178,21 @@ type ContractorType {
 """A price a contractor gave for a job."""
 type QuoteType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   job: JobType!
   contractor: ContractorType!
   amount: Float!
   description: String
   status: String!
   sourceCommunication: CommunicationType
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 """One message sent to, or received from, a contractor."""
 type CommunicationType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   job: JobType
   contractor: ContractorType
   channel: String!
@@ -204,13 +206,13 @@ type CommunicationType {
   receivedAt: DateTime
   parsedSummary: String
   needsReview: Boolean!
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 """One recorded call to an AI provider."""
 type AIGenerationType {
   id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   job: JobType!
   originalImageUrl: String
   prompt: String!
@@ -218,8 +220,6 @@ type AIGenerationType {
   provider: String!
   status: String!
   createdBy: UserType!
-  createdAt: DateTime!
-  updatedAt: DateTime!
   metadata: JSONString
 }
 
@@ -262,10 +262,10 @@ enum TradeCategory {
 """A contractor saved to a user's rolodex, with the contractor attached."""
 type UserContractorType {
   id: String!
-  contractor: ContractorType!
-  note: String
   createdAt: DateTime!
   updatedAt: DateTime!
+  contractor: ContractorType!
+  note: String
 }
 
 """One row of a contractor's job history."""
@@ -280,9 +280,9 @@ type ContractorJobHistoryType {
 
 """A user's membership of a home."""
 type HomeMemberType {
+  createdAt: DateTime!
   user: UserType!
   role: String!
-  createdAt: DateTime!
 }
 
 """Every write operation the API exposes."""

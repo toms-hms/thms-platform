@@ -113,3 +113,13 @@ class RefreshTokenTests(TestCase):
         with self.assertRaises(UnauthorizedError):
             AuthService().refresh(refresh_token=first)
         self.assertTrue(AuthService().refresh(refresh_token=second)["tokens"]["refresh_token"])
+
+
+class CheckPasswordTests(TestCase):
+    """UserManager.check_password()"""
+
+    def test_accepts_the_right_password_and_rejects_others(self):
+        """The stored hash matches the password it was made from and nothing else."""
+        user = UserFactory()
+        self.assertTrue(User.objects.check_password(user, TEST_PASSWORD))
+        self.assertFalse(User.objects.check_password(user, "wrong-password"))

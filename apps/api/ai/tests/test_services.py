@@ -178,7 +178,7 @@ class ImageGenerationTests(TestCase):
         openai = MagicMock(spec=OpenAIClient)
         openai.generate_image.return_value = b"png-bytes"
         storage = fake_storage()
-        generation = ImageGenerationService(openai=openai, storage=storage).generate(
+        generation = ImageGenerationService(openai=openai, storage_service=storage).generate(
             job_id=self.job.pk, user_id=self.user.pk, source_image_id=self.source.pk, prompt="Greener yard"
         )
 
@@ -193,7 +193,7 @@ class ImageGenerationTests(TestCase):
         openai = MagicMock(spec=OpenAIClient)
         openai.generate_image.side_effect = RuntimeError("provider down")
         with self.assertRaises(RuntimeError):
-            ImageGenerationService(openai=openai, storage=fake_storage()).generate(
+            ImageGenerationService(openai=openai, storage_service=fake_storage()).generate(
                 job_id=self.job.pk,
                 user_id=self.user.pk,
                 source_image_id=self.source.pk,

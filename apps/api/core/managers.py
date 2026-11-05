@@ -19,6 +19,14 @@ from core.utils.unset_utils import UNSET
 class BaseManager(models.Manager.from_queryset(BaseQuerySet)):
     """Manager exposing the shared BaseQuerySet filters and the partial-update write."""
 
+    def delete(self, instance: models.Model) -> None:
+        """Deletes the row. Signals (the audit log) and on_delete protection behave as for `instance.delete()`.
+
+        Django keeps `delete` off managers so `Model.objects.delete()` cannot wipe a table; this takes
+        one loaded row, which is what services need. Bulk deletes stay on querysets inside manager methods.
+        """
+        instance.delete()
+
     def apply_updates(self, instance: models.Model, **fields: Any) -> models.Model:
         """Sets every field that is not UNSET and saves only those columns.
 

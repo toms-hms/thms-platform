@@ -15,12 +15,16 @@ authority: an unavailable backend falls through to the database.
 
 import logging
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
 
 from core.errors import ForbiddenError
+
+if TYPE_CHECKING:
+    from homes.models.user_home.manager import UserHomeManager
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +46,12 @@ class Permission(StrEnum):
 
 class PermissionService:
     """Decides whether a user holds a permission in a home, caching each member's role."""
+
+    def __init__(self, *, user_home_manager: "UserHomeManager | None" = None) -> None:
+        # Imported here, not at module level: homes imports core, so core cannot import homes at load time.
+        from homes.models import UserHome
+
+        self._user_home_manager = user_home_manager or UserHome.objects
 
     def role_permissions(self, role: str) -> frozenset[Permission]:
         """Returns the permissions a home role grants. OWNER holds every permission."""
@@ -95,12 +105,10 @@ class PermissionService:
 
     def membership_role(self, *, user_id: str, home_id: str) -> str | None:
         """Returns the user's role in the home, or None when they are not a member. Consults the cache."""
-        from homes.models import UserHome
-
         cached = self._cache_get(self._key(user_id, home_id))
         if cached is not None:
             return cached
-        role = UserHome.objects.role_for(user_id=user_id, home_id=home_id)
+        role = self._user_home_manager.role_for(user_id=user_id, home_id=home_id)
         if role is not None:
             self._cache_set(self._key(user_id, home_id), role)
         return role
@@ -121,9 +129,7 @@ class PermissionService:
 
     def home_ids_with(self, user, permission: Permission) -> models.QuerySet:
         """Returns a subquery of the ids of homes where the user holds the permission."""
-        from homes.models import UserHome
-
-        return UserHome.objects.home_ids_with_roles(user_id=user.pk, roles=self.roles_with(permission))
+        return self._user_home_manager.home_ids_with_roles(user_id=user.pk, roles=self.roles_with(permission))
 
     def invalidate(self, *, user_id: str, home_id: str) -> None:
         """Drops the user's cached role in the home so the next check re-reads the database."""

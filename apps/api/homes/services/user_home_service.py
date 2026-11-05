@@ -5,14 +5,22 @@ permission check re-reads the database.
 """
 
 from accounts.models import User
+from accounts.models.user.manager import UserManager
 from core.errors import BadRequestError, NotFoundError
 from core.services.permission_service import PermissionService
 from core.utils.email_utils import normalize_email
 from homes.models import UserHome
+from homes.models.user_home.manager import UserHomeManager
 
 
 class UserHomeService:
     """Adds members to homes, changes their role, and removes them."""
+
+    def __init__(
+        self, *, user_manager: UserManager | None = None, user_home_manager: UserHomeManager | None = None
+    ) -> None:
+        self._user_manager = user_manager or User.objects
+        self._user_home_manager = user_home_manager or UserHome.objects
 
     def create(
         self, *, home_id: str, role: str, user_id: str | None = None, email: str | None = None
@@ -25,15 +33,15 @@ class UserHomeService:
         if user_id is None:
             if email is None:
                 raise BadRequestError("Either userId or email is required")
-            user = User.objects.find(email=normalize_email(email))
+            user = self._user_manager.find(email=normalize_email(email))
             if user is None:
                 raise NotFoundError("User")
             user_id = user.pk
-        membership = UserHome.objects.upsert(user_id=user_id, home_id=home_id, role=role)
+        membership = self._user_home_manager.upsert(user_id=user_id, home_id=home_id, role=role)
         PermissionService().invalidate(user_id=user_id, home_id=home_id)
         return membership
 
     def delete(self, *, home_id: str, user_id: str) -> None:
         """Removes the user's membership of the home."""
-        UserHome.objects.remove(user_id=user_id, home_id=home_id)
+        self._user_home_manager.remove(user_id=user_id, home_id=home_id)
         PermissionService().invalidate(user_id=user_id, home_id=home_id)

@@ -10,16 +10,22 @@ from core.utils.crypto_utils import encrypt
 from integrations.clients.google_client import GoogleClient, GoogleConnection
 from integrations.clients.microsoft_client import MicrosoftClient, MicrosoftConnection
 from integrations.models import Integration, IntegrationProvider, IntegrationType
+from integrations.models.integration.manager import IntegrationManager
 
 
 class IntegrationService:
     """Stores, replaces and removes a user's connected accounts."""
 
     def __init__(
-        self, *, google: GoogleClient | None = None, microsoft: MicrosoftClient | None = None
+        self,
+        *,
+        google: GoogleClient | None = None,
+        microsoft: MicrosoftClient | None = None,
+        integration_manager: IntegrationManager | None = None,
     ) -> None:
         self._google = google or GoogleClient()
         self._microsoft = microsoft or MicrosoftClient()
+        self._integration_manager = integration_manager or Integration.objects
 
     def google_auth_url(self, *, user_id: str) -> str:
         """Returns the Google consent URL for the user."""
@@ -49,7 +55,7 @@ class IntegrationService:
         self, *, user_id: str, provider: str, connection: GoogleConnection | MicrosoftConnection
     ) -> Integration:
         """Creates or replaces the user's connection for the provider, encrypting its tokens."""
-        return Integration.objects.upsert_by_provider(
+        return self._integration_manager.upsert_by_provider(
             user_id=user_id,
             provider=provider,
             type=IntegrationType.EMAIL,
@@ -62,7 +68,7 @@ class IntegrationService:
 
     def create_ai(self, *, user_id: str, provider: str, api_key: str) -> Integration:
         """Stores an AI provider API key as an encrypted integration."""
-        return Integration.objects.upsert_by_provider(
+        return self._integration_manager.upsert_by_provider(
             user_id=user_id,
             provider=IntegrationProvider.OPENAI,
             type=IntegrationType.AI,
@@ -75,7 +81,7 @@ class IntegrationService:
 
     def delete(self, *, integration_id: str) -> None:
         """Removes a connected account. The caller has already checked ownership."""
-        integration = Integration.objects.find(pk=integration_id)
+        integration = self._integration_manager.find(pk=integration_id)
         if integration is None:
             raise NotFoundError("Integration")
-        integration.delete()
+        self._integration_manager.delete(integration)

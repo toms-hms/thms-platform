@@ -1,6 +1,6 @@
 ---
 name: api-service
-description: Guide for <app>/services/<name>_service.py — service classes that own business logic and writes; keyword-only methods, UNSET partial updates via apply_updates, collaborators (clients, other services) injected in __init__ with defaults.
+description: Guide for <app>/services/<name>_service.py — service classes that own business logic and writes; keyword-only methods, UNSET partial updates via apply_updates, collaborators (managers, clients, other services) injected in __init__ with defaults.
 ---
 
 # API Service
@@ -14,6 +14,9 @@ Cross-app services (storage, permissions) live in `core/services/`.
 class QuoteService:
     """Records, edits and removes quotes."""
 
+    def __init__(self, *, quote_manager: QuoteManager | None = None) -> None:
+        self._quote_manager = quote_manager or Quote.objects
+
     def create(
         self,
         *,
@@ -24,7 +27,7 @@ class QuoteService:
         status: str | None = None,
     ) -> Quote:
         """Records a quote from a contractor against the job."""
-        return Quote.objects.create(
+        return self._quote_manager.create(
             job_id=job_id, contractor_id=contractor_id, amount=amount,
             description=description, status=status or QuoteStatus.DRAFT,
         )
@@ -38,10 +41,10 @@ class QuoteService:
         status: str | Unset = UNSET,
     ) -> Quote:
         """Applies the provided fields. UNSET leaves a field alone; None clears the description."""
-        quote = Quote.objects.find(pk=quote_id)
+        quote = self._quote_manager.find(pk=quote_id)
         if quote is None:
             raise NotFoundError("Quote")
-        return Quote.objects.apply_updates(quote, amount=amount, description=description, status=status)
+        return self._quote_manager.apply_updates(quote, amount=amount, description=description, status=status)
 ```
 
 ## Methods
@@ -50,7 +53,7 @@ class QuoteService:
 - **Parameter names match the GraphQL argument names** (snake_case), so the mutation calls `QuoteService().update(quote_id=quote_id, **data)`.
 - **A model service owns one model** and is named after it: `QuoteService`, `UserHomeService`. Its writes are plain `create`, `update` and `delete` (the class names the noun, so `QuoteService().create`, never `create_quote` and never `add` / `assign` / `record` / `remove`). CRUD on a second model means a second service: `HomeService` creates the owner's membership by calling an injected `UserHomeService`, not by owning member methods.
 - **Real domain actions keep their verb** alongside the CRUD: `promote`, `send`, `connect_google`. A create that comes in variants takes keyword alternatives (`UserHomeService.create(user_id=... | email=...)`) rather than growing a second create.
-- **Services that aren't about one model** (`AuthService`, `DiagnoseService`, `EmailDraftService`, `ImageGenerationService`, `EmailService`, `StorageService`, `PermissionService`) are named for what they do and use action verbs. They may write through a manager's named call (`JobImage.objects.create(...)`) rather than another model's service.
+- **Services that aren't about one model** (`AuthService`, `DiagnoseService`, `EmailDraftService`, `ImageGenerationService`, `EmailService`, `StorageService`, `PermissionService`) are named for what they do and use action verbs. They may write through an injected manager's named call (`self._job_image_manager.create(...)`) rather than another model's service.
 - **Return the model instance written,** or `None` for a delete.
 - Raise domain errors from `core.errors`. Never return an error value, never raise bare `Exception`.
 
@@ -64,37 +67,52 @@ An update method defaults every optional field to `UNSET` (`core.utils.unset_uti
 | `null` | `None` | nullable field cleared; required field → `VALIDATION_ERROR` |
 | a value | the value | field set |
 
-Always finish with `Model.objects.apply_updates(instance, field=value, ...)`. It
+Always finish with `self._<model>_manager.apply_updates(instance, field=value, ...)`. It
 skips UNSET, enforces null rules, and saves only the changed columns (plus
 `updated_at`). Never write a `for field in (...): setattr(...)` loop, and never
 treat `None` as "not provided".
 
 ## Collaborators: injected in `__init__` with defaults
 
-A service that uses a client or another service takes it as a keyword-only
+A service takes every manager, client and other service it uses as a keyword-only
 constructor argument that defaults to the real one:
 
 ```python
 class ImageGenerationService:
     """Generates an image, stores it as a job image and records the generation."""
 
-    def __init__(self, *, openai: OpenAIClient | None = None, storage: StorageService | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        openai: OpenAIClient | None = None,
+        storage_service: StorageService | None = None,
+        ai_generation_manager: AIGenerationManager | None = None,
+        job_image_manager: JobImageManager | None = None,
+    ) -> None:
         self._openai = openai or OpenAIClient()
-        self._storage = storage or StorageService()
+        self._storage_service = storage_service or StorageService()
+        self._ai_generation_manager = ai_generation_manager or AIGeneration.objects
+        self._job_image_manager = job_image_manager or JobImage.objects
 ```
+
+- **Names:** managers are `<model>_manager` (`self._job_manager`), services are
+  `<name>_service` (`self._storage_service`), clients are the vendor (`self._openai`).
+- **No `Model.objects` in a service method body.** The constructor default is the only place a
+  service names `Model.objects`, so its constructor lists everything it reads and writes.
 
 - Production code constructs services with no arguments: `ImageGenerationService().generate(...)`.
 - Tests pass fakes: `ImageGenerationService(openai=MagicMock(spec=OpenAIClient))`.
 - Collaborators are stored as private attributes (`self._openai`), never public ones.
 - Constructing a service builds its clients, and a client checks its configuration as it is built (see `client.md`). Construct services inside the resolver that uses them, never at module level.
-- Managers, querysets and utils are **not** injected. Call them directly.
+- Utils are **not** injected. Call them directly.
+- Tests normally keep the real managers and the test database; fake a manager only where the real one cannot be used.
 
 ## What a service may call
 
 - Other services, through constructor collaborators.
 - Clients, through constructor collaborators. A vendor SDK is never imported in a service (see `client.md`).
-- **One named manager call per lookup or write**, on any app's model: `find`, `create`, `upsert`, `apply_updates`, `filter_existing`, `replace_for_contractor`. A chain (`.filter(...).exists()`, `.filter_x(...).delete()`, `.values_list(...)`) is a manager method, never inline in a service.
-- `instance.delete()` on a row it has loaded.
+- **One named call on an injected manager per lookup or write**, on any app's model: `find`, `create`, `upsert`, `apply_updates`, `filter_existing`, `replace_for_contractor`. A chain (`.filter(...).exists()`, `.filter_x(...).delete()`, `.values_list(...)`) is a manager method, never inline in a service.
+- Deletes go through the manager too: `self._job_manager.delete(job)`. A service never calls a method on a model instance (`job.delete()`, `job.save()`).
 - Utils (see `utils.md`).
 
 ## What does not belong here

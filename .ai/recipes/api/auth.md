@@ -25,7 +25,7 @@ Durations are Node-style strings (`15m`, `7d`, `3600`) — `core.utils.jwt_utils
 Django's password hashers (`PASSWORD_HASHERS` default, PBKDF2 first; MD5 under `DJANGO_ENV=test` for speed). Set and check passwords through the model:
 
 - `User.objects.create(..., password=make_password(password))` to store one. There is no `create_user`; every path that creates a user hashes with `make_password` (register, factories, seed data).
-- `user.check_password(...)` to verify one. It also upgrades the hash when the configured hasher changes.
+- `self._user_manager.check_password(user, password)` to verify one (`UserManager.check_password`). It also re-saves the hash when the configured hasher changes. Services never call `user.check_password` on the instance.
 
 ## Emails
 

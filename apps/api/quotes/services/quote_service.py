@@ -5,10 +5,14 @@ from decimal import Decimal
 from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 from quotes.models import Quote, QuoteStatus
+from quotes.models.quote.manager import QuoteManager
 
 
 class QuoteService:
     """Records, edits and removes quotes."""
+
+    def __init__(self, *, quote_manager: QuoteManager | None = None) -> None:
+        self._quote_manager = quote_manager or Quote.objects
 
     def create(
         self,
@@ -21,7 +25,7 @@ class QuoteService:
         source_communication_id: str | None = None,
     ) -> Quote:
         """Records a quote from a contractor against the job."""
-        return Quote.objects.create(
+        return self._quote_manager.create(
             job_id=job_id,
             contractor_id=contractor_id,
             amount=amount,
@@ -39,14 +43,14 @@ class QuoteService:
         status: str | Unset = UNSET,
     ) -> Quote:
         """Applies the provided fields. UNSET leaves a field alone; None clears the description."""
-        quote = Quote.objects.find(pk=quote_id)
+        quote = self._quote_manager.find(pk=quote_id)
         if quote is None:
             raise NotFoundError("Quote")
-        return Quote.objects.apply_updates(quote, amount=amount, description=description, status=status)
+        return self._quote_manager.apply_updates(quote, amount=amount, description=description, status=status)
 
     def delete(self, *, quote_id: str) -> None:
         """Deletes the quote."""
-        quote = Quote.objects.find(pk=quote_id)
+        quote = self._quote_manager.find(pk=quote_id)
         if quote is None:
             raise NotFoundError("Quote")
-        quote.delete()
+        self._quote_manager.delete(quote)

@@ -5,20 +5,24 @@ from django.utils import timezone
 from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 from jobs.models import CONTACTED_STATUSES, RESPONDED_STATUSES, JobContractor
+from jobs.models.job_contractor.manager import JobContractorManager
 
 
 class JobContractorService:
     """Assigns contractors to jobs and moves them through the outreach statuses."""
 
+    def __init__(self, *, job_contractor_manager: JobContractorManager | None = None) -> None:
+        self._job_contractor_manager = job_contractor_manager or JobContractor.objects
+
     def create(self, *, job_id: str, contractor_id: str, notes: str | None = None) -> JobContractor:
         """Assigns the contractor to the job, or updates the notes on an existing assignment."""
-        return JobContractor.objects.upsert(job_id=job_id, contractor_id=contractor_id, notes=notes)
+        return self._job_contractor_manager.upsert(job_id=job_id, contractor_id=contractor_id, notes=notes)
 
     def update(
         self, *, job_contractor_id: str, status: str, notes: str | None | Unset = UNSET
     ) -> JobContractor:
         """Moves the assignment to the status, stamping first contact and first response the first time each happens."""
-        assignment = JobContractor.objects.find(pk=job_contractor_id)
+        assignment = self._job_contractor_manager.find(pk=job_contractor_id)
         if assignment is None:
             raise NotFoundError("JobContractor")
         now = timezone.now()
@@ -27,11 +31,11 @@ class JobContractorService:
             stamps["last_contacted_at"] = now
         if status in RESPONDED_STATUSES and not assignment.last_response_at:
             stamps["last_response_at"] = now
-        return JobContractor.objects.apply_updates(assignment, status=status, notes=notes, **stamps)
+        return self._job_contractor_manager.apply_updates(assignment, status=status, notes=notes, **stamps)
 
     def delete(self, *, job_contractor_id: str) -> None:
         """Removes the contractor from the job."""
-        job_contractor = JobContractor.objects.find(pk=job_contractor_id)
+        job_contractor = self._job_contractor_manager.find(pk=job_contractor_id)
         if job_contractor is None:
             raise NotFoundError("JobContractor")
-        job_contractor.delete()
+        self._job_contractor_manager.delete(job_contractor)

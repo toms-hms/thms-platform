@@ -4,17 +4,30 @@ import json
 
 from ai.clients.openai_client import OpenAIClient
 from ai.models import AIGeneration, AIGenerationStatus
+from ai.models.ai_generation.manager import AIGenerationManager
 from ai.utils.prompt_utils import EMAIL_MODEL, EMAIL_SYSTEM_PROMPT, outreach_email_prompt
 from contractors.models import Contractor
+from contractors.models.contractor.manager import ContractorManager
 from core.errors import NotFoundError
 from jobs.models import Job
+from jobs.models.job.manager import JobManager
 
 
 class EmailDraftService:
     """Drafts one outreach email per contractor and records each generation against the job."""
 
-    def __init__(self, *, openai: OpenAIClient | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        openai: OpenAIClient | None = None,
+        ai_generation_manager: AIGenerationManager | None = None,
+        contractor_manager: ContractorManager | None = None,
+        job_manager: JobManager | None = None,
+    ) -> None:
         self._openai = openai or OpenAIClient()
+        self._ai_generation_manager = ai_generation_manager or AIGeneration.objects
+        self._contractor_manager = contractor_manager or Contractor.objects
+        self._job_manager = job_manager or Job.objects
 
     def draft(
         self,
@@ -27,11 +40,11 @@ class EmailDraftService:
         custom_instructions: str | None = None,
     ) -> list[dict[str, str]]:
         """Returns one draft per contractor. A contractor whose reply is empty is skipped."""
-        job = Job.objects.find(pk=job_id)
+        job = self._job_manager.find(pk=job_id)
         if job is None:
             raise NotFoundError("Job")
         drafts: list[dict[str, str]] = []
-        for contractor in Contractor.objects.filter_ids(contractor_ids):
+        for contractor in self._contractor_manager.filter_ids(contractor_ids):
             user_prompt = outreach_email_prompt(
                 contractor_name=contractor.name,
                 company_name=contractor.company_name,
@@ -53,7 +66,7 @@ class EmailDraftService:
             if not message.content:
                 continue
             parsed = json.loads(message.content)
-            AIGeneration.objects.create(
+            self._ai_generation_manager.create(
                 job_id=job_id,
                 prompt=user_prompt,
                 provider="openai",

@@ -10,11 +10,15 @@ from typing import Any
 from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset, is_set
 from jobs.models import Job, JobIntent, JobStatus
+from jobs.models.job.manager import JobManager
 from jobs.utils.ai_session_utils import build_ai_session
 
 
 class JobService:
     """Creates, edits and deletes jobs."""
+
+    def __init__(self, *, job_manager: JobManager | None = None) -> None:
+        self._job_manager = job_manager or Job.objects
 
     def create(
         self,
@@ -32,7 +36,7 @@ class JobService:
     ) -> Job:
         """Creates a job on the home. The categories the user confirmed are recorded in the AI session."""
         confirmed_categories = categories or [category]
-        return Job.objects.create(
+        return self._job_manager.create(
             home_id=home_id,
             created_by_id=user_id,
             title=title,
@@ -62,14 +66,14 @@ class JobService:
         The first confirmed category (from `categories`, else the session's
         confirmedCategories) becomes the job's category, overriding `category`.
         """
-        job = Job.objects.find(pk=job_id)
+        job = self._job_manager.find(pk=job_id)
         if job is None:
             raise NotFoundError("Job")
         session = ai_session if is_set(ai_session) else None
         confirmed = (categories if is_set(categories) else None) or (session or {}).get("confirmedCategories")
         primary_category = confirmed[0] if confirmed else category
         new_session = build_ai_session(ai_session=session, confirmed_categories=confirmed)
-        return Job.objects.apply_updates(
+        return self._job_manager.apply_updates(
             job,
             title=title,
             intent=intent,
@@ -82,7 +86,7 @@ class JobService:
 
     def delete(self, *, job_id: str) -> None:
         """Deletes the job and everything cascading from it."""
-        job = Job.objects.find(pk=job_id)
+        job = self._job_manager.find(pk=job_id)
         if job is None:
             raise NotFoundError("Job")
-        job.delete()
+        self._job_manager.delete(job)

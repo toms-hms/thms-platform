@@ -6,6 +6,7 @@ from core.errors import NotFoundError
 from core.utils.crypto_utils import decrypt
 from integrations.clients.google_client import GoogleClient
 from integrations.models import Integration, IntegrationProvider
+from integrations.models.integration.manager import IntegrationManager
 from integrations.utils.email_utils import build_raw_message
 
 
@@ -13,10 +14,15 @@ class EmailService:
     """Sends mail from the user's Gmail and records it as a communication on the job."""
 
     def __init__(
-        self, *, google: GoogleClient | None = None, communications: CommunicationService | None = None
+        self,
+        *,
+        google: GoogleClient | None = None,
+        communication_service: CommunicationService | None = None,
+        integration_manager: IntegrationManager | None = None,
     ) -> None:
         self._google = google or GoogleClient()
-        self._communications = communications or CommunicationService()
+        self._communication_service = communication_service or CommunicationService()
+        self._integration_manager = integration_manager or Integration.objects
 
     def send(
         self,
@@ -34,7 +40,7 @@ class EmailService:
 
         Raises NotFoundError unless the integration is the user's own Gmail connection.
         """
-        integration = Integration.objects.find(
+        integration = self._integration_manager.find(
             pk=integration_id, user_id=user_id, provider=IntegrationProvider.GOOGLE
         )
         if integration is None:
@@ -46,7 +52,7 @@ class EmailService:
             scopes=list(integration.scopes or []),
             raw_message=build_raw_message(to=to, subject=subject, body_text=body_text, body_html=body_html),
         )
-        return self._communications.create(
+        return self._communication_service.create(
             direction=CommunicationDirection.SENT,
             job_id=job_id,
             contractor_id=contractor_id,

@@ -1,6 +1,7 @@
 """Job images: the three-step upload (presign, PUT, confirm) and deletion."""
 
 from ai.models import JobImage, JobImageKind
+from ai.models.job_image.manager import JobImageManager
 from core.errors import NotFoundError
 from core.services.storage_service import StorageService
 
@@ -8,15 +9,21 @@ from core.services.storage_service import StorageService
 class JobImageService:
     """Uploads and removes the images attached to a job."""
 
-    def __init__(self, *, storage: StorageService | None = None) -> None:
-        self._storage = storage or StorageService()
+    def __init__(
+        self,
+        *,
+        storage_service: StorageService | None = None,
+        job_image_manager: JobImageManager | None = None,
+    ) -> None:
+        self._storage_service = storage_service or StorageService()
+        self._job_image_manager = job_image_manager or JobImage.objects
 
     def request_upload(self, *, job_id: str, file_name: str, content_type: str, kind: str) -> dict[str, str]:
         """Returns a presigned upload URL and the key the client must confirm with."""
         extension = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
-        key = self._storage.job_file_key(job_id=job_id, folder=kind, extension=extension)
+        key = self._storage_service.job_file_key(job_id=job_id, folder=kind, extension=extension)
         return {
-            "upload_url": self._storage.upload_url(key=key, content_type=content_type),
+            "upload_url": self._storage_service.upload_url(key=key, content_type=content_type),
             "key": key,
             "kind": kind,
         }
@@ -25,7 +32,7 @@ class JobImageService:
         self, *, job_id: str, user_id: str, key: str, kind: str | None = None, label: str | None = None
     ) -> JobImage:
         """Records an uploaded object as a job image."""
-        return JobImage.objects.create(
+        return self._job_image_manager.create(
             job_id=job_id,
             storage_key=key,
             kind=kind or JobImageKind.SOURCE,
@@ -35,8 +42,8 @@ class JobImageService:
 
     def delete(self, *, image_id: str) -> None:
         """Deletes the image row and its stored object. The caller has already checked access."""
-        image = JobImage.objects.find(pk=image_id)
+        image = self._job_image_manager.find(pk=image_id)
         if image is None:
             raise NotFoundError("JobImage")
-        self._storage.delete(key=image.storage_key)
-        image.delete()
+        self._storage_service.delete(key=image.storage_key)
+        self._job_image_manager.delete(image)

@@ -1,16 +1,26 @@
 """A user's contractor rolodex."""
 
 from contractors.models import Contractor
+from contractors.models.contractor.manager import ContractorManager
 from contractors.services.contractor_service import ContractorService
 from core.errors import BadRequestError, ConflictError, NotFoundError
 from user_contractors.models import UserContractor
+from user_contractors.models.user_contractor.manager import UserContractorManager
 
 
 class UserContractorService:
     """Adds contractors to, and removes them from, a user's rolodex."""
 
-    def __init__(self, *, contractors: ContractorService | None = None) -> None:
-        self._contractors = contractors or ContractorService()
+    def __init__(
+        self,
+        *,
+        contractor_service: ContractorService | None = None,
+        contractor_manager: ContractorManager | None = None,
+        user_contractor_manager: UserContractorManager | None = None,
+    ) -> None:
+        self._contractor_service = contractor_service or ContractorService()
+        self._contractor_manager = contractor_manager or Contractor.objects
+        self._user_contractor_manager = user_contractor_manager or UserContractor.objects
 
     def create(
         self,
@@ -31,10 +41,10 @@ class UserContractorService:
         Raises BadRequestError when neither is given, ConflictError when it is already saved.
         """
         if contractor_id:
-            if Contractor.objects.find(pk=contractor_id) is None:
+            if self._contractor_manager.find(pk=contractor_id) is None:
                 raise NotFoundError("Contractor")
         elif name:
-            contractor_id = self._contractors.create(
+            contractor_id = self._contractor_service.create(
                 name=name,
                 categories=categories or [],
                 is_global=False,
@@ -47,13 +57,13 @@ class UserContractorService:
         else:
             raise BadRequestError("Either contractorId or name is required")
 
-        if UserContractor.objects.filter_existing(user_id=user_id, contractor_id=contractor_id):
+        if self._user_contractor_manager.filter_existing(user_id=user_id, contractor_id=contractor_id):
             raise ConflictError("Contractor already in your rolodex")
-        return UserContractor.objects.create(user_id=user_id, contractor_id=contractor_id, note=note)
+        return self._user_contractor_manager.create(user_id=user_id, contractor_id=contractor_id, note=note)
 
     def delete(self, *, user_contractor_id: str) -> None:
         """Removes an entry from a rolodex. The caller has already checked ownership."""
-        user_contractor = UserContractor.objects.find(pk=user_contractor_id)
+        user_contractor = self._user_contractor_manager.find(pk=user_contractor_id)
         if user_contractor is None:
             raise NotFoundError("UserContractor")
-        user_contractor.delete()
+        self._user_contractor_manager.delete(user_contractor)

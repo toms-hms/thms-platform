@@ -9,12 +9,16 @@ from datetime import datetime
 from django.utils import timezone
 
 from communications.models import Communication, CommunicationChannel, CommunicationDirection
+from communications.models.communication.manager import CommunicationManager
 from core.errors import NotFoundError
 from core.utils.unset_utils import UNSET, Unset
 
 
 class CommunicationService:
     """Writes to the message log."""
+
+    def __init__(self, *, communication_manager: CommunicationManager | None = None) -> None:
+        self._communication_manager = communication_manager or Communication.objects
 
     def create(
         self,
@@ -31,7 +35,7 @@ class CommunicationService:
         received_at: datetime | None = None,
     ) -> Communication:
         """Records one email. `sent=True` stamps sent_at now; received messages are flagged for review."""
-        return Communication.objects.create(
+        return self._communication_manager.create(
             job_id=job_id,
             contractor_id=contractor_id,
             channel=CommunicationChannel.EMAIL,
@@ -54,9 +58,9 @@ class CommunicationService:
         parsed_summary: str | None | Unset = UNSET,
     ) -> Communication:
         """Updates the review flag or parsed summary. UNSET leaves a field alone; None clears it."""
-        communication = Communication.objects.find(pk=communication_id)
+        communication = self._communication_manager.find(pk=communication_id)
         if communication is None:
             raise NotFoundError("Communication")
-        return Communication.objects.apply_updates(
+        return self._communication_manager.apply_updates(
             communication, needs_review=needs_review, parsed_summary=parsed_summary
         )

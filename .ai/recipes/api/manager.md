@@ -8,7 +8,7 @@ description: Guide for <app>/models/<model_name>/manager.py — composing severa
 A manager sits on top of the app's queryset. It owns:
 
 - **Compositions:** named lookups that chain several queryset filters.
-- **Generic writes** on its own table that need more than `create()`, e.g. `upsert`. Every manager also inherits `apply_updates(instance, **fields)` from `BaseManager`, the partial-update write services use (see `service.md`).
+- **Generic writes** on its own table that need more than `create()`, e.g. `upsert`. Every manager also inherits two instance writes from `BaseManager`: `apply_updates(instance, **fields)`, the partial update, and `delete(instance)`, so services never call methods on a model instance (see `service.md`). Django keeps `delete` off managers to prevent table-wide deletes; `BaseManager.delete` takes one loaded row.
 - **Methods that return values** rather than a queryset: a single row, a dict, a list of dicts.
 
 It lives in `models/<model_name>/manager.py`. The chainable filters live next to

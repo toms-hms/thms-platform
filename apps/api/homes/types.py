@@ -4,6 +4,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from homes.models import Home, UserHome
+from homes.utils.address_utils import format_address
 
 
 class HomeType(DjangoObjectType):
@@ -30,7 +31,13 @@ class HomeType(DjangoObjectType):
 
     def resolve_full_address(self, info) -> str:
         """Returns the home's single-line address."""
-        return self.full_address
+        return format_address(
+            address1=self.address1,
+            address2=self.address2,
+            city=self.city,
+            state=self.state,
+            zip_code=self.zip_code,
+        )
 
 
 class HomeMemberType(DjangoObjectType):

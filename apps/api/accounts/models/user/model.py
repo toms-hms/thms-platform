@@ -39,8 +39,3 @@ class User(AbstractBaseUser):
 
     def __str__(self) -> str:
         return self.email
-
-    @property
-    def is_admin(self) -> bool:
-        """Returns True when the user holds the ADMIN role."""
-        return self.role == UserRole.ADMIN

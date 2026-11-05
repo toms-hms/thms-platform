@@ -61,7 +61,7 @@ class HomeScopedQuerySet(BaseQuerySet):
 
     def visible_to(self, user, permission: Permission) -> Self:
         """Returns rows in homes where the user holds the permission; every row for an ADMIN."""
-        if user.is_admin:
+        if PermissionService().is_admin(user):
             return self
         return self.filter(
             **{f"{self.home_id_path}__in": PermissionService().home_ids_with(user, permission)}

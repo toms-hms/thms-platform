@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from accounts.factories import UserFactory
 from contractors.factories import ContractorFactory
-from contractors.models import Contractor, TradeCategory
+from contractors.models import Contractor, ContractorZipCode, TradeCategory
 from core.errors import BadRequestError, ConflictError, NotFoundError
 from user_contractors.factories import UserContractorFactory
 from user_contractors.models import UserContractor
@@ -29,7 +29,7 @@ class CreateUserContractorTests(TestCase):
         )
         contractor = Contractor.objects.get(pk=entry.contractor_id)
         self.assertFalse(contractor.is_global)
-        self.assertEqual(contractor.zip_codes, ["78701"])
+        self.assertEqual(ContractorZipCode.objects.zip_codes_for(contractor_id=contractor.pk), ["78701"])
 
     def test_requires_an_id_or_a_name(self):
         """Neither a contractor id nor a name is a bad request."""

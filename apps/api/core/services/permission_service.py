@@ -53,6 +53,12 @@ class PermissionService:
             return frozenset(Permission) - {Permission.HOME_DELETE}
         return frozenset()
 
+    def is_admin(self, user) -> bool:
+        """Returns True when the user holds the platform-wide ADMIN role."""
+        from accounts.models import UserRole
+
+        return user.role == UserRole.ADMIN
+
     def roles_with(self, permission: Permission) -> list[str]:
         """Returns the home roles that grant the permission."""
         from homes.models import HomeRole
@@ -103,7 +109,7 @@ class PermissionService:
         """Returns True when the user holds the permission in the home. ADMIN holds every permission."""
         if not home_id:
             return False
-        if user.is_admin:
+        if self.is_admin(user):
             return True
         role = self.membership_role(user_id=user.pk, home_id=home_id)
         return role is not None and permission in self.role_permissions(role)

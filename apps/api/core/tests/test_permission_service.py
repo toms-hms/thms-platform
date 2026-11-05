@@ -33,6 +33,15 @@ class RolePermissionsTests(TestCase):
         )
 
 
+class IsAdminTests(TestCase):
+    """PermissionService.is_admin()"""
+
+    def test_true_only_for_the_admin_role(self):
+        """An ADMIN is an admin; an ordinary user is not."""
+        self.assertTrue(PermissionService().is_admin(AdminFactory()))
+        self.assertFalse(PermissionService().is_admin(UserFactory()))
+
+
 class CanTests(TestCase):
     """PermissionService.can() and require()"""
 

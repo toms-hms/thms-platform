@@ -44,8 +44,3 @@ class Contractor(models.Model):
 
     def __str__(self) -> str:
         return self.company_name or self.name
-
-    @property
-    def zip_codes(self) -> list[str]:
-        """Returns the ZIP codes this contractor serves."""
-        return [z.zip_code for z in self.zip_code_rows.all()]

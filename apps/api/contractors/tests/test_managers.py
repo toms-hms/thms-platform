@@ -3,7 +3,7 @@
 from django.test import TestCase
 
 from contractors.factories import ContractorFactory
-from contractors.models import Contractor, TradeCategory
+from contractors.models import Contractor, ContractorZipCode, TradeCategory
 from jobs.factories import JobContractorFactory
 
 
@@ -66,12 +66,20 @@ class FilterContractorsTests(TestCase):
 
 
 class ZipCodesTests(TestCase):
-    """Contractor.zip_codes"""
+    """ContractorZipCodeManager.zip_codes_for() / replace_for_contractor()"""
 
-    def test_exposes_the_service_area(self):
-        """The contractor reports every ZIP code it serves."""
+    def test_returns_the_service_area(self):
+        """Every ZIP code the contractor serves comes back."""
         contractor = ContractorFactory(zip_codes=["78701", "78702"])
-        self.assertEqual(sorted(contractor.zip_codes), ["78701", "78702"])
+        self.assertEqual(
+            sorted(ContractorZipCode.objects.zip_codes_for(contractor_id=contractor.pk)), ["78701", "78702"]
+        )
+
+    def test_replace_sets_exactly_the_given_codes(self):
+        """Replacing drops the old codes and keeps only the new ones."""
+        contractor = ContractorFactory(zip_codes=["78701", "78702"])
+        ContractorZipCode.objects.replace_for_contractor(contractor=contractor, zip_codes=["90210"])
+        self.assertEqual(ContractorZipCode.objects.zip_codes_for(contractor_id=contractor.pk), ["90210"])
 
 
 class JobHistoryTests(TestCase):

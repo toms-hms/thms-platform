@@ -28,8 +28,8 @@ class ContractorType(DjangoObjectType):
         convert_choices_to_enum = False
 
     def resolve_zip_codes(self, info) -> list[str]:
-        """Returns the ZIP codes the contractor serves."""
-        return self.zip_codes
+        """Returns the ZIP codes the contractor serves, from the rows the list query preloads."""
+        return [row.zip_code for row in self.zip_code_rows.all()]
 
     def resolve_categories(self, info) -> list[str]:
         """Returns the trade categories the contractor works in."""

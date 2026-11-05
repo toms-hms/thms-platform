@@ -23,11 +23,6 @@ class CreateHomeTests(TestCase):
         membership = UserHome.objects.find(user_id=user.pk, home_id=home.pk)
         self.assertEqual(membership.role, HomeRole.OWNER)
 
-    def test_full_address_renders_on_one_line(self):
-        """The home exposes its address as a single display string."""
-        home = HomeService().create(user_id=UserFactory().pk, **HOME_INPUT)
-        self.assertEqual(home.full_address, "1 St, Austin, TX 78701")
-
 
 class DeleteHomeTests(TestCase):
     """HomeService.delete()"""

@@ -50,7 +50,12 @@ class Job(models.Model):
 - **Constraint names are lowercase `<model>_<fields>_unique`.**
 - **Nullable text columns keep `null=True`.** The API distinguishes null from empty string, so the usual Django advice does not apply here (ruff's DJ001 is disabled for this reason).
 - **Store ids in JSON as strings.** A UUID in a `JSONField` or JWT claim raises at serialization time, so use `str(obj.pk)`.
-- A derived value that needs no query can be a `@property` (`Home.full_address`, `Contractor.zip_codes`). Anything that queries belongs in the queryset or manager.
+- **A model declares fields, `Meta`, its choices and `__str__`, and nothing else.** No `@property` and no methods of our own. A value computed from a row lives where its kind of work lives:
+  - Lookups and related-row reads go in the manager: `ContractorZipCode.objects.zip_codes_for(contractor_id=...)`.
+  - Display formatting goes in a util, called by the GraphQL type: `homes.utils.address_utils.format_address(...)`.
+  - Role and access checks go in `PermissionService`: `PermissionService().is_admin(user)`.
+
+  What `User` inherits from Django's `AbstractBaseUser` (`check_password`, `is_authenticated`) is the framework's, not ours, and stays.
 
 ## Choices
 

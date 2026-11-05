@@ -31,7 +31,7 @@ class QuoteType(DjangoObjectType):
 - **No flat `*_id` fields** for foreign keys. A client that needs the id selects it
   through the relation: `contractor { id }`. The list resolver preloads the relations
   its response reads, so this costs no extra query.
-- **Only declare what the model doesn't have:** computed values (`url`, `full_address`)
+- **Only declare what the model doesn't have:** computed values (`url`, `full_address`, resolved through a util or manager method, since models carry no properties)
   and reverse relations (`JobType.quotes`).
 - **Nested relations** are fields resolved through the related model's queryset filters,
   e.g. `Quote.objects.filter_job_ids([self.pk]).select_related("contractor")`. Import the other app's model inside the resolver.

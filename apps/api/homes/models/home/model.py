@@ -30,9 +30,3 @@ class Home(models.Model):
 
     def __str__(self) -> str:
         return self.name
-
-    @property
-    def full_address(self) -> str:
-        """Returns the home's address as a single display line."""
-        parts = [p for p in (self.address1, self.address2) if p]
-        return f"{', '.join(parts)}, {self.city}, {self.state} {self.zip_code}"

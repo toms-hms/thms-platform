@@ -5,7 +5,7 @@ from typing import Any
 from ai.clients.openai_client import OpenAIClient
 from ai.models import AIGeneration, AIGenerationStatus, JobImage, JobImageKind
 from ai.utils.prompt_utils import IMAGE_MODEL, visualisation_prompt
-from core.errors import BadRequestError, NotFoundError
+from core.errors import NotFoundError
 from core.services.storage_service import StorageService
 
 
@@ -60,22 +60,3 @@ class ImageGenerationService:
         except Exception:
             AIGeneration.objects.apply_updates(generation, status=AIGenerationStatus.FAILED)
             raise
-
-    def retry(self, *, generation_id: str, user_id: str) -> AIGeneration:
-        """Re-runs a FAILED generation against the job's source image."""
-        generation = AIGeneration.objects.find(pk=generation_id)
-        if generation is None:
-            raise NotFoundError("AIGeneration")
-        if generation.status != AIGenerationStatus.FAILED:
-            raise BadRequestError("Can only retry failed generations")
-        source_image = JobImage.objects.find_source_image(generation.job_id)
-        if not source_image:
-            raise NotFoundError("Source image")
-        return self.generate(
-            job_id=generation.job_id,
-            user_id=user_id,
-            source_image_id=source_image.pk,
-            prompt=generation.prompt,
-            provider=generation.provider,
-            metadata=generation.metadata,
-        )

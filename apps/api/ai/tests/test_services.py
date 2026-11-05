@@ -13,7 +13,7 @@ from django.test import TestCase, override_settings
 
 from accounts.factories import UserFactory
 from ai.clients.openai_client import OpenAIClient
-from ai.factories import AIGenerationFactory, JobImageFactory
+from ai.factories import JobImageFactory
 from ai.models import AIGeneration, AIGenerationStatus, JobImage, JobImageKind
 from ai.services.diagnose_service import DiagnoseService
 from ai.services.email_draft_service import EmailDraftService
@@ -165,7 +165,7 @@ class EmailDraftTests(TestCase):
 
 
 class ImageGenerationTests(TestCase):
-    """ImageGenerationService.generate() and retry()"""
+    """ImageGenerationService.generate()"""
 
     def setUp(self):
         """Creates a job with a source image."""
@@ -201,11 +201,3 @@ class ImageGenerationTests(TestCase):
             )
 
         self.assertEqual(AIGeneration.objects.get(job=self.job).status, AIGenerationStatus.FAILED)
-
-    def test_retry_only_applies_to_failed_generations(self):
-        """Retrying a completed generation is refused."""
-        generation = AIGenerationFactory(job=self.job, status=AIGenerationStatus.COMPLETED)
-        with self.assertRaises(BadRequestError):
-            ImageGenerationService(openai=MagicMock(spec=OpenAIClient), storage=fake_storage()).retry(
-                generation_id=generation.pk, user_id=self.user.pk
-            )

@@ -44,6 +44,26 @@ class FindTests(TestCase):
         self.assertIsNone(Home.objects.find(pk="not-a-uuid"))
 
 
+class FindFirstTests(TestCase):
+    """BaseQuerySet.find_first()"""
+
+    def test_returns_the_first_of_several_matches(self):
+        """When several rows match, the first by the model's ordering comes back instead of an error."""
+        owner = UserFactory()
+        HomeFactory(owner=owner, name="Shared")
+        HomeFactory(owner=owner, name="Shared")
+        expected = Home.objects.filter(name="Shared").first()
+        self.assertEqual(Home.objects.find_first(name="Shared"), expected)
+
+    def test_none_when_nothing_matches(self):
+        """A lookup that matches nothing returns None."""
+        self.assertIsNone(Home.objects.find_first(name="No such home"))
+
+    def test_none_for_a_malformed_id(self):
+        """An id that is not a UUID returns None rather than a validation error."""
+        self.assertIsNone(Home.objects.find_first(pk="not-a-uuid"))
+
+
 class VisibleToTests(TestCase):
     """HomeQuerySet.visible_to()"""
 

@@ -93,8 +93,14 @@ if quote is None:
 `NotFoundError` is a domain error; `core.graphql.to_graphql_error` turns it into
 `NOT_FOUND` on the wire, so no resolver catches it.
 
-A `find_<thing>` method is only for a lookup that encodes a domain rule, e.g.
-`JobImage.objects.find_source_image(job_id)`.
+`find` is for lookups where **at most one row can match** (a primary key, a unique
+column, a unique pair). Never loosen it to `.filter(...).first()`: a second match is a data
+bug, and `find` surfaces it instead of quietly returning one of the rows.
+
+When several rows may legitimately match and any one (or the earliest) will do, use a
+name that says so: `find_first(**filters)`, returning the first row by the model's
+`Meta.ordering`, or `None`. Don't call it `first` (that shadows Django's
+`QuerySet.first()`), and don't add a per-model `find_<thing>` wrapper for it.
 
 ## Rules
 

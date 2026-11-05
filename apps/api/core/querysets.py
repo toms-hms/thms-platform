@@ -33,6 +33,13 @@ class BaseQuerySet(models.QuerySet):
         except (self.model.DoesNotExist, ValidationError):
             return None
 
+    def find_first(self, **kwargs: Any):
+        """Returns the first matching row by the model's default ordering, or None. Several rows may match."""
+        try:
+            return self.filter(**kwargs).first()
+        except ValidationError:
+            return None
+
 
 class HomeScopedQuerySet(BaseQuerySet):
     """Rows whose access is decided by membership of the home they belong to.

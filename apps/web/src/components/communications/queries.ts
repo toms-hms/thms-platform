@@ -3,7 +3,7 @@ import type { CommunicationDto } from '@/types/api';
 import { CONTRACTOR_FIELDS } from '@/components/jobs/queries';
 
 export const COMMUNICATION_FIELDS = `
-  id jobId contractorId channel direction subject bodyText bodyHtml sentAt receivedAt parsedSummary needsReview createdAt
+  id channel direction subject bodyText bodyHtml sentAt receivedAt parsedSummary needsReview createdAt
   contractor { ${CONTRACTOR_FIELDS} }
 `;
 

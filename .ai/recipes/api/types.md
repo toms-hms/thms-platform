@@ -1,6 +1,6 @@
 ---
 name: api-types
-description: Guide for <app>/types.py — GraphQL object types (DjangoObjectType and plain graphene.ObjectType payloads), explicit fields, flat FK ids, nested relation resolvers and cross-app type references.
+description: Guide for <app>/types.py — GraphQL object types (DjangoObjectType and plain graphene.ObjectType payloads), explicit fields, foreign keys as nested objects, nested relation resolvers and cross-app type references.
 ---
 
 # API Types
@@ -13,21 +13,10 @@ separate lets one app reference another's types without importing its schema.
 class QuoteType(DjangoObjectType):
     """A price a contractor gave for a job."""
 
-    contractor = graphene.Field(ContractorType, required=True)
-    job_id = graphene.ID(required=True)
-
     class Meta:
         model = Quote
-        fields = ("id", "job", "amount", "description", "status", "created_at", "updated_at")
+        fields = ("id", "job", "contractor", "amount", "description", "status", "created_at", "updated_at")
         convert_choices_to_enum = False
-
-    def resolve_contractor(self, info):
-        """Returns the contractor who gave the quote."""
-        return self.contractor
-
-    def resolve_job_id(self, info) -> str:
-        """Returns the id of the job this quote is against."""
-        return self.job_id
 ```
 
 ## Rules
@@ -36,8 +25,14 @@ class QuoteType(DjangoObjectType):
   password hashes and encrypted tokens stay out of the schema.
 - **Always set `convert_choices_to_enum = False`.** Enum-backed fields come out as plain
   strings, which is what clients compare against.
-- **Expose flat FK ids** (`job_id`, `contractor_id`) next to the nested object, each with
-  a one-line resolver returning `self.<fk>_id`.
+- **Foreign keys go in `fields`.** graphene-django turns each one into a field of the
+  related type, required when the column is non-null. Don't declare it by hand and don't
+  write a resolver that returns `self.<fk>`.
+- **No flat `*_id` fields** for foreign keys. A client that needs the id selects it
+  through the relation: `contractor { id }`. The list resolver preloads the relations
+  its response reads, so this costs no extra query.
+- **Only declare what the model doesn't have:** computed values (`url`, `full_address`)
+  and reverse relations (`JobType.quotes`).
 - **Nested relations** are fields resolved through the related model's queryset filters,
   e.g. `Quote.objects.filter_job_ids([self.pk]).select_related("contractor")`. Import the other app's model inside the resolver.
 - **Payloads that are not models** (upload targets, AI results) are plain

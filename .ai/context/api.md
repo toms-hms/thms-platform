@@ -57,7 +57,7 @@ Django owns it: default `<app>_<model>` table names, field-named columns, genera
 - A malformed id (not a UUID) is never an internal error. `get_or_404` raises NOT_FOUND, `home_id_for` / `owner_id_for` return None (so `@authorize` answers FORBIDDEN), and anything else maps to BAD_REQUEST.
 - Auth is stateless JWT, not Django sessions. `core.middleware.JWTAuthenticationMiddleware` sets `request.user`, and it runs **before** `AuditlogMiddleware` so audit entries have an actor.
 - `convert_choices_to_enum = False` on every `DjangoObjectType`: outputs stay plain strings. Inputs use the explicit enums in `core/enums.py`.
-- Types expose flat FK ids (`jobId`, `contractorId`) alongside nested objects, so a client can get an id without a nested selection.
+- Foreign keys are exposed only as nested objects (`contractor { id }`). There are no flat `*_id` fields on model types; non-model payloads (`EmailDraftType.contractorId`, job history rows) carry plain ids.
 - The permission cache is an optimisation, never the authority — if the cache backend is down, checks fall through to the database and the rate limiter fails open.
 - `django.contrib.auth` is deliberately **not** installed: nothing uses Django's permissions, groups or admin, and leaving it out keeps those tables out of the database. `AUTH_USER_MODEL` still points at `accounts.User`.
 

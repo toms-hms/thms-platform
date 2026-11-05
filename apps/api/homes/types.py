@@ -3,7 +3,6 @@
 import graphene
 from graphene_django import DjangoObjectType
 
-from accounts.types import UserType
 from homes.models import Home, UserHome
 
 
@@ -39,11 +38,5 @@ class HomeMemberType(DjangoObjectType):
 
     class Meta:
         model = UserHome
-        fields = ("role", "created_at")
+        fields = ("user", "role", "created_at")
         convert_choices_to_enum = False
-
-    user = graphene.Field(UserType, required=True)
-
-    def resolve_user(self, info):
-        """Returns the member's user record."""
-        return self.user

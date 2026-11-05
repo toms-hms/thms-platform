@@ -36,7 +36,7 @@ export default function JobContractorsTab({ job }: Props) {
     listIntegrations().then((r) => setIntegrationsList(r.data)).catch(() => {});
   }, []);
 
-  const attachedIds = new Set(jcs.map((jc) => jc.contractorId));
+  const attachedIds = new Set(jcs.map((jc) => jc.contractor.id));
   const available = allContractors.filter((c) => !attachedIds.has(c.id));
 
   async function handleAdd(e: FormEvent) {
@@ -76,7 +76,7 @@ export default function JobContractorsTab({ job }: Props) {
     setDraftLoading(true);
     try {
       const res = await draftEmail(job.id, {
-        contractorIds: selected.map((jc) => jc.contractorId),
+        contractorIds: selected.map((jc) => jc.contractor.id),
         tone: 'professional',
         includeImages: false,
         customInstructions: emailNotes,
@@ -94,7 +94,7 @@ export default function JobContractorsTab({ job }: Props) {
       alert('Select an email integration first');
       return;
     }
-    const jc = jcs.find((j) => j.contractorId === draft.contractorId);
+    const jc = jcs.find((j) => j.contractor.id === draft.contractorId);
     setSendingEmail(draft.contractorId);
     try {
       await sendEmail(job.id, {
@@ -234,7 +234,7 @@ export default function JobContractorsTab({ job }: Props) {
           )}
 
           {emailDrafts.map((draft) => {
-            const ctr = jcs.find((jc) => jc.contractorId === draft.contractorId)?.contractor;
+            const ctr = jcs.find((jc) => jc.contractor.id === draft.contractorId)?.contractor;
             return (
               <div key={draft.contractorId} className="border border-gray-200 rounded-lg p-4 space-y-2">
                 <p className="font-medium text-gray-900">To: {ctr?.name}</p>

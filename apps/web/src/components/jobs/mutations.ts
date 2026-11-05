@@ -22,9 +22,9 @@ import {
   QUOTE_FIELDS,
 } from './queries';
 
-const JOB_FIELDS = `id homeId createdByUserId title intent category description notes status aiSession createdAt updatedAt`;
+const JOB_FIELDS = `id title intent category description notes status aiSession createdAt updatedAt`;
 const COMMUNICATION_FIELDS = `
-  id jobId contractorId channel direction subject bodyText bodyHtml sentAt receivedAt parsedSummary needsReview createdAt
+  id channel direction subject bodyText bodyHtml sentAt receivedAt parsedSummary needsReview createdAt
 `;
 
 /** Updates fields on an existing job. */

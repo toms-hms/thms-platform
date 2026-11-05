@@ -144,7 +144,7 @@ export default function QuotesTab({ job }: Props) {
             >
               <option value="">-- Select contractor --</option>
               {contractors.map((jc: any) => (
-                <option key={jc.contractorId} value={jc.contractorId}>
+                <option key={jc.contractor.id} value={jc.contractor.id}>
                   {jc.contractor?.name}
                 </option>
               ))}

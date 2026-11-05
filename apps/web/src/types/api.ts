@@ -274,8 +274,6 @@ export interface DiagnoseResult {
 
 export interface JobDto {
   id: string;
-  homeId: string;
-  createdByUserId: string;
   title: string;
   intent: JobIntent;
   category: TradeCategory;
@@ -319,8 +317,6 @@ export interface UpdateJobInput {
 
 export interface JobContractorDto {
   id: string;
-  jobId: string;
-  contractorId: string;
   contractor: ContractorDto;
   status: JobContractorStatus;
   lastContactedAt?: string | null;
@@ -334,9 +330,6 @@ export interface JobContractorDto {
 
 export interface QuoteDto {
   id: string;
-  jobId: string;
-  contractorId: string;
-  sourceCommunicationId?: string | null;
   contractor: ContractorDto;
   amount: number;
   description?: string | null;
@@ -363,8 +356,6 @@ export interface UpdateQuoteInput {
 
 export interface CommunicationDto {
   id: string;
-  jobId?: string | null;
-  contractorId?: string | null;
   contractor?: ContractorDto | null;
   channel: CommunicationChannel;
   direction: CommunicationDirection;
@@ -389,8 +380,6 @@ export interface UpdateCommunicationInput {
 
 export interface JobImageDto {
   id: string;
-  jobId: string;
-  aiGenerationId?: string | null;
   storageKey: string;
   kind: string;
   label?: string | null;
@@ -400,7 +389,6 @@ export interface JobImageDto {
 
 export interface AIGenerationDto {
   id: string;
-  jobId: string;
   originalImageUrl?: string | null;
   prompt: string;
   generatedImageUrl?: string | null;

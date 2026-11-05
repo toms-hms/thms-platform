@@ -3,7 +3,7 @@ import type { HomeDto, JobDto } from '@/types/api';
 import { HOME_FIELDS } from '../queries';
 
 export const JOB_FIELDS = `
-  id homeId createdByUserId title intent category description notes status aiSession createdAt updatedAt
+  id title intent category description notes status aiSession createdAt updatedAt
   home { id name }
 `;
 

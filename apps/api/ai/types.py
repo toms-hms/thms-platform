@@ -11,7 +11,6 @@ class AIGenerationType(DjangoObjectType):
     """One recorded call to an AI provider."""
 
     metadata = graphene.JSONString()
-    job_id = graphene.ID(required=True)
 
     class Meta:
         model = AIGeneration
@@ -29,17 +28,11 @@ class AIGenerationType(DjangoObjectType):
         )
         convert_choices_to_enum = False
 
-    def resolve_job_id(self, info) -> str:
-        """Returns the id of the job this generation belongs to."""
-        return self.job_id
-
 
 class JobImageType(DjangoObjectType):
     """An image attached to a job, with a presigned URL to read it."""
 
     url = graphene.String(required=True, description="Presigned download URL, valid for one hour.")
-    job_id = graphene.ID(required=True)
-    ai_generation_id = graphene.ID()
 
     class Meta:
         model = JobImage
@@ -49,14 +42,6 @@ class JobImageType(DjangoObjectType):
     def resolve_url(self, info) -> str:
         """Returns a presigned URL for the stored object."""
         return StorageService().download_url(key=self.storage_key)
-
-    def resolve_job_id(self, info) -> str:
-        """Returns the id of the job this image belongs to."""
-        return self.job_id
-
-    def resolve_ai_generation_id(self, info) -> str | None:
-        """Returns the id of the generation that produced this image, when it was generated."""
-        return self.ai_generation_id
 
 
 class UploadUrlType(graphene.ObjectType):

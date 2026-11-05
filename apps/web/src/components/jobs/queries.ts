@@ -12,15 +12,15 @@ export const CONTRACTOR_FIELDS = `
   id name companyName email phone categories zipCodes notes isGlobal createdAt updatedAt
 `;
 export const JOB_CONTRACTOR_FIELDS = `
-  id jobId contractorId status lastContactedAt lastResponseAt notes createdAt updatedAt
+  id status lastContactedAt lastResponseAt notes createdAt updatedAt
   contractor { ${CONTRACTOR_FIELDS} }
 `;
 export const QUOTE_FIELDS = `
-  id jobId contractorId sourceCommunicationId amount description status createdAt updatedAt contractor { ${CONTRACTOR_FIELDS} }
+  id amount description status createdAt updatedAt contractor { ${CONTRACTOR_FIELDS} }
 `;
-export const JOB_IMAGE_FIELDS = `id jobId aiGenerationId storageKey kind label url createdAt`;
+export const JOB_IMAGE_FIELDS = `id storageKey kind label url createdAt`;
 export const AI_GENERATION_FIELDS = `
-  id jobId prompt provider status originalImageUrl generatedImageUrl createdAt
+  id prompt provider status originalImageUrl generatedImageUrl createdAt
 `;
 
 /** Lists job-contractor assignments for the given jobs. */

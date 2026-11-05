@@ -13,7 +13,7 @@ class UpsertTests(TestCase):
         """Assigning the same contractor twice updates the existing row."""
         assignment = JobContractorFactory()
         again = JobContractor.objects.upsert(
-            job_id=assignment.job_id, contractor_id=assignment.contractor_id, notes="second note"
+            contractor_id=assignment.contractor_id, job_id=assignment.job_id, notes="second note"
         )
         self.assertEqual(again.pk, assignment.pk)
         self.assertEqual(again.notes, "second note")

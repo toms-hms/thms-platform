@@ -16,8 +16,8 @@ class CreateAiIntegration(graphene.Mutation):
     """Stores an AI provider API key for the caller."""
 
     class Arguments:
-        provider = graphene.String(required=True)
         api_key = graphene.String(required=True)
+        provider = graphene.String(required=True)
 
     integration = graphene.Field(IntegrationType)
 
@@ -25,7 +25,7 @@ class CreateAiIntegration(graphene.Mutation):
     def mutate(self, info, provider: str, api_key: str):
         """Encrypts and stores the API key."""
         integration = IntegrationService().create_ai(
-            user_id=current_user(info).pk, provider=provider, api_key=api_key
+            user_id=current_user(info).pk, api_key=api_key, provider=provider
         )
         return CreateAiIntegration(integration=integration)
 
@@ -38,7 +38,7 @@ class DeleteIntegration(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @owner_required(resource=Integration, arg="integration_id")
+    @owner_required(arg="integration_id", resource=Integration)
     def mutate(self, info, integration_id: str):
         """Deletes the integration."""
         IntegrationService().delete(integration_id=integration_id)
@@ -49,17 +49,17 @@ class SendEmail(graphene.Mutation):
     """Sends an email through the caller's Gmail connection and records it against the job."""
 
     class Arguments:
-        job_id = graphene.ID(required=True)
         integration_id = graphene.ID(required=True)
-        to = graphene.String(required=True)
-        subject = graphene.String(required=True)
+        job_id = graphene.ID(required=True)
         body_text = graphene.String(required=True)
-        body_html = graphene.String()
+        subject = graphene.String(required=True)
+        to = graphene.String(required=True)
         contractor_id = graphene.ID()
+        body_html = graphene.String()
 
     communication = graphene.Field(CommunicationType)
 
-    @authorize(Permission.COMMUNICATIONS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.COMMUNICATIONS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, **data):
         """Sends the message and records it against the job."""
         communication = EmailService().send(user_id=current_user(info).pk, job_id=job_id, **data)

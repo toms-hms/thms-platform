@@ -33,7 +33,7 @@ class JobImagesTests(GraphQLTestCase):
         super().setUp()
         self.user = UserFactory()
         self.other = UserFactory()
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
         self.image = JobImageFactory(job=self.job, uploaded_by=self.user)
 
     def test_lists_images_with_a_presigned_url(self):

@@ -56,7 +56,7 @@ def admin_required(resolver: Callable) -> Callable:
     return wrapper
 
 
-def authorize(permission: Permission, *, resource: type, arg: str) -> Callable[[Callable], Callable]:
+def authorize(permission: Permission, *, arg: str, resource: type) -> Callable[[Callable], Callable]:
     """Wraps a resolver so it runs only when the caller holds the permission in the row's home.
 
     `resource` is a model whose queryset is home-scoped; `arg` names the resolver
@@ -79,7 +79,7 @@ def authorize(permission: Permission, *, resource: type, arg: str) -> Callable[[
     return decorator
 
 
-def owner_required(*, resource: type, arg: str) -> Callable[[Callable], Callable]:
+def owner_required(*, arg: str, resource: type) -> Callable[[Callable], Callable]:
     """Wraps a resolver so it runs only when the row named by `arg` belongs to the caller.
 
     `resource` is a model whose queryset is user-owned. A row that does not exist

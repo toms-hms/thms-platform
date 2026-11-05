@@ -19,25 +19,25 @@ class EmailDraftService:
     def __init__(
         self,
         *,
-        openai: OpenAIClient | None = None,
         ai_generation_manager: AIGenerationManager | None = None,
         contractor_manager: ContractorManager | None = None,
         job_manager: JobManager | None = None,
+        openai: OpenAIClient | None = None,
     ) -> None:
-        self._openai = openai or OpenAIClient()
         self._ai_generation_manager = ai_generation_manager or AIGeneration.objects
         self._contractor_manager = contractor_manager or Contractor.objects
         self._job_manager = job_manager or Job.objects
+        self._openai = openai or OpenAIClient()
 
     def draft(
         self,
         *,
+        contractor_ids: list[str],
         job_id: str,
         user_id: str,
-        contractor_ids: list[str],
-        tone: str = "professional",
-        include_images: bool = False,
         custom_instructions: str | None = None,
+        include_images: bool = False,
+        tone: str = "professional",
     ) -> list[dict[str, str]]:
         """Returns one draft per contractor. A contractor whose reply is empty is skipped."""
         job = self._job_manager.find(pk=job_id)
@@ -46,33 +46,33 @@ class EmailDraftService:
         drafts: list[dict[str, str]] = []
         for contractor in self._contractor_manager.filter_ids(contractor_ids):
             user_prompt = outreach_email_prompt(
-                contractor_name=contractor.name,
+                city=job.home.city,
                 company_name=contractor.company_name,
-                job_title=job.title,
+                contractor_name=contractor.name,
+                custom_instructions=custom_instructions,
                 job_category=job.category,
                 job_description=job.description,
-                city=job.home.city,
+                job_title=job.title,
                 state=job.home.state,
-                custom_instructions=custom_instructions,
             )
             message = self._openai.chat(
-                model=EMAIL_MODEL,
                 messages=[
                     {"role": "system", "content": EMAIL_SYSTEM_PROMPT.format(tone=tone)},
                     {"role": "user", "content": user_prompt},
                 ],
+                model=EMAIL_MODEL,
                 response_format={"type": "json_object"},
             )
             if not message.content:
                 continue
             parsed = json.loads(message.content)
             self._ai_generation_manager.create(
+                created_by_id=user_id,
                 job_id=job_id,
+                metadata={"contractorId": str(contractor.pk), "type": "EMAIL_DRAFT"},
                 prompt=user_prompt,
                 provider="openai",
                 status=AIGenerationStatus.COMPLETED,
-                metadata={"contractorId": str(contractor.pk), "type": "EMAIL_DRAFT"},
-                created_by_id=user_id,
             )
             drafts.append(
                 {

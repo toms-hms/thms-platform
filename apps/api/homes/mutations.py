@@ -15,9 +15,9 @@ class CreateHome(graphene.Mutation):
     """Creates a home owned by the caller."""
 
     class Arguments:
-        name = graphene.String(required=True)
         address1 = graphene.String(required=True)
         city = graphene.String(required=True)
+        name = graphene.String(required=True)
         state = graphene.String(required=True)
         zip_code = graphene.String(required=True)
         address2 = graphene.String()
@@ -37,17 +37,17 @@ class UpdateHome(graphene.Mutation):
 
     class Arguments:
         home_id = graphene.ID(required=True)
-        name = graphene.String()
         address1 = graphene.String()
         address2 = graphene.String()
         city = graphene.String()
+        name = graphene.String()
+        notes = graphene.String()
         state = graphene.String()
         zip_code = graphene.String()
-        notes = graphene.String()
 
     home = graphene.Field(HomeType)
 
-    @authorize(Permission.HOME_EDIT, resource=Home, arg="home_id")
+    @authorize(Permission.HOME_EDIT, arg="home_id", resource=Home)
     def mutate(self, info, home_id: str, **data):
         """Applies the update to the home."""
         return UpdateHome(home=HomeService().update(home_id=home_id, **data))
@@ -61,7 +61,7 @@ class DeleteHome(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @authorize(Permission.HOME_DELETE, resource=Home, arg="home_id")
+    @authorize(Permission.HOME_DELETE, arg="home_id", resource=Home)
     def mutate(self, info, home_id: str):
         """Deletes the home."""
         HomeService().delete(home_id=home_id)
@@ -78,11 +78,11 @@ class CreateHomeMember(graphene.Mutation):
 
     member = graphene.Field(HomeMemberType)
 
-    @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
+    @authorize(Permission.HOME_MANAGE_MEMBERS, arg="home_id", resource=Home)
     def mutate(self, info, home_id: str, email: str, role: str | None = None):
         """Grants the named user access to the home."""
         return CreateHomeMember(
-            member=UserHomeService().create(home_id=home_id, email=email, role=role or HomeRole.MEMBER)
+            member=UserHomeService().create(home_id=home_id, role=role or HomeRole.MEMBER, email=email)
         )
 
 
@@ -95,7 +95,7 @@ class DeleteHomeMember(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @authorize(Permission.HOME_MANAGE_MEMBERS, resource=Home, arg="home_id")
+    @authorize(Permission.HOME_MANAGE_MEMBERS, arg="home_id", resource=Home)
     def mutate(self, info, home_id: str, user_id: str):
         """Revokes the named user's membership of the home."""
         UserHomeService().delete(home_id=home_id, user_id=user_id)

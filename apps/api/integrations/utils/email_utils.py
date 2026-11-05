@@ -3,7 +3,7 @@
 import base64
 
 
-def build_raw_message(*, to: str, subject: str, body_text: str, body_html: str | None = None) -> str:
+def build_raw_message(*, body_text: str, subject: str, to: str, body_html: str | None = None) -> str:
     """Returns a base64url-encoded RFC 2822 HTML message, as the Gmail send API expects."""
     message = "\r\n".join(
         [

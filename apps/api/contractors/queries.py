@@ -30,7 +30,7 @@ class ContractorsQuery(graphene.ObjectType):
     def resolve_contractors(self, info, search=None, trade_categories=None, zip_codes=None):
         """Returns global contractors narrowed by search text, trade categories and ZIP codes."""
         return Contractor.objects.filter_contractors(
-            search=search, trade_categories=trade_categories, zip_codes=zip_codes, is_global=True
+            is_global=True, search=search, trade_categories=trade_categories, zip_codes=zip_codes
         ).prefetch_related("zip_code_rows")
 
     @login_required

@@ -31,13 +31,13 @@ class JobsQuery(graphene.ObjectType):
     def resolve_jobs(self, info, home_ids=None, statuses=None, trade_categories=None):
         """Returns the jobs the caller can see, narrowed by homes, statuses and trade categories."""
         return (
-            Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
-            .filter_home_ids(home_ids)
+            Job.objects.filter_home_ids(home_ids)
             .filter_statuses(statuses)
             .filter_trade_categories(trade_categories)
+            .visible_to(current_user(info), Permission.JOBS_VIEW)
         )
 
-    @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_VIEW, arg="job_id", resource=Job)
     def resolve_job(self, info, job_id: str):
         """Returns one job."""
         job = Job.objects.find(pk=job_id)

@@ -12,10 +12,10 @@ class ContractorQuerySetTests(TestCase):
     def setUp(self):
         """Creates a plumber in 78701 and an electrician in 78702."""
         self.plumber = ContractorFactory(
-            email="ada@plumb.test", categories=[TradeCategory.PLUMBING], zip_codes=["78701"]
+            categories=[TradeCategory.PLUMBING], email="ada@plumb.test", zip_codes=["78701"]
         )
         self.electrician = ContractorFactory(
-            email="eli@volt.test", categories=[TradeCategory.ELECTRICAL], zip_codes=["78702"]
+            categories=[TradeCategory.ELECTRICAL], email="eli@volt.test", zip_codes=["78702"]
         )
 
     def test_none_leaves_every_filter_off(self):

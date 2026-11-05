@@ -15,16 +15,16 @@ class CreateQuote(graphene.Mutation):
     """Records a quote against a job."""
 
     class Arguments:
-        job_id = graphene.ID(required=True)
         contractor_id = graphene.ID(required=True)
+        job_id = graphene.ID(required=True)
         amount = graphene.Float(required=True)
+        source_communication_id = graphene.ID()
         description = graphene.String()
         status = QuoteStatusEnum()
-        source_communication_id = graphene.ID()
 
     quote = graphene.Field(QuoteType)
 
-    @authorize(Permission.QUOTES_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.QUOTES_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, **data):
         """Records the quote against the job."""
         return CreateQuote(quote=QuoteService().create(job_id=job_id, **data))
@@ -41,7 +41,7 @@ class UpdateQuote(graphene.Mutation):
 
     quote = graphene.Field(QuoteType)
 
-    @authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
+    @authorize(Permission.QUOTES_EDIT, arg="quote_id", resource=Quote)
     def mutate(self, info, quote_id: str, **data):
         """Applies the update to the quote."""
         return UpdateQuote(quote=QuoteService().update(quote_id=quote_id, **data))
@@ -55,7 +55,7 @@ class DeleteQuote(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
+    @authorize(Permission.QUOTES_EDIT, arg="quote_id", resource=Quote)
     def mutate(self, info, quote_id: str):
         """Deletes the quote."""
         QuoteService().delete(quote_id=quote_id)

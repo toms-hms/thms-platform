@@ -54,6 +54,7 @@ class CreateJob(graphene.Mutation):
         return CreateJob(job=JobService().create(home_id=home_id, user_id=current_user(info).pk, **data))
 ```
 
+- **`Arguments` classes:** required first, `ID`s before values within each group, alphabetical (see `core.md` "Parameter order").
 - **CRUD mutations are `create<Type>` / `update<Type>` / `delete<Type>`**, named for the GraphQL type they return: `createJob`, `createJobContractor`, `deleteHomeMember`, `deleteIntegration`. They call the matching service's `create` / `update` / `delete`.
 - **Real actions keep their verb:** `promoteContractor`, `sendEmail`, `draftEmail`, `requestUploadUrl`, `login`.
 - A mutation returns the object it changed, or `success: Boolean!` for a delete.

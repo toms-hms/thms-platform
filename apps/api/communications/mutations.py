@@ -19,7 +19,7 @@ class UpdateCommunication(graphene.Mutation):
 
     communication = graphene.Field(CommunicationType)
 
-    @authorize(Permission.COMMUNICATIONS_EDIT, resource=Communication, arg="communication_id")
+    @authorize(Permission.COMMUNICATIONS_EDIT, arg="communication_id", resource=Communication)
     def mutate(self, info, communication_id: str, **data):
         """Applies the update to the message."""
         return UpdateCommunication(

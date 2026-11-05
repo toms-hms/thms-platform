@@ -95,6 +95,6 @@ class ModelStrTests(TestCase):
     def test_names_the_model_and_its_id(self):
         """Every model renders as `<Model> - <id>`, with no field values in it."""
         user = UserFactory(email="private@example.com")
-        home = HomeFactory(owner=user, name="Smith residence")
+        home = HomeFactory(name="Smith residence", owner=user)
         self.assertEqual(str(user), f"User - {user.pk}")
         self.assertEqual(str(home), f"Home - {home.pk}")

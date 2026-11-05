@@ -50,7 +50,7 @@ class CanTests(TestCase):
         cache.clear()
         self.owner, self.member, self.stranger = UserFactory(), UserFactory(), UserFactory()
         self.home = HomeFactory(owner=self.owner)
-        UserHome.objects.upsert(user_id=self.member.pk, home_id=self.home.pk, role=HomeRole.MEMBER)
+        UserHome.objects.upsert(home_id=self.home.pk, user_id=self.member.pk, role=HomeRole.MEMBER)
 
     def test_owner_may_delete_the_home(self):
         """An owner holds HOME_DELETE."""
@@ -88,7 +88,7 @@ class HomeIdsWithTests(TestCase):
         member = UserFactory()
         owned = HomeFactory(owner=member)
         joined = HomeFactory(owner=UserFactory())
-        UserHome.objects.upsert(user_id=member.pk, home_id=joined.pk, role=HomeRole.MEMBER)
+        UserHome.objects.upsert(home_id=joined.pk, user_id=member.pk, role=HomeRole.MEMBER)
 
         viewable = {row["home_id"] for row in PermissionService().home_ids_with(member, Permission.JOBS_VIEW)}
         deletable = {
@@ -109,29 +109,29 @@ class MembershipCacheTests(TestCase):
 
     def test_a_membership_is_cached(self):
         """A second lookup for the same pair does not re-query the database."""
-        PermissionService().membership_role(user_id=self.user.pk, home_id=self.home.pk)
+        PermissionService().membership_role(home_id=self.home.pk, user_id=self.user.pk)
         with self.assertNumQueries(0):
             self.assertEqual(
-                PermissionService().membership_role(user_id=self.user.pk, home_id=self.home.pk),
+                PermissionService().membership_role(home_id=self.home.pk, user_id=self.user.pk),
                 HomeRole.OWNER,
             )
 
     def test_a_non_member_is_not_cached(self):
         """A miss is re-checked, so adding someone takes effect immediately."""
         stranger = UserFactory()
-        self.assertIsNone(PermissionService().membership_role(user_id=stranger.pk, home_id=self.home.pk))
-        UserHome.objects.upsert(user_id=stranger.pk, home_id=self.home.pk, role=HomeRole.MEMBER)
+        self.assertIsNone(PermissionService().membership_role(home_id=self.home.pk, user_id=stranger.pk))
+        UserHome.objects.upsert(home_id=self.home.pk, user_id=stranger.pk, role=HomeRole.MEMBER)
         self.assertEqual(
-            PermissionService().membership_role(user_id=stranger.pk, home_id=self.home.pk), HomeRole.MEMBER
+            PermissionService().membership_role(home_id=self.home.pk, user_id=stranger.pk), HomeRole.MEMBER
         )
 
     def test_invalidate_forces_a_re_check(self):
         """After invalidation, a changed role is read from the database."""
-        PermissionService().membership_role(user_id=self.user.pk, home_id=self.home.pk)
-        UserHome.objects.upsert(user_id=self.user.pk, home_id=self.home.pk, role=HomeRole.MEMBER)
-        PermissionService().invalidate(user_id=self.user.pk, home_id=self.home.pk)
+        PermissionService().membership_role(home_id=self.home.pk, user_id=self.user.pk)
+        UserHome.objects.upsert(home_id=self.home.pk, user_id=self.user.pk, role=HomeRole.MEMBER)
+        PermissionService().invalidate(home_id=self.home.pk, user_id=self.user.pk)
         self.assertEqual(
-            PermissionService().membership_role(user_id=self.user.pk, home_id=self.home.pk), HomeRole.MEMBER
+            PermissionService().membership_role(home_id=self.home.pk, user_id=self.user.pk), HomeRole.MEMBER
         )
 
 
@@ -162,4 +162,4 @@ class CacheOutageTests(TestCase):
     def test_invalidate_survives_a_cache_outage(self):
         """Invalidation does not raise when the backend is unreachable."""
         with patch.object(cache, "delete", side_effect=ConnectionError("cache down")):
-            PermissionService().invalidate(user_id=self.user.pk, home_id=self.home.pk)
+            PermissionService().invalidate(home_id=self.home.pk, user_id=self.user.pk)

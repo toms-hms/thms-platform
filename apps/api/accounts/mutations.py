@@ -12,9 +12,9 @@ class Register(graphene.Mutation):
 
     class Arguments:
         email = graphene.String(required=True)
-        password = graphene.String(required=True)
         first_name = graphene.String(required=True)
         last_name = graphene.String(required=True)
+        password = graphene.String(required=True)
 
     user = graphene.Field(UserType)
     tokens = graphene.Field(AuthTokensType)
@@ -22,7 +22,7 @@ class Register(graphene.Mutation):
     def mutate(self, info, email: str, password: str, first_name: str, last_name: str):
         """Registers the user and returns them with a fresh token pair."""
         result = AuthService().register(
-            email=email, password=password, first_name=first_name, last_name=last_name
+            email=email, first_name=first_name, last_name=last_name, password=password
         )
         return Register(user=result["user"], tokens=AuthTokensType(**result["tokens"]))
 

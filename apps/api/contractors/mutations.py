@@ -12,13 +12,13 @@ class CreateContractor(graphene.Mutation):
     """Adds a contractor to the global directory. Admin only."""
 
     class Arguments:
-        name = graphene.String(required=True)
         categories = graphene.List(graphene.NonNull(TradeCategoryEnum), required=True)
+        name = graphene.String(required=True)
         company_name = graphene.String()
         email = graphene.String()
+        notes = graphene.String()
         phone = graphene.String()
         zip_codes = graphene.List(graphene.NonNull(graphene.String))
-        notes = graphene.String()
 
     contractor = graphene.Field(ContractorType)
 
@@ -33,13 +33,13 @@ class UpdateContractor(graphene.Mutation):
 
     class Arguments:
         contractor_id = graphene.ID(required=True)
-        name = graphene.String()
         categories = graphene.List(graphene.NonNull(TradeCategoryEnum))
         company_name = graphene.String()
         email = graphene.String()
+        name = graphene.String()
+        notes = graphene.String()
         phone = graphene.String()
         zip_codes = graphene.List(graphene.NonNull(graphene.String))
-        notes = graphene.String()
 
     contractor = graphene.Field(ContractorType)
 

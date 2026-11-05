@@ -93,18 +93,18 @@ class SendEmailTests(TestCase):
         """Creates a user with a Gmail connection, a job to send about and a fake Google client."""
         self.user = UserFactory()
         self.integration = IntegrationFactory(user=self.user)
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
         self.google = MagicMock(spec=GoogleClient)
         self.google.send_message.return_value = SentMessage(message_id="msg-1", thread_id="thread-1")
 
     def test_records_the_sent_message(self):
         """A sent email is stored as an outbound communication that needs no review."""
         message = EmailService(google=self.google).send(
-            user_id=self.user.pk,
             integration_id=self.integration.pk,
-            to="contractor@example.test",
-            subject="Quote request",
+            user_id=self.user.pk,
             body_text="Hello",
+            subject="Quote request",
+            to="contractor@example.test",
             job_id=self.job.pk,
         )
 
@@ -117,10 +117,10 @@ class SendEmailTests(TestCase):
         """A connection the caller does not own cannot be used to send, and nothing is sent."""
         with self.assertRaises(NotFoundError):
             EmailService(google=self.google).send(
-                user_id=UserFactory().pk,
                 integration_id=self.integration.pk,
-                to="x@example.test",
-                subject="s",
+                user_id=UserFactory().pk,
                 body_text="b",
+                subject="s",
+                to="x@example.test",
             )
         self.google.send_message.assert_not_called()

@@ -17,25 +17,25 @@ class ImageGenerationService:
     def __init__(
         self,
         *,
-        openai: OpenAIClient | None = None,
-        storage_service: StorageService | None = None,
         ai_generation_manager: AIGenerationManager | None = None,
         job_image_manager: JobImageManager | None = None,
+        openai: OpenAIClient | None = None,
+        storage_service: StorageService | None = None,
     ) -> None:
-        self._openai = openai or OpenAIClient()
-        self._storage_service = storage_service or StorageService()
         self._ai_generation_manager = ai_generation_manager or AIGeneration.objects
         self._job_image_manager = job_image_manager or JobImage.objects
+        self._openai = openai or OpenAIClient()
+        self._storage_service = storage_service or StorageService()
 
     def generate(
         self,
         *,
         job_id: str,
-        user_id: str,
         source_image_id: str,
+        user_id: str,
         prompt: str,
-        provider: str = "openai",
         metadata: dict[str, Any] | None = None,
+        provider: str = "openai",
     ) -> AIGeneration:
         """Returns the completed generation. On any failure the generation is marked FAILED and the error re-raised."""
         source_image = self._job_image_manager.find(pk=source_image_id)
@@ -43,25 +43,25 @@ class ImageGenerationService:
             raise NotFoundError("Source image")
 
         generation = self._ai_generation_manager.create(
+            created_by_id=user_id,
             job_id=job_id,
+            metadata=metadata,
             original_image_url=self._storage_service.download_url(key=source_image.storage_key),
             prompt=prompt,
             provider=provider,
             status=AIGenerationStatus.PROCESSING,
-            metadata=metadata,
-            created_by_id=user_id,
         )
         try:
             image_bytes = self._openai.generate_image(model=IMAGE_MODEL, prompt=visualisation_prompt(prompt))
-            key = self._storage_service.job_file_key(job_id=job_id, folder="generated", extension="png")
-            self._storage_service.put(key=key, body=image_bytes, content_type="image/png")
+            key = self._storage_service.job_file_key(job_id=job_id, extension="png", folder="generated")
+            self._storage_service.put(body=image_bytes, content_type="image/png", key=key)
             self._job_image_manager.create(
+                ai_generation=generation,
                 job_id=job_id,
-                storage_key=key,
+                uploaded_by_id=user_id,
                 kind=JobImageKind.GENERATED,
                 label=f"AI Generated: {prompt[:50]}",
-                ai_generation=generation,
-                uploaded_by_id=user_id,
+                storage_key=key,
             )
             return self._ai_generation_manager.apply_updates(
                 generation,

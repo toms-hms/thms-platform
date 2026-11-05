@@ -12,18 +12,18 @@ class JobImageService:
     def __init__(
         self,
         *,
-        storage_service: StorageService | None = None,
         job_image_manager: JobImageManager | None = None,
+        storage_service: StorageService | None = None,
     ) -> None:
-        self._storage_service = storage_service or StorageService()
         self._job_image_manager = job_image_manager or JobImage.objects
+        self._storage_service = storage_service or StorageService()
 
-    def request_upload(self, *, job_id: str, file_name: str, content_type: str, kind: str) -> dict[str, str]:
+    def request_upload(self, *, job_id: str, content_type: str, file_name: str, kind: str) -> dict[str, str]:
         """Returns a presigned upload URL and the key the client must confirm with."""
         extension = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
-        key = self._storage_service.job_file_key(job_id=job_id, folder=kind, extension=extension)
+        key = self._storage_service.job_file_key(job_id=job_id, extension=extension, folder=kind)
         return {
-            "upload_url": self._storage_service.upload_url(key=key, content_type=content_type),
+            "upload_url": self._storage_service.upload_url(content_type=content_type, key=key),
             "key": key,
             "kind": kind,
         }
@@ -34,10 +34,10 @@ class JobImageService:
         """Records an uploaded object as a job image."""
         return self._job_image_manager.create(
             job_id=job_id,
-            storage_key=key,
+            uploaded_by_id=user_id,
             kind=kind or JobImageKind.SOURCE,
             label=label,
-            uploaded_by_id=user_id,
+            storage_key=key,
         )
 
     def delete(self, *, image_id: str) -> None:

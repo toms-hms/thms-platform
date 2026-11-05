@@ -45,17 +45,17 @@ class RequestUploadUrl(graphene.Mutation):
 
     class Arguments:
         job_id = graphene.ID(required=True)
-        file_name = graphene.String(required=True)
         content_type = graphene.String(required=True)
+        file_name = graphene.String(required=True)
         kind = graphene.String(required=True)
 
     upload = graphene.Field(UploadUrlType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, file_name: str, content_type: str, kind: str):
         """Issues the presigned URL."""
         result = JobImageService().request_upload(
-            job_id=job_id, file_name=file_name, content_type=content_type, kind=kind
+            job_id=job_id, content_type=content_type, file_name=file_name, kind=kind
         )
         return RequestUploadUrl(upload=UploadUrlType(**result))
 
@@ -71,7 +71,7 @@ class CreateJobImage(graphene.Mutation):
 
     image = graphene.Field(JobImageType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, key: str, kind: str | None = None, label: str | None = None):
         """Writes the image row."""
         image = JobImageService().create(
@@ -88,7 +88,7 @@ class DeleteJobImage(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @authorize(Permission.JOBS_EDIT, resource=JobImage, arg="image_id")
+    @authorize(Permission.JOBS_EDIT, arg="image_id", resource=JobImage)
     def mutate(self, info, image_id: str):
         """Deletes the image and its stored object."""
         JobImageService().delete(image_id=image_id)
@@ -102,21 +102,21 @@ class CreateAiGeneration(graphene.Mutation):
         job_id = graphene.ID(required=True)
         source_image_id = graphene.ID(required=True)
         prompt = graphene.String(required=True)
-        provider = graphene.String()
         metadata = graphene.JSONString()
+        provider = graphene.String()
 
     ai_generation = graphene.Field(AIGenerationType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, source_image_id: str, prompt: str, provider=None, metadata=None):
         """Runs the generation."""
         generation = ImageGenerationService().generate(
             job_id=job_id,
-            user_id=current_user(info).pk,
             source_image_id=source_image_id,
+            user_id=current_user(info).pk,
             prompt=prompt,
-            provider=provider or "openai",
             metadata=metadata,
+            provider=provider or "openai",
         )
         return CreateAiGeneration(ai_generation=generation)
 
@@ -129,7 +129,7 @@ class StartDiagnose(graphene.Mutation):
 
     result = graphene.Field(DiagnoseResultType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str):
         """Returns the assistant's opening question."""
         return StartDiagnose(
@@ -146,7 +146,7 @@ class DiagnoseJob(graphene.Mutation):
 
     result = graphene.Field(DiagnoseResultType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, message: str):
         """Runs one diagnostic turn."""
         payload = _diagnose_payload(DiagnoseService().answer(job_id=job_id, message=message))
@@ -157,15 +157,15 @@ class DraftEmail(graphene.Mutation):
     """Generates outreach email drafts for up to three contractors on a job."""
 
     class Arguments:
-        job_id = graphene.ID(required=True)
         contractor_ids = graphene.List(graphene.NonNull(graphene.ID), required=True)
-        tone = graphene.String()
-        include_images = graphene.Boolean()
+        job_id = graphene.ID(required=True)
         custom_instructions = graphene.String()
+        include_images = graphene.Boolean()
+        tone = graphene.String()
 
     drafts = graphene.List(graphene.NonNull(EmailDraftType), required=True)
 
-    @authorize(Permission.COMMUNICATIONS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.COMMUNICATIONS_EDIT, arg="job_id", resource=Job)
     def mutate(
         self,
         info,
@@ -177,12 +177,12 @@ class DraftEmail(graphene.Mutation):
     ):
         """Returns one draft per contractor."""
         drafts = EmailDraftService().draft(
+            contractor_ids=contractor_ids,
             job_id=job_id,
             user_id=current_user(info).pk,
-            contractor_ids=contractor_ids,
-            tone=tone or "professional",
-            include_images=bool(include_images),
             custom_instructions=custom_instructions,
+            include_images=bool(include_images),
+            tone=tone or "professional",
         )
         return DraftEmail(drafts=[EmailDraftType(**draft) for draft in drafts])
 

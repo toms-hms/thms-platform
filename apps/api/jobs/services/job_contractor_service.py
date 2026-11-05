@@ -14,9 +14,9 @@ class JobContractorService:
     def __init__(self, *, job_contractor_manager: JobContractorManager | None = None) -> None:
         self._job_contractor_manager = job_contractor_manager or JobContractor.objects
 
-    def create(self, *, job_id: str, contractor_id: str, notes: str | None = None) -> JobContractor:
+    def create(self, *, contractor_id: str, job_id: str, notes: str | None = None) -> JobContractor:
         """Assigns the contractor to the job, or updates the notes on an existing assignment."""
-        return self._job_contractor_manager.upsert(job_id=job_id, contractor_id=contractor_id, notes=notes)
+        return self._job_contractor_manager.upsert(contractor_id=contractor_id, job_id=job_id, notes=notes)
 
     def update(
         self, *, job_contractor_id: str, status: str, notes: str | None | Unset = UNSET
@@ -31,7 +31,7 @@ class JobContractorService:
             stamps["last_contacted_at"] = now
         if status in RESPONDED_STATUSES and not assignment.last_response_at:
             stamps["last_response_at"] = now
-        return self._job_contractor_manager.apply_updates(assignment, status=status, notes=notes, **stamps)
+        return self._job_contractor_manager.apply_updates(assignment, notes=notes, status=status, **stamps)
 
     def delete(self, *, job_contractor_id: str) -> None:
         """Removes the contractor from the job."""

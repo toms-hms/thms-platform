@@ -16,50 +16,50 @@ class EmailService:
     def __init__(
         self,
         *,
-        google: GoogleClient | None = None,
         communication_service: CommunicationService | None = None,
+        google: GoogleClient | None = None,
         integration_manager: IntegrationManager | None = None,
     ) -> None:
-        self._google = google or GoogleClient()
         self._communication_service = communication_service or CommunicationService()
+        self._google = google or GoogleClient()
         self._integration_manager = integration_manager or Integration.objects
 
     def send(
         self,
         *,
-        user_id: str,
         integration_id: str,
-        to: str,
-        subject: str,
+        user_id: str,
         body_text: str,
-        body_html: str | None = None,
-        job_id: str | None = None,
+        subject: str,
+        to: str,
         contractor_id: str | None = None,
+        job_id: str | None = None,
+        body_html: str | None = None,
     ) -> Communication:
         """Sends the message and returns the recorded communication.
 
         Raises NotFoundError unless the integration is the user's own Gmail connection.
         """
         integration = self._integration_manager.find(
-            pk=integration_id, user_id=user_id, provider=IntegrationProvider.GOOGLE
+            user_id=user_id, pk=integration_id, provider=IntegrationProvider.GOOGLE
         )
         if integration is None:
             raise NotFoundError("Integration")
 
         sent = self._google.send_message(
             access_token=decrypt(integration.access_token_enc),
+            raw_message=build_raw_message(body_text=body_text, subject=subject, to=to, body_html=body_html),
             refresh_token=decrypt(integration.refresh_token_enc) if integration.refresh_token_enc else None,
             scopes=list(integration.scopes or []),
-            raw_message=build_raw_message(to=to, subject=subject, body_text=body_text, body_html=body_html),
         )
         return self._communication_service.create(
             direction=CommunicationDirection.SENT,
-            job_id=job_id,
             contractor_id=contractor_id,
-            subject=subject,
-            body_text=body_text,
-            body_html=body_html,
             external_message_id=sent.message_id,
             external_thread_id=sent.thread_id,
+            job_id=job_id,
+            body_html=body_html,
+            body_text=body_text,
             sent=True,
+            subject=subject,
         )

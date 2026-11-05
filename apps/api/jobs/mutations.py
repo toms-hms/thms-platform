@@ -17,18 +17,18 @@ class CreateJob(graphene.Mutation):
 
     class Arguments:
         home_id = graphene.ID(required=True)
-        title = graphene.String(required=True)
         category = TradeCategoryEnum(required=True)
-        intent = JobIntentEnum()
+        title = graphene.String(required=True)
+        ai_session = graphene.JSONString()
         categories = graphene.List(graphene.NonNull(TradeCategoryEnum))
         description = graphene.String()
+        intent = JobIntentEnum()
         notes = graphene.String()
         status = JobStatusEnum()
-        ai_session = graphene.JSONString()
 
     job = graphene.Field(JobType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Home, arg="home_id")
+    @authorize(Permission.JOBS_EDIT, arg="home_id", resource=Home)
     def mutate(self, info, home_id: str, **data):
         """Creates the job on the home."""
         return CreateJob(job=JobService().create(home_id=home_id, user_id=current_user(info).pk, **data))
@@ -39,18 +39,18 @@ class UpdateJob(graphene.Mutation):
 
     class Arguments:
         job_id = graphene.ID(required=True)
-        title = graphene.String()
-        category = TradeCategoryEnum()
-        intent = JobIntentEnum()
+        ai_session = graphene.JSONString()
         categories = graphene.List(graphene.NonNull(TradeCategoryEnum))
+        category = TradeCategoryEnum()
         description = graphene.String()
+        intent = JobIntentEnum()
         notes = graphene.String()
         status = JobStatusEnum()
-        ai_session = graphene.JSONString()
+        title = graphene.String()
 
     job = graphene.Field(JobType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, **data):
         """Applies the update to the job."""
         return UpdateJob(job=JobService().update(job_id=job_id, **data))
@@ -64,7 +64,7 @@ class DeleteJob(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str):
         """Deletes the job."""
         JobService().delete(job_id=job_id)
@@ -75,18 +75,18 @@ class CreateJobContractor(graphene.Mutation):
     """Assigns a contractor to a job."""
 
     class Arguments:
-        job_id = graphene.ID(required=True)
         contractor_id = graphene.ID(required=True)
+        job_id = graphene.ID(required=True)
         notes = graphene.String()
 
     job_contractor = graphene.Field(JobContractorType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Job, arg="job_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_id", resource=Job)
     def mutate(self, info, job_id: str, contractor_id: str, notes: str | None = None):
         """Creates or updates the assignment."""
         return CreateJobContractor(
             job_contractor=JobContractorService().create(
-                job_id=job_id, contractor_id=contractor_id, notes=notes
+                contractor_id=contractor_id, job_id=job_id, notes=notes
             )
         )
 
@@ -101,7 +101,7 @@ class UpdateJobContractor(graphene.Mutation):
 
     job_contractor = graphene.Field(JobContractorType)
 
-    @authorize(Permission.JOBS_EDIT, resource=JobContractor, arg="job_contractor_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_contractor_id", resource=JobContractor)
     def mutate(self, info, job_contractor_id: str, status: str, **extra):
         """Applies the status change. Omitting notes leaves them unchanged."""
         return UpdateJobContractor(
@@ -119,7 +119,7 @@ class DeleteJobContractor(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @authorize(Permission.JOBS_EDIT, resource=JobContractor, arg="job_contractor_id")
+    @authorize(Permission.JOBS_EDIT, arg="job_contractor_id", resource=JobContractor)
     def mutate(self, info, job_contractor_id: str):
         """Removes the assignment."""
         JobContractorService().delete(job_contractor_id=job_contractor_id)

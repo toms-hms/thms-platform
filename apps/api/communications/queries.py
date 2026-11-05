@@ -30,16 +30,16 @@ class CommunicationsQuery(graphene.ObjectType):
         """Returns the messages on the jobs the caller can see, narrowed by the given filters."""
         return (
             Communication.objects.filter_communications(
-                job_ids=job_ids,
                 contractor_ids=contractor_ids,
-                needs_review=needs_review,
+                job_ids=job_ids,
                 directions=directions,
+                needs_review=needs_review,
             )
             .select_related("contractor")
             .visible_to(current_user(info), Permission.COMMUNICATIONS_VIEW)
         )
 
-    @authorize(Permission.COMMUNICATIONS_VIEW, resource=Communication, arg="communication_id")
+    @authorize(Permission.COMMUNICATIONS_VIEW, arg="communication_id", resource=Communication)
     def resolve_communication(self, info, communication_id: str):
         """Returns one message."""
         communication = Communication.objects.find(pk=communication_id)

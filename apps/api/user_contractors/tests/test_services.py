@@ -25,7 +25,7 @@ class CreateUserContractorTests(TestCase):
         """Supplying a name creates a contractor that stays out of the global directory."""
         user = UserFactory()
         entry = UserContractorService().create(
-            user_id=user.pk, name="Bob's Plumbing", categories=[TradeCategory.PLUMBING], zip_codes=["78701"]
+            user_id=user.pk, categories=[TradeCategory.PLUMBING], name="Bob's Plumbing", zip_codes=["78701"]
         )
         contractor = Contractor.objects.get(pk=entry.contractor_id)
         self.assertFalse(contractor.is_global)

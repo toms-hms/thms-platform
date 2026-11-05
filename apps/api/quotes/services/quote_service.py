@@ -17,21 +17,21 @@ class QuoteService:
     def create(
         self,
         *,
-        job_id: str,
         contractor_id: str,
+        job_id: str,
         amount: Decimal | float,
+        source_communication_id: str | None = None,
         description: str | None = None,
         status: str | None = None,
-        source_communication_id: str | None = None,
     ) -> Quote:
         """Records a quote from a contractor against the job."""
         return self._quote_manager.create(
-            job_id=job_id,
             contractor_id=contractor_id,
+            job_id=job_id,
+            source_communication_id=source_communication_id,
             amount=amount,
             description=description,
             status=status or QuoteStatus.DRAFT,
-            source_communication_id=source_communication_id,
         )
 
     def update(

@@ -18,14 +18,14 @@ class CreateUserContractor(graphene.Mutation):
 
     class Arguments:
         contractor_id = graphene.ID()
-        note = graphene.String()
-        name = graphene.String()
+        categories = graphene.List(graphene.NonNull(TradeCategoryEnum))
         company_name = graphene.String()
         email = graphene.String()
-        phone = graphene.String()
-        categories = graphene.List(graphene.NonNull(TradeCategoryEnum))
-        zip_codes = graphene.List(graphene.NonNull(graphene.String))
+        name = graphene.String()
+        note = graphene.String()
         notes = graphene.String()
+        phone = graphene.String()
+        zip_codes = graphene.List(graphene.NonNull(graphene.String))
 
     user_contractor = graphene.Field(UserContractorType)
 
@@ -44,7 +44,7 @@ class DeleteUserContractor(graphene.Mutation):
 
     success = graphene.Boolean(required=True)
 
-    @owner_required(resource=UserContractor, arg="user_contractor_id")
+    @owner_required(arg="user_contractor_id", resource=UserContractor)
     def mutate(self, info, user_contractor_id: str):
         """Deletes the rolodex entry."""
         UserContractorService().delete(user_contractor_id=user_contractor_id)

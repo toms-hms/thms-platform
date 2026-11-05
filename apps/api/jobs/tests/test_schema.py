@@ -37,7 +37,7 @@ class JobQueryTests(GraphQLTestCase):
         self.user = UserFactory()
         self.other = UserFactory()
         self.home = HomeFactory(owner=self.user)
-        self.job = JobFactory(home=self.home, created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=self.home)
         JobContractorFactory(job=self.job)
         QuoteFactory(job=self.job)
         CommunicationFactory(job=self.job)
@@ -67,7 +67,7 @@ class JobQueryTests(GraphQLTestCase):
     def test_listing_by_a_home_the_caller_cannot_see_is_empty(self):
         """Filtering by someone else's home narrows to nothing; it never widens what the caller sees."""
         stranger_home = HomeFactory(owner=self.other)
-        JobFactory(home=stranger_home, created_by=self.other)
+        JobFactory(created_by=self.other, home=stranger_home)
         body = self.execute(JOBS, {"homeIds": [stranger_home.pk]}, token=self.token_for(self.user))
         self.assertEqual(self.assert_ok(body)["jobs"], [])
 

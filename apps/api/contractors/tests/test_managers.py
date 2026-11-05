@@ -13,17 +13,17 @@ class FilterContractorsTests(TestCase):
     def setUp(self):
         """Creates a plumber in 78701 and an electrician in 78702."""
         self.plumber = ContractorFactory(
-            name="Ada Plumb",
+            categories=[TradeCategory.PLUMBING],
             company_name="Plumb Co",
             email="ada@plumb.test",
-            categories=[TradeCategory.PLUMBING],
+            name="Ada Plumb",
             zip_codes=["78701"],
         )
         self.electrician = ContractorFactory(
-            name="Eli Volt",
+            categories=[TradeCategory.ELECTRICAL],
             company_name="Volt Co",
             email="eli@volt.test",
-            categories=[TradeCategory.ELECTRICAL],
+            name="Eli Volt",
             zip_codes=["78702"],
         )
 

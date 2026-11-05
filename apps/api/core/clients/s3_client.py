@@ -22,7 +22,7 @@ class S3Client:
             config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
         )
 
-    def presigned_put(self, *, key: str, content_type: str, expires_in: int) -> str:
+    def presigned_put(self, *, content_type: str, expires_in: int, key: str) -> str:
         """Returns a presigned URL a client can PUT the object's bytes to."""
         return self._sdk.generate_presigned_url(
             "put_object",
@@ -30,13 +30,13 @@ class S3Client:
             ExpiresIn=expires_in,
         )
 
-    def presigned_get(self, *, key: str, expires_in: int) -> str:
+    def presigned_get(self, *, expires_in: int, key: str) -> str:
         """Returns a presigned URL a client can GET the object from."""
         return self._sdk.generate_presigned_url(
             "get_object", Params={"Bucket": self._bucket, "Key": key}, ExpiresIn=expires_in
         )
 
-    def put_object(self, *, key: str, body: bytes, content_type: str) -> None:
+    def put_object(self, *, body: bytes, content_type: str, key: str) -> None:
         """Writes bytes to the bucket under key."""
         self._sdk.put_object(Bucket=self._bucket, Key=key, Body=body, ContentType=content_type)
 

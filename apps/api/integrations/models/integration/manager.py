@@ -9,5 +9,5 @@ class IntegrationManager(BaseManager.from_queryset(IntegrationQuerySet)):
 
     def upsert_by_provider(self, *, user_id: str, provider: str, **fields):
         """Creates or replaces the user's connection for this provider."""
-        integration, _ = self.update_or_create(user_id=user_id, provider=provider, defaults=fields)
+        integration, _ = self.update_or_create(user_id=user_id, defaults=fields, provider=provider)
         return integration

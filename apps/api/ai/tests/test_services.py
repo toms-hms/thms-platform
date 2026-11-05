@@ -31,7 +31,7 @@ def tool_call(name: str, arguments: dict) -> SimpleNamespace:
     return SimpleNamespace(function=SimpleNamespace(name=name, arguments=json.dumps(arguments)))
 
 
-def fake_openai(*, tool_calls=None, content=None) -> MagicMock:
+def fake_openai(*, content=None, tool_calls=None) -> MagicMock:
     """Returns a fake OpenAIClient whose chat() replies with the given tool calls or content."""
     openai = MagicMock(spec=OpenAIClient)
     openai.chat.return_value = SimpleNamespace(tool_calls=tool_calls, content=content)
@@ -137,7 +137,7 @@ class EmailDraftTests(TestCase):
     def setUp(self):
         """Creates a user with a job on their home."""
         self.user = UserFactory()
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
 
     def test_returns_one_draft_per_contractor_and_records_each_generation(self):
         """Each contractor gets a draft, and each call is logged as a generation."""
@@ -146,7 +146,7 @@ class EmailDraftTests(TestCase):
             content=json.dumps({"subject": "Quote request", "bodyText": "Hello", "bodyHtml": "<p>Hello</p>"})
         )
         drafts = EmailDraftService(openai=openai).draft(
-            job_id=self.job.pk, user_id=self.user.pk, contractor_ids=[first.pk, second.pk]
+            contractor_ids=[first.pk, second.pk], job_id=self.job.pk, user_id=self.user.pk
         )
 
         self.assertEqual(len(drafts), 2)
@@ -157,7 +157,7 @@ class EmailDraftTests(TestCase):
         """The caller's tone reaches the system prompt."""
         openai = fake_openai(content=json.dumps({"subject": "s", "bodyText": "b", "bodyHtml": "h"}))
         EmailDraftService(openai=openai).draft(
-            job_id=self.job.pk, user_id=self.user.pk, contractor_ids=[ContractorFactory().pk], tone="friendly"
+            contractor_ids=[ContractorFactory().pk], job_id=self.job.pk, user_id=self.user.pk, tone="friendly"
         )
 
         system_message = openai.chat.call_args.kwargs["messages"][0]["content"]
@@ -170,7 +170,7 @@ class ImageGenerationTests(TestCase):
     def setUp(self):
         """Creates a job with a source image."""
         self.user = UserFactory()
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
         self.source = JobImageFactory(job=self.job, uploaded_by=self.user, kind=JobImageKind.SOURCE)
 
     def test_stores_the_generated_image_and_completes(self):
@@ -179,7 +179,7 @@ class ImageGenerationTests(TestCase):
         openai.generate_image.return_value = b"png-bytes"
         storage = fake_storage()
         generation = ImageGenerationService(openai=openai, storage_service=storage).generate(
-            job_id=self.job.pk, user_id=self.user.pk, source_image_id=self.source.pk, prompt="Greener yard"
+            job_id=self.job.pk, source_image_id=self.source.pk, user_id=self.user.pk, prompt="Greener yard"
         )
 
         self.assertEqual(generation.status, AIGenerationStatus.COMPLETED)
@@ -195,8 +195,8 @@ class ImageGenerationTests(TestCase):
         with self.assertRaises(RuntimeError):
             ImageGenerationService(openai=openai, storage_service=fake_storage()).generate(
                 job_id=self.job.pk,
-                user_id=self.user.pk,
                 source_image_id=self.source.pk,
+                user_id=self.user.pk,
                 prompt="Greener yard",
             )
 

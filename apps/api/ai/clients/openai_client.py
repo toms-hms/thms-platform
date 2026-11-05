@@ -26,11 +26,11 @@ class OpenAIClient:
     def chat(
         self,
         *,
-        model: str,
         messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]] | None = None,
-        tool_choice: str | None = None,
+        model: str,
         response_format: dict[str, Any] | None = None,
+        tool_choice: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> Any:
         """Returns the first choice's message from a chat completion."""
         options: dict[str, Any] = {}
@@ -44,7 +44,7 @@ class OpenAIClient:
         return response.choices[0].message
 
     def generate_image(
-        self, *, model: str, prompt: str, size: str = "1024x1024", quality: str = "standard"
+        self, *, model: str, prompt: str, quality: str = "standard", size: str = "1024x1024"
     ) -> bytes:
         """Returns the bytes of one generated image. Raises BadRequestError when no image comes back."""
         response = self._sdk.images.generate(model=model, prompt=prompt, n=1, size=size, quality=quality)

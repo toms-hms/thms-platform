@@ -92,7 +92,7 @@ class HomeAuthorizationTests(GraphQLTestCase):
         super().setUp()
         self.owner, self.member = UserFactory(), UserFactory()
         self.home = HomeFactory(owner=self.owner)
-        UserHome.objects.upsert(user_id=self.member.pk, home_id=self.home.pk, role=HomeRole.MEMBER)
+        UserHome.objects.upsert(home_id=self.home.pk, user_id=self.member.pk, role=HomeRole.MEMBER)
 
     def test_member_may_not_delete_the_home(self):
         """MEMBER lacks HOME_DELETE, so deleting is FORBIDDEN and the home survives."""
@@ -127,7 +127,7 @@ class HomeMembersQueryTests(GraphQLTestCase):
         super().setUp()
         self.owner, self.member, self.other = UserFactory(), UserFactory(), UserFactory()
         self.home = HomeFactory(owner=self.owner)
-        UserHome.objects.upsert(user_id=self.member.pk, home_id=self.home.pk, role=HomeRole.MEMBER)
+        UserHome.objects.upsert(home_id=self.home.pk, user_id=self.member.pk, role=HomeRole.MEMBER)
 
     def test_lists_every_member_of_the_home(self):
         """Every membership of the requested home comes back."""

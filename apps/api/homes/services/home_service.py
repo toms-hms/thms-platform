@@ -19,21 +19,21 @@ class HomeService:
     def __init__(
         self,
         *,
-        user_home_service: UserHomeService | None = None,
         home_manager: HomeManager | None = None,
         user_home_manager: UserHomeManager | None = None,
+        user_home_service: UserHomeService | None = None,
     ) -> None:
-        self._user_home_service = user_home_service or UserHomeService()
         self._home_manager = home_manager or Home.objects
         self._user_home_manager = user_home_manager or UserHome.objects
+        self._user_home_service = user_home_service or UserHomeService()
 
     def create(
         self,
         *,
         user_id: str,
-        name: str,
         address1: str,
         city: str,
+        name: str,
         state: str,
         zip_code: str,
         address2: str | None = None,
@@ -42,29 +42,29 @@ class HomeService:
     ) -> Home:
         """Creates a home owned by the user."""
         home = self._home_manager.create(
-            name=name,
             address1=address1,
             address2=address2,
             city=city,
+            country=country or "US",
+            name=name,
+            notes=notes,
             state=state,
             zip_code=zip_code,
-            country=country or "US",
-            notes=notes,
         )
-        self._user_home_service.create(home_id=home.pk, user_id=user_id, role=HomeRole.OWNER)
+        self._user_home_service.create(home_id=home.pk, role=HomeRole.OWNER, user_id=user_id)
         return home
 
     def update(
         self,
         *,
         home_id: str,
-        name: str | Unset = UNSET,
         address1: str | Unset = UNSET,
         address2: str | None | Unset = UNSET,
         city: str | Unset = UNSET,
+        name: str | Unset = UNSET,
+        notes: str | None | Unset = UNSET,
         state: str | Unset = UNSET,
         zip_code: str | Unset = UNSET,
-        notes: str | None | Unset = UNSET,
     ) -> Home:
         """Applies the provided fields. UNSET leaves a field alone; None clears a nullable one."""
         home = self._home_manager.find(pk=home_id)
@@ -72,13 +72,13 @@ class HomeService:
             raise NotFoundError("Home")
         return self._home_manager.apply_updates(
             home,
-            name=name,
             address1=address1,
             address2=address2,
             city=city,
+            name=name,
+            notes=notes,
             state=state,
             zip_code=zip_code,
-            notes=notes,
         )
 
     def delete(self, *, home_id: str) -> None:
@@ -89,4 +89,4 @@ class HomeService:
         member_ids = self._user_home_manager.member_ids(home_id=home_id)
         self._home_manager.delete(home)
         for member_id in member_ids:
-            PermissionService().invalidate(user_id=member_id, home_id=home_id)
+            PermissionService().invalidate(home_id=home_id, user_id=member_id)

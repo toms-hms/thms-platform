@@ -22,7 +22,7 @@ class CreateJobTests(TestCase):
     def test_creates_a_draft_job(self):
         """A job starts in DRAFT unless another status is given."""
         job = JobService().create(
-            home_id=self.home.pk, user_id=self.user.pk, title="Leak", category=TradeCategory.PLUMBING
+            home_id=self.home.pk, user_id=self.user.pk, category=TradeCategory.PLUMBING, title="Leak"
         )
         self.assertEqual(job.status, JobStatus.DRAFT)
         self.assertEqual(job.intent, JobIntent.ISSUE)
@@ -33,8 +33,8 @@ class CreateJobTests(TestCase):
         job = JobService().create(
             home_id=self.home.pk,
             user_id=self.user.pk,
-            title="Rewire",
             category=TradeCategory.ELECTRICAL,
+            title="Rewire",
             categories=[TradeCategory.ELECTRICAL, TradeCategory.CARPENTRY],
         )
         self.assertEqual(
@@ -44,7 +44,7 @@ class CreateJobTests(TestCase):
     def test_leaves_the_ai_session_empty_when_there_is_nothing_to_record(self):
         """A plain job carries no AI session."""
         job = JobService().create(
-            home_id=self.home.pk, user_id=self.user.pk, title="Paint", category=TradeCategory.PAINTING
+            home_id=self.home.pk, user_id=self.user.pk, category=TradeCategory.PAINTING, title="Paint"
         )
         self.assertEqual(job.ai_session["confirmedCategories"], [TradeCategory.PAINTING])
 
@@ -54,7 +54,7 @@ class UpdateJobTests(TestCase):
 
     def test_updates_only_the_supplied_fields(self):
         """Fields that are not supplied keep their existing values."""
-        job = JobFactory(title="Old", description="Keep me")
+        job = JobFactory(description="Keep me", title="Old")
         updated = JobService().update(job_id=job.pk, title="New")
         self.assertEqual(updated.title, "New")
         self.assertEqual(updated.description, "Keep me")

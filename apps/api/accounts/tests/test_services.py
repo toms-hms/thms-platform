@@ -14,7 +14,7 @@ class RegisterTests(TestCase):
     def test_creates_user_and_issues_tokens(self):
         """A new email registers and comes back with a usable token pair."""
         result = AuthService().register(
-            email="new@example.com", password="password123", first_name="New", last_name="User"
+            email="new@example.com", first_name="New", last_name="User", password="password123"
         )
         self.assertEqual(result["user"].email, "new@example.com")
         self.assertTrue(result["tokens"]["access_token"])
@@ -23,7 +23,7 @@ class RegisterTests(TestCase):
     def test_stores_a_hashed_password(self):
         """The password is stored through Django's hasher, never as plaintext."""
         AuthService().register(
-            email="hash@example.com", password="password123", first_name="A", last_name="B"
+            email="hash@example.com", first_name="A", last_name="B", password="password123"
         )
         user = User.objects.get(email="hash@example.com")
         self.assertNotIn("password123", user.password)
@@ -32,7 +32,7 @@ class RegisterTests(TestCase):
     def test_stores_the_email_normalized(self):
         """The address is trimmed and lower-cased before it is stored."""
         result = AuthService().register(
-            email="  Pat@Example.COM ", password="password123", first_name="Pat", last_name="B"
+            email="  Pat@Example.COM ", first_name="Pat", last_name="B", password="password123"
         )
         self.assertEqual(result["user"].email, "pat@example.com")
 
@@ -41,7 +41,7 @@ class RegisterTests(TestCase):
         UserFactory(email="taken@example.com")
         with self.assertRaises(ConflictError):
             AuthService().register(
-                email="Taken@Example.com", password="password123", first_name="A", last_name="B"
+                email="Taken@Example.com", first_name="A", last_name="B", password="password123"
             )
 
     def test_rejects_duplicate_email(self):
@@ -49,7 +49,7 @@ class RegisterTests(TestCase):
         UserFactory(email="taken@example.com")
         with self.assertRaises(ConflictError):
             AuthService().register(
-                email="taken@example.com", password="password123", first_name="A", last_name="B"
+                email="taken@example.com", first_name="A", last_name="B", password="password123"
             )
 
 

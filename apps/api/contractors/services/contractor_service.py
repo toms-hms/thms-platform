@@ -30,24 +30,24 @@ class ContractorService:
     def create(
         self,
         *,
-        name: str,
         categories: list[str],
         is_global: bool,
+        name: str,
         company_name: str | None = None,
         email: str | None = None,
+        notes: str | None = None,
         phone: str | None = None,
         zip_codes: list[str] | None = None,
-        notes: str | None = None,
     ) -> Contractor:
         """Creates the contractor and its service area in one transaction."""
         contractor = self._contractor_manager.create(
-            name=name,
             categories=categories,
-            is_global=is_global,
             company_name=company_name,
             email=email,
-            phone=phone,
+            is_global=is_global,
+            name=name,
             notes=notes,
+            phone=phone,
         )
         self._replace_zip_codes(contractor=contractor, zip_codes=zip_codes or [])
         return contractor
@@ -57,13 +57,13 @@ class ContractorService:
         self,
         *,
         contractor_id: str,
-        name: str | Unset = UNSET,
         categories: list[str] | Unset = UNSET,
         company_name: str | None | Unset = UNSET,
         email: str | None | Unset = UNSET,
+        name: str | Unset = UNSET,
+        notes: str | None | Unset = UNSET,
         phone: str | None | Unset = UNSET,
         zip_codes: list[str] | None | Unset = UNSET,
-        notes: str | None | Unset = UNSET,
     ) -> Contractor:
         """Applies the provided fields. zip_codes replaces the whole service area; None clears it."""
         contractor = self._contractor_manager.find(pk=contractor_id)
@@ -71,12 +71,12 @@ class ContractorService:
             raise NotFoundError("Contractor")
         self._contractor_manager.apply_updates(
             contractor,
-            name=name,
             categories=categories,
             company_name=company_name,
             email=email,
-            phone=phone,
+            name=name,
             notes=notes,
+            phone=phone,
         )
         if zip_codes is not UNSET:
             self._replace_zip_codes(contractor=contractor, zip_codes=zip_codes or [])

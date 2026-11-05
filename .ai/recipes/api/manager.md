@@ -43,17 +43,17 @@ def filter_contractors(
     self,
     *,
     ids: list[str] | None = None,
-    zip_codes: list[str] | None = None,
-    trade_categories: list[str] | None = None,
     is_global: bool | None = None,
     search: str | None = None,
+    trade_categories: list[str] | None = None,
+    zip_codes: list[str] | None = None,
 ) -> ContractorQuerySet:
     """Returns contractors matching every supplied filter. An empty list matches nothing."""
     return (
         self.filter_ids(ids)
-        .filter_zip_codes(zip_codes)
-        .filter_trade_categories(trade_categories)
         .filter_is_global(is_global)
+        .filter_trade_categories(trade_categories)
+        .filter_zip_codes(zip_codes)
         .search(search)
     )
 ```
@@ -66,7 +66,7 @@ def filter_contractors(
 - **Preloads belong to the caller.** Only the resolver knows which relations the response
   reads, so `select_related` / `prefetch_related` go there, not in the composition.
 
-- **Keyword-only arguments** for every filter and for any method with more than one parameter of the same type (`upsert(*, user_id, home_id, role)`). Names are plural and domain-explicit,
+- **Keyword-only arguments**, ordered as `core.md` "Parameter order" says, for every filter and for any method with more than one parameter of the same type (`upsert(*, user_id, home_id, role)`). Names are plural and domain-explicit,
   matching the queryset method they feed (`trade_categories`, not `categories`).
 - A composition returns the queryset, so the caller can keep chaining, e.g. `visible_to` or `.prefetch_related`.
 - If a filter is missing, add it to the queryset first, then chain it here.

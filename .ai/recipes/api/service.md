@@ -20,15 +20,15 @@ class QuoteService:
     def create(
         self,
         *,
-        job_id: str,
         contractor_id: str,
+        job_id: str,
         amount: Decimal | float,
         description: str | None = None,
         status: str | None = None,
     ) -> Quote:
         """Records a quote from a contractor against the job."""
         return self._quote_manager.create(
-            job_id=job_id, contractor_id=contractor_id, amount=amount,
+            contractor_id=contractor_id, job_id=job_id, amount=amount,
             description=description, status=status or QuoteStatus.DRAFT,
         )
 
@@ -49,7 +49,7 @@ class QuoteService:
 
 ## Methods
 
-- **Every parameter after `self` is keyword-only (`*,`)** and explicitly typed. Never take `data: dict`.
+- **Every parameter after `self` is keyword-only (`*,`)** and explicitly typed. Never take `data: dict`. Order them as `core.md` "Parameter order" says: required ids, required values, optional ids, optional values, each alphabetical.
 - **Parameter names match the GraphQL argument names** (snake_case), so the mutation calls `QuoteService().update(quote_id=quote_id, **data)`.
 - **A model service owns one model** and is named after it: `QuoteService`, `UserHomeService`. Its writes are plain `create`, `update` and `delete` (the class names the noun, so `QuoteService().create`, never `create_quote` and never `add` / `assign` / `record` / `remove`). CRUD on a second model means a second service: `HomeService` creates the owner's membership by calling an injected `UserHomeService`, not by owning member methods.
 - **Real domain actions keep their verb** alongside the CRUD: `promote`, `send`, `connect_google`. A create that comes in variants takes keyword alternatives (`UserHomeService.create(user_id=... | email=...)`) rather than growing a second create.
@@ -84,15 +84,15 @@ class ImageGenerationService:
     def __init__(
         self,
         *,
-        openai: OpenAIClient | None = None,
-        storage_service: StorageService | None = None,
         ai_generation_manager: AIGenerationManager | None = None,
         job_image_manager: JobImageManager | None = None,
+        openai: OpenAIClient | None = None,
+        storage_service: StorageService | None = None,
     ) -> None:
-        self._openai = openai or OpenAIClient()
-        self._storage_service = storage_service or StorageService()
         self._ai_generation_manager = ai_generation_manager or AIGeneration.objects
         self._job_image_manager = job_image_manager or JobImage.objects
+        self._openai = openai or OpenAIClient()
+        self._storage_service = storage_service or StorageService()
 ```
 
 - **Names:** managers are `<model>_manager` (`self._job_manager`), services are

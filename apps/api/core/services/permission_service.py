@@ -103,7 +103,7 @@ class PermissionService:
         except Exception:
             logger.warning("Permission cache unavailable on delete", exc_info=True)
 
-    def membership_role(self, *, user_id: str, home_id: str) -> str | None:
+    def membership_role(self, *, home_id: str, user_id: str) -> str | None:
         """Returns the user's role in the home, or None when they are not a member. Consults the cache."""
         cached = self._cache_get(self._key(user_id, home_id))
         if cached is not None:
@@ -119,7 +119,7 @@ class PermissionService:
             return False
         if self.is_admin(user):
             return True
-        role = self.membership_role(user_id=user.pk, home_id=home_id)
+        role = self.membership_role(home_id=home_id, user_id=user.pk)
         return role is not None and permission in self.role_permissions(role)
 
     def require(self, user, permission: Permission, home_id: str | None) -> None:
@@ -131,6 +131,6 @@ class PermissionService:
         """Returns a subquery of the ids of homes where the user holds the permission."""
         return self._user_home_manager.home_ids_with_roles(user_id=user.pk, roles=self.roles_with(permission))
 
-    def invalidate(self, *, user_id: str, home_id: str) -> None:
+    def invalidate(self, *, home_id: str, user_id: str) -> None:
         """Drops the user's cached role in the home so the next check re-reads the database."""
         self._cache_delete(self._key(user_id, home_id))

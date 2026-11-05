@@ -83,7 +83,7 @@ class GoogleClient:
         )
 
     def send_message(
-        self, *, access_token: str, refresh_token: str | None, scopes: list[str], raw_message: str
+        self, *, access_token: str, raw_message: str, refresh_token: str | None, scopes: list[str]
     ) -> SentMessage:
         """Sends a base64url-encoded RFC 2822 message from the authorised mailbox."""
         credentials = Credentials(

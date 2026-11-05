@@ -30,13 +30,13 @@ class AuthService:
         self._user_manager.apply_updates(user, refresh_token_hash=hash_token(refresh_token))
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    def register(self, *, email: str, password: str, first_name: str, last_name: str) -> dict[str, Any]:
+    def register(self, *, email: str, first_name: str, last_name: str, password: str) -> dict[str, Any]:
         """Creates a user and returns them with a fresh token pair. Rejects an email already in use."""
         email = normalize_email(email)
         if self._user_manager.find(email=email):
             raise ConflictError("Email already registered")
         user = self._user_manager.create(
-            email=email, password=make_password(password), first_name=first_name, last_name=last_name
+            email=email, first_name=first_name, last_name=last_name, password=make_password(password)
         )
         return {"user": user, "tokens": self._issue_tokens(user=user)}
 

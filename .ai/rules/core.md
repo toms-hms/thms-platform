@@ -8,11 +8,50 @@ The backend is Python (Django + Graphene); the frontend is TypeScript (Next.js).
 
 ```python
 # good
-def filter_contractors(self, *, zip_codes=None, trade_categories=None, search=None): ...
+def filter_contractors(self, *, search=None, trade_categories=None, zip_codes=None): ...
 
 # bad — positional soup at the call site
 def filter_contractors(self, zip_codes=None, trade_categories=None, search=None): ...
 ```
+
+### Parameter order
+
+Keyword-only parameters come in four groups, each alphabetical:
+
+1. required ids, 2. required values, 3. optional ids, 4. optional values.
+
+An **id** is a parameter that identifies rows: a name ending in `_id` / `_ids`, the name `ids`,
+or a parameter typed as a model (`user: User`). Everything else is a value.
+
+```python
+def create(
+    self,
+    *,
+    contractor_id: str,                           # required ids
+    job_id: str,
+    amount: Decimal | float,                      # required values
+    source_communication_id: str | None = None,   # optional ids
+    description: str | None = None,               # optional values
+    status: str | None = None,
+) -> Quote: ...
+```
+
+`core/tests/test_conventions.py` enforces this for every function in `apps/api`. The same order
+applies, by review, to:
+
+- **Call sites:** keyword arguments follow the callee's parameter order. Where the callee takes
+  `**fields` (Django's `create`, `filter`, `apply_updates`, factories), ids and model instances
+  come first, then values, each alphabetical: `JobFactory(created_by=user, home=home)`.
+- **Constructors:** injected dependencies are all optional, so plain alphabetical, and the
+  `self._x = ...` assignments match.
+- **Queryset chains:** filter-style calls (`filter_*`, `filter`, `search`, `select_related`,
+  `prefetch_related`, `visible_to`, `owned_by`) are alphabetical. Calls that change the shape or end
+  the chain (`values` / `values_list`, `order_by`, slicing, `first`, `exists`, `delete`) stay last.
+- **GraphQL `Arguments` classes:** required first, `ID`s before values within each group,
+  alphabetical. Graphene sorts arguments in the exported schema regardless, so this is for readers.
+
+Positional parameters keep their order (`can(user, permission, home_id)`, `apply_updates(instance,
+**fields)`), as do framework-fixed signatures (`resolve_x(self, info, ...)`, `mutate(self, info, ...)`).
 
 **TypeScript.** Destructure options-bag parameters at the signature, not in the body. The exception: when a destructured name would shadow something in scope, use a namespace import to disambiguate rather than renaming the destructure.
 

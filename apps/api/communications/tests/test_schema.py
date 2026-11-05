@@ -31,7 +31,7 @@ class CommunicationsTests(GraphQLTestCase):
         super().setUp()
         self.user = UserFactory()
         self.other = UserFactory()
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
         self.sent = CommunicationFactory(
             job=self.job, direction=CommunicationDirection.SENT, needs_review=False
         )

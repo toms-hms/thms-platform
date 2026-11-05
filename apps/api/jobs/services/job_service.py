@@ -25,41 +25,41 @@ class JobService:
         *,
         home_id: str,
         user_id: str,
-        title: str,
         category: str,
-        intent: str | None = None,
+        title: str,
+        ai_session: dict[str, Any] | None = None,
         categories: list[str] | None = None,
         description: str | None = None,
+        intent: str | None = None,
         notes: str | None = None,
         status: str | None = None,
-        ai_session: dict[str, Any] | None = None,
     ) -> Job:
         """Creates a job on the home. The categories the user confirmed are recorded in the AI session."""
         confirmed_categories = categories or [category]
         return self._job_manager.create(
-            home_id=home_id,
             created_by_id=user_id,
-            title=title,
-            intent=intent or JobIntent.ISSUE,
+            home_id=home_id,
+            ai_session=build_ai_session(ai_session=ai_session, confirmed_categories=confirmed_categories),
             category=category,
             description=description,
+            intent=intent or JobIntent.ISSUE,
             notes=notes,
             status=status or JobStatus.DRAFT,
-            ai_session=build_ai_session(ai_session=ai_session, confirmed_categories=confirmed_categories),
+            title=title,
         )
 
     def update(
         self,
         *,
         job_id: str,
-        title: str | Unset = UNSET,
-        category: str | Unset = UNSET,
-        intent: str | Unset = UNSET,
+        ai_session: dict[str, Any] | None | Unset = UNSET,
         categories: list[str] | None | Unset = UNSET,
+        category: str | Unset = UNSET,
         description: str | None | Unset = UNSET,
+        intent: str | Unset = UNSET,
         notes: str | None | Unset = UNSET,
         status: str | Unset = UNSET,
-        ai_session: dict[str, Any] | None | Unset = UNSET,
+        title: str | Unset = UNSET,
     ) -> Job:
         """Applies the provided fields, keeping the primary category in step with the confirmed categories.
 
@@ -75,13 +75,13 @@ class JobService:
         new_session = build_ai_session(ai_session=session, confirmed_categories=confirmed)
         return self._job_manager.apply_updates(
             job,
-            title=title,
-            intent=intent,
+            ai_session=new_session if new_session is not None else UNSET,
+            category=primary_category,
             description=description,
+            intent=intent,
             notes=notes,
             status=status,
-            category=primary_category,
-            ai_session=new_session if new_session is not None else UNSET,
+            title=title,
         )
 
     def delete(self, *, job_id: str) -> None:

@@ -146,25 +146,24 @@ class Command(BaseCommand):
         users = {}
         for email, first_name, last_name, role in USERS:
             users[email], _ = User.objects.get_or_create(
-                email=email,
                 defaults={
                     "password": password_hash,
                     "first_name": first_name,
                     "last_name": last_name,
                     "role": role,
                 },
+                email=email,
             )
 
         demo_user = users["demo@thms.dev"]
         homes = []
         for fields in HOMES:
-            home, _ = Home.objects.get_or_create(name=fields["name"], defaults=fields)
-            UserHome.objects.get_or_create(user=demo_user, home=home, defaults={"role": HomeRole.OWNER})
+            home, _ = Home.objects.get_or_create(defaults=fields, name=fields["name"])
+            UserHome.objects.get_or_create(home=home, user=demo_user, defaults={"role": HomeRole.OWNER})
             homes.append(home)
 
         for categories, name, company_name, email, phone in CONTRACTORS:
             Contractor.objects.get_or_create(
-                email=email,
                 defaults={
                     "name": name,
                     "company_name": company_name,
@@ -172,11 +171,11 @@ class Command(BaseCommand):
                     "categories": categories,
                     "is_global": True,
                 },
+                email=email,
             )
 
         for intent, category, title, description in JOBS:
             Job.objects.get_or_create(
-                title=title,
                 home=homes[0],
                 defaults={
                     "intent": intent,
@@ -185,6 +184,7 @@ class Command(BaseCommand):
                     "status": JobStatus.DRAFT,
                     "created_by": demo_user,
                 },
+                title=title,
             )
 
         self.stdout.write(self.style.SUCCESS("Seed complete."))

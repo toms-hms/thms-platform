@@ -50,8 +50,8 @@ class FindFirstTests(TestCase):
     def test_returns_the_first_of_several_matches(self):
         """When several rows match, the first by the model's ordering comes back instead of an error."""
         owner = UserFactory()
-        HomeFactory(owner=owner, name="Shared")
-        HomeFactory(owner=owner, name="Shared")
+        HomeFactory(name="Shared", owner=owner)
+        HomeFactory(name="Shared", owner=owner)
         expected = Home.objects.filter(name="Shared").first()
         self.assertEqual(Home.objects.find_first(name="Shared"), expected)
 
@@ -80,7 +80,7 @@ class VisibleToTests(TestCase):
         """A member sees the home for HOME_VIEW but not for HOME_DELETE."""
         member = UserFactory()
         home = HomeFactory(owner=UserFactory())
-        UserHome.objects.upsert(user_id=member.pk, home_id=home.pk, role=HomeRole.MEMBER)
+        UserHome.objects.upsert(home_id=home.pk, user_id=member.pk, role=HomeRole.MEMBER)
         self.assertTrue(Home.objects.visible_to(member, Permission.HOME_VIEW).filter(pk=home.pk).exists())
         self.assertFalse(Home.objects.visible_to(member, Permission.HOME_DELETE).filter(pk=home.pk).exists())
 

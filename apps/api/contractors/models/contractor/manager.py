@@ -11,19 +11,19 @@ class ContractorManager(BaseManager.from_queryset(ContractorQuerySet)):
         self,
         *,
         ids: list[str] | None = None,
-        zip_codes: list[str] | None = None,
-        trade_categories: list[str] | None = None,
         emails: list[str] | None = None,
         is_global: bool | None = None,
         search: str | None = None,
+        trade_categories: list[str] | None = None,
+        zip_codes: list[str] | None = None,
     ) -> ContractorQuerySet:
         """Returns contractors matching every supplied filter. An empty list matches nothing."""
         return (
-            self.filter_ids(ids)
-            .filter_zip_codes(zip_codes)
-            .filter_trade_categories(trade_categories)
-            .filter_emails(emails)
+            self.filter_emails(emails)
+            .filter_ids(ids)
             .filter_is_global(is_global)
+            .filter_trade_categories(trade_categories)
+            .filter_zip_codes(zip_codes)
             .search(search)
         )
 

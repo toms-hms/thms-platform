@@ -27,7 +27,7 @@ class HomesQuery(graphene.ObjectType):
         """Returns every home the caller belongs to; every home for an ADMIN."""
         return Home.objects.visible_to(current_user(info), Permission.HOME_VIEW)
 
-    @authorize(Permission.HOME_VIEW, resource=Home, arg="home_id")
+    @authorize(Permission.HOME_VIEW, arg="home_id", resource=Home)
     def resolve_home(self, info, home_id: str):
         """Returns one home."""
         home = Home.objects.find(pk=home_id)

@@ -34,7 +34,7 @@ class VisibleToTests(TestCase):
         """Creates a user with one home and job, plus an unrelated home and job."""
         self.user = UserFactory()
         self.home = HomeFactory(owner=self.user)
-        self.job = JobFactory(home=self.home, created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=self.home)
         self.other_job = JobFactory(home=HomeFactory(owner=UserFactory()))
 
     def test_returns_only_visible_jobs(self):
@@ -57,7 +57,7 @@ class VisibleToTests(TestCase):
 
     def test_filters_chain(self):
         """Home and status filters narrow together; None leaves a filter off."""
-        JobFactory(home=self.home, created_by=self.user, status=JobStatus.COMPLETED)
+        JobFactory(created_by=self.user, home=self.home, status=JobStatus.COMPLETED)
         jobs = (
             Job.objects.visible_to(self.user, Permission.JOBS_VIEW)
             .filter_home_ids([self.home.pk])

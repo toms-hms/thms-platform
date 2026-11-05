@@ -10,7 +10,7 @@ A util is a plain function that turns inputs into outputs. Utils live in
 `prompt_utils.py`, `email_utils.py`, `ai_session_utils.py`, `crypto_utils.py`.
 
 ```python
-def build_raw_message(*, to: str, subject: str, body_text: str, body_html: str | None = None) -> str:
+def build_raw_message(*, body_text: str, subject: str, to: str, body_html: str | None = None) -> str:
     """Returns a base64url-encoded RFC 2822 HTML message, as the Gmail send API expects."""
     ...
 ```

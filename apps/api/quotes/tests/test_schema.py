@@ -34,7 +34,7 @@ class QuotesTests(GraphQLTestCase):
         super().setUp()
         self.user = UserFactory()
         self.other = UserFactory()
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
         self.quote = QuoteFactory(job=self.job)
 
     def test_lists_quotes_for_a_visible_job(self):
@@ -90,7 +90,7 @@ class QuotePartialUpdateTests(GraphQLTestCase):
         """Creates a quote with an amount and description on the user's job."""
         super().setUp()
         self.user = UserFactory()
-        job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
         self.quote = QuoteFactory(job=job, amount=100, description="Original")
 
     def test_an_omitted_argument_leaves_the_field_alone(self):

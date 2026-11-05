@@ -20,7 +20,7 @@ class OpenAIClient:
             raise BadRequestError("OpenAI API key not configured")
         self._sdk = OpenAI(api_key=api_key)
 
-    def chat(self, *, model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> Any:
+    def chat(self, *, messages: list[dict[str, Any]], model: str, tools: list[dict[str, Any]] | None = None) -> Any:
         """Returns the first choice's message from a chat completion."""
         return self._sdk.chat.completions.create(model=model, messages=messages, tools=tools).choices[0].message
 ```

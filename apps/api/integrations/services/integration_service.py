@@ -20,12 +20,12 @@ class IntegrationService:
         self,
         *,
         google: GoogleClient | None = None,
-        microsoft: MicrosoftClient | None = None,
         integration_manager: IntegrationManager | None = None,
+        microsoft: MicrosoftClient | None = None,
     ) -> None:
         self._google = google or GoogleClient()
-        self._microsoft = microsoft or MicrosoftClient()
         self._integration_manager = integration_manager or Integration.objects
+        self._microsoft = microsoft or MicrosoftClient()
 
     def google_auth_url(self, *, user_id: str) -> str:
         """Returns the Google consent URL for the user."""
@@ -39,44 +39,44 @@ class IntegrationService:
         """Exchanges the authorization code and stores the user's Gmail connection."""
         return self._store_email_connection(
             user_id=user_id,
-            provider=IntegrationProvider.GOOGLE,
             connection=self._google.exchange_code(code=code),
+            provider=IntegrationProvider.GOOGLE,
         )
 
     def connect_microsoft(self, *, user_id: str, code: str) -> Integration:
         """Exchanges the authorization code and stores the user's Outlook connection."""
         return self._store_email_connection(
             user_id=user_id,
-            provider=IntegrationProvider.MICROSOFT,
             connection=self._microsoft.exchange_code(code=code),
+            provider=IntegrationProvider.MICROSOFT,
         )
 
     def _store_email_connection(
-        self, *, user_id: str, provider: str, connection: GoogleConnection | MicrosoftConnection
+        self, *, user_id: str, connection: GoogleConnection | MicrosoftConnection, provider: str
     ) -> Integration:
         """Creates or replaces the user's connection for the provider, encrypting its tokens."""
         return self._integration_manager.upsert_by_provider(
             user_id=user_id,
             provider=provider,
-            type=IntegrationType.EMAIL,
             access_token_enc=encrypt(connection.access_token),
-            refresh_token_enc=encrypt(connection.refresh_token) if connection.refresh_token else None,
-            token_expires_at=connection.expires_at,
             email=connection.email,
+            refresh_token_enc=encrypt(connection.refresh_token) if connection.refresh_token else None,
             scopes=connection.scopes,
+            token_expires_at=connection.expires_at,
+            type=IntegrationType.EMAIL,
         )
 
-    def create_ai(self, *, user_id: str, provider: str, api_key: str) -> Integration:
+    def create_ai(self, *, user_id: str, api_key: str, provider: str) -> Integration:
         """Stores an AI provider API key as an encrypted integration."""
         return self._integration_manager.upsert_by_provider(
             user_id=user_id,
             provider=IntegrationProvider.OPENAI,
-            type=IntegrationType.AI,
             access_token_enc=encrypt(api_key),
-            refresh_token_enc=None,
-            token_expires_at=None,
             email=None,
+            refresh_token_enc=None,
             scopes=[],
+            token_expires_at=None,
+            type=IntegrationType.AI,
         )
 
     def delete(self, *, integration_id: str) -> None:

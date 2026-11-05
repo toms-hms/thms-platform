@@ -191,7 +191,7 @@ def tools_for(intent: str) -> list[dict[str, Any]]:
     return [ASK_QUESTION_TOOL, SUGGEST_CATEGORIES_TOOL, summary_tool]
 
 
-def job_context(*, title: str, category: str, description: str | None) -> str:
+def job_context(*, category: str, description: str | None, title: str) -> str:
     """Returns the job's title, category and description as prompt context."""
     lines = [f"Job title: {title}", f"Category: {category}"]
     if description:
@@ -199,7 +199,7 @@ def job_context(*, title: str, category: str, description: str | None) -> str:
     return "\n".join(lines)
 
 
-def read_tool_calls(*, message: Any, existing_summary: Any, intent: str) -> dict[str, Any]:
+def read_tool_calls(*, existing_summary: Any, intent: str, message: Any) -> dict[str, Any]:
     """Returns the question, options, summary and category suggestions carried by one assistant turn."""
     result: dict[str, Any] = {
         "question": None,
@@ -221,14 +221,14 @@ def read_tool_calls(*, message: Any, existing_summary: Any, intent: str) -> dict
 
 def outreach_email_prompt(
     *,
-    contractor_name: str,
+    city: str,
     company_name: str | None,
-    job_title: str,
+    contractor_name: str,
+    custom_instructions: str | None,
     job_category: str,
     job_description: str | None,
-    city: str,
+    job_title: str,
     state: str,
-    custom_instructions: str | None,
 ) -> str:
     """Returns the user prompt asking for one outreach email as a JSON object."""
     company = f" at {company_name}" if company_name else ""

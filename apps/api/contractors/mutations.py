@@ -1,17 +1,11 @@
-"""GraphQL surface for the contractor directory.
-
-Reads are open to any authenticated user; every write is admin-only, matching
-the role gates the REST routes applied.
-"""
+"""GraphQL writes for the contractor directory. Every write is admin-only."""
 
 import graphene
 
-from contractors.models import Contractor
 from contractors.services.contractor_service import ContractorService
-from contractors.types import ContractorJobHistoryType, ContractorType
+from contractors.types import ContractorType
 from core.enums import TradeCategoryEnum
-from core.errors import NotFoundError
-from core.graphql import admin_required, login_required
+from core.graphql import admin_required
 
 
 class CreateContractor(graphene.Mutation):
@@ -82,47 +76,6 @@ class DeleteContractor(graphene.Mutation):
         """Deletes the contractor."""
         ContractorService().delete(contractor_id=contractor_id)
         return DeleteContractor(success=True)
-
-
-class ContractorsQuery(graphene.ObjectType):
-    """Contractor reads."""
-
-    contractors = graphene.List(
-        graphene.NonNull(ContractorType),
-        search=graphene.String(),
-        trade_categories=graphene.List(graphene.NonNull(TradeCategoryEnum)),
-        zip_codes=graphene.List(graphene.NonNull(graphene.String)),
-        required=True,
-    )
-    contractor = graphene.Field(ContractorType, contractor_id=graphene.ID(required=True))
-    contractor_job_history = graphene.List(
-        graphene.NonNull(ContractorJobHistoryType),
-        contractor_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
-        required=True,
-    )
-
-    @login_required
-    def resolve_contractors(self, info, search=None, trade_categories=None, zip_codes=None):
-        """Returns global contractors narrowed by search text, trade categories and ZIP codes."""
-        return Contractor.objects.filter_contractors(
-            search=search, trade_categories=trade_categories, zip_codes=zip_codes, is_global=True
-        ).prefetch_related("zip_code_rows")
-
-    @login_required
-    def resolve_contractor(self, info, contractor_id: str):
-        """Returns one contractor by id."""
-        contractor = Contractor.objects.find(pk=contractor_id)
-        if contractor is None:
-            raise NotFoundError("Contractor")
-        return contractor
-
-    @login_required
-    def resolve_contractor_job_history(self, info, contractor_ids: list[str]):
-        """Returns the contractors' job history, most recent first."""
-        return [
-            ContractorJobHistoryType(**row)
-            for row in Contractor.objects.list_job_history(contractor_ids=contractor_ids)
-        ]
 
 
 class ContractorsMutation(graphene.ObjectType):

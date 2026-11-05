@@ -1,9 +1,9 @@
-"""GraphQL surface for quotes."""
+"""GraphQL writes for quotes."""
 
 import graphene
 
 from core.enums import QuoteStatusEnum
-from core.graphql import authorize, current_user, login_required
+from core.graphql import authorize
 from core.services.permission_service import Permission
 from jobs.models import Job
 from quotes.models import Quote
@@ -60,25 +60,6 @@ class DeleteQuote(graphene.Mutation):
         """Deletes the quote."""
         QuoteService().delete(quote_id=quote_id)
         return DeleteQuote(success=True)
-
-
-class QuotesQuery(graphene.ObjectType):
-    """Quote reads."""
-
-    quotes = graphene.List(
-        graphene.NonNull(QuoteType),
-        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
-        required=True,
-    )
-
-    @login_required
-    def resolve_quotes(self, info, job_ids: list[str]):
-        """Returns the quotes on the jobs the caller can see."""
-        return (
-            Quote.objects.filter_job_ids(job_ids)
-            .select_related("contractor")
-            .visible_to(current_user(info), Permission.QUOTES_VIEW)
-        )
 
 
 class QuotesMutation(graphene.ObjectType):

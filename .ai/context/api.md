@@ -24,7 +24,7 @@ apps/api/
     managers.py     BaseManager (incl. apply_updates)
     graphql.py      current_user and the access decorators (@authorize, @owner_required, …)
     converters.py   GraphQL field conversions (UUID → String)
-    types.py / schema.py  the audit log query
+    types.py / queries.py  the audit log query
     errors.py, enums.py, middleware.py, testing.py
   <app>/
     models/<model>/ model.py · queryset.py · manager.py   (models/__init__.py re-exports)
@@ -33,7 +33,8 @@ apps/api/
     utils/          <topic>_utils.py — pure functions (ai, integrations, jobs)
     factories/      <model>_factory.py (factories/__init__.py re-exports)
     types.py        GraphQL object types
-    schema.py       queries (read via managers) and mutations (write via services)
+    queries.py      the app's Query class (reads via managers and querysets)
+    mutations.py    one Mutation per write (via services), then the app's Mutation class
     tests/          test_querysets.py, test_managers.py, test_services.py, test_schema.py
 ```
 

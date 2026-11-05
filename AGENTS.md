@@ -37,7 +37,7 @@ Detailed how-to guides for common task types. Load only what the task requires.
 - Vendor clients (one SDK each): `.ai/recipes/api/client.md`
 - Pure helpers (`*_utils.py`): `.ai/recipes/api/utils.md`
 - GraphQL types (`types.py`): `.ai/recipes/api/types.md`
-- GraphQL queries & mutations (`schema.py`): `.ai/recipes/api/schema.md`
+- GraphQL queries & mutations (`queries.py` / `mutations.py`): `.ai/recipes/api/schema.md`
 - Permissioning: `.ai/recipes/api/permissioning.md`
 - Authentication (JWT, password hashing): `.ai/recipes/api/auth.md`
 - Audit log: `.ai/recipes/api/audit.md`

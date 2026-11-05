@@ -6,16 +6,25 @@ the schema file stays a single, readable index of the whole API surface.
 
 import graphene
 
-from accounts.schema import AccountsMutation, AccountsQuery
-from ai.schema import AiMutation, AiQuery
-from communications.schema import CommunicationsMutation, CommunicationsQuery
-from contractors.schema import ContractorsMutation, ContractorsQuery
-from core.schema import AuditQuery
-from homes.schema import HomesMutation, HomesQuery
-from integrations.schema import IntegrationsMutation, IntegrationsQuery
-from jobs.schema import JobsMutation, JobsQuery
-from quotes.schema import QuotesMutation, QuotesQuery
-from user_contractors.schema import UserContractorsMutation, UserContractorsQuery
+from accounts.mutations import AccountsMutation
+from accounts.queries import AccountsQuery
+from ai.mutations import AiMutation
+from ai.queries import AiQuery
+from communications.mutations import CommunicationsMutation
+from communications.queries import CommunicationsQuery
+from contractors.mutations import ContractorsMutation
+from contractors.queries import ContractorsQuery
+from core.queries import AuditQuery
+from homes.mutations import HomesMutation
+from homes.queries import HomesQuery
+from integrations.mutations import IntegrationsMutation
+from integrations.queries import IntegrationsQuery
+from jobs.mutations import JobsMutation
+from jobs.queries import JobsQuery
+from quotes.mutations import QuotesMutation
+from quotes.queries import QuotesQuery
+from user_contractors.mutations import UserContractorsMutation
+from user_contractors.queries import UserContractorsQuery
 
 
 class Query(

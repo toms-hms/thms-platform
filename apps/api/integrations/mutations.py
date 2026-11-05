@@ -1,7 +1,4 @@
-"""GraphQL surface for connected accounts and sending mail through them.
-
-Tokens never leave the server: the type exposes only the connection's metadata.
-"""
+"""GraphQL writes for connected accounts and sending mail through them."""
 
 import graphene
 
@@ -67,31 +64,6 @@ class SendEmail(graphene.Mutation):
         """Sends the message and records it against the job."""
         communication = EmailService().send(user_id=current_user(info).pk, job_id=job_id, **data)
         return SendEmail(communication=communication)
-
-
-class IntegrationsQuery(graphene.ObjectType):
-    """Integration reads."""
-
-    integrations = graphene.List(
-        graphene.NonNull(IntegrationType), required=True, description="The caller's connected accounts."
-    )
-    google_auth_url = graphene.String(required=True, description="Consent URL for connecting Gmail.")
-    microsoft_auth_url = graphene.String(required=True, description="Consent URL for connecting Outlook.")
-
-    @login_required
-    def resolve_integrations(self, info):
-        """Returns the caller's connected accounts."""
-        return Integration.objects.owned_by(current_user(info))
-
-    @login_required
-    def resolve_google_auth_url(self, info) -> str:
-        """Returns the Google consent URL for the caller."""
-        return IntegrationService().google_auth_url(user_id=current_user(info).pk)
-
-    @login_required
-    def resolve_microsoft_auth_url(self, info) -> str:
-        """Returns the Microsoft consent URL for the caller."""
-        return IntegrationService().microsoft_auth_url(user_id=current_user(info).pk)
 
 
 class IntegrationsMutation(graphene.ObjectType):

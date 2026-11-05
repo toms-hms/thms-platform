@@ -1,4 +1,4 @@
-"""GraphQL surface for the audit log.
+"""GraphQL reads for the audit log.
 
 django-auditlog records every create, update and delete on the registered
 domain models. The log is admin-only: it names who changed what, and when.

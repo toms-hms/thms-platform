@@ -34,7 +34,8 @@ core/          shared plumbing: base querysets/managers, permission + storage se
   utils/         <topic>_utils.py — pure helper functions
   factories/     <model>_factory.py — test factories
   types.py       GraphQL object types
-  schema.py      GraphQL queries and mutations
+  queries.py     GraphQL reads (the app's Query class)
+  mutations.py   GraphQL writes (one Mutation per write, plus the app's Mutation class)
   tests/         queryset, manager, service and schema tests
 ```
 

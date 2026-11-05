@@ -31,7 +31,8 @@ apps/api/<app>/
     __init__.py               re-exports every factory: `from jobs.factories import JobFactory`
     <model_name>_factory.py   one factory module per model
   types.py                    GraphQL object types
-  schema.py                   GraphQL queries and mutations, each with an access decorator
+  queries.py                  GraphQL reads: the app's Query class, each resolver with an access decorator
+  mutations.py                GraphQL writes: one Mutation class per write, then the app's Mutation class
   apps.py                     AppConfig, including audit-log registration
   migrations/
   tests/
@@ -48,8 +49,8 @@ apps/api/<app>/
 
 | Layer | May call | Must not |
 | --- | --- | --- |
-| `schema.py` queries, `types.py` fields | managers and querysets (reads), `current_user`, access decorators | clients |
-| `schema.py` mutations, `views.py` | services, `current_user`, access decorators | managers for writes, clients |
+| `queries.py`, `types.py` fields | managers and querysets (reads), `current_user`, access decorators | clients |
+| `mutations.py`, `views.py` | services, `current_user`, access decorators | managers for writes, clients |
 | services | other services and clients (via `__init__`), managers and querysets of any app, utils | vendor SDKs directly, access checks |
 | clients | their vendor's SDK / HTTP API | the database, services, business rules |
 | managers / querysets | their own queryset; other models inside methods | business rules, state transitions, orchestration across models |
@@ -70,7 +71,8 @@ resolver chains `visible_to(...).filter_*()` itself. A mutation always calls a s
 | `utils/<topic>_utils.py` | Pure functions and constants | I/O of any kind |
 | `factories/<model>_factory.py` | One `DjangoModelFactory` (plus its variants, e.g. `AdminFactory`) | Anything used outside tests |
 | `types.py` | `DjangoObjectType`s and payload `ObjectType`s | Access checks, writes |
-| `schema.py` | Arguments, access decorators, reads via managers, writes via services | Types, business logic |
+| `queries.py` | Fields, arguments, access decorators, reads via managers and querysets | Types, writes, business logic |
+| `mutations.py` | Arguments, access decorators, writes via services | Types, business logic, direct manager writes |
 
 See `queryset.md`, `manager.md`, `service.md`, `client.md`, `utils.md`, `factory.md`,
 `types.md` and `schema.md` for each file type.

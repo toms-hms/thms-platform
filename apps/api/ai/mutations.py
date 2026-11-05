@@ -1,4 +1,4 @@
-"""GraphQL surface for job images and AI generations.
+"""GraphQL writes for job images, AI generations, the diagnostic assistant and email drafts.
 
 Image uploads are a three-step flow: request a presigned URL, PUT the bytes
 straight to storage, then confirm so the row is written.
@@ -6,7 +6,7 @@ straight to storage, then confirm so the row is written.
 
 import graphene
 
-from ai.models import AIGeneration, JobImage
+from ai.models import JobImage
 from ai.services.diagnose_service import DiagnoseService
 from ai.services.email_draft_service import EmailDraftService
 from ai.services.image_generation_service import ImageGenerationService
@@ -19,7 +19,7 @@ from ai.types import (
     JobImageType,
     UploadUrlType,
 )
-from core.graphql import authorize, current_user, login_required
+from core.graphql import authorize, current_user
 from core.services.permission_service import Permission
 from jobs.models import Job
 
@@ -185,33 +185,6 @@ class DraftEmail(graphene.Mutation):
             custom_instructions=custom_instructions,
         )
         return DraftEmail(drafts=[EmailDraftType(**draft) for draft in drafts])
-
-
-class AiQuery(graphene.ObjectType):
-    """Image and generation reads."""
-
-    job_images = graphene.List(
-        graphene.NonNull(JobImageType),
-        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
-        required=True,
-    )
-    ai_generations = graphene.List(
-        graphene.NonNull(AIGenerationType),
-        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
-        required=True,
-    )
-
-    @login_required
-    def resolve_job_images(self, info, job_ids: list[str]):
-        """Returns the images on the jobs the caller can see."""
-        return JobImage.objects.filter_job_ids(job_ids).visible_to(current_user(info), Permission.JOBS_VIEW)
-
-    @login_required
-    def resolve_ai_generations(self, info, job_ids: list[str]):
-        """Returns the generations recorded against the jobs the caller can see."""
-        return AIGeneration.objects.filter_job_ids(job_ids).visible_to(
-            current_user(info), Permission.JOBS_VIEW
-        )
 
 
 class AiMutation(graphene.ObjectType):

@@ -1,4 +1,4 @@
-"""GraphQL surface for the user's contractor rolodex."""
+"""GraphQL writes for the user's contractor rolodex."""
 
 import graphene
 
@@ -49,19 +49,6 @@ class DeleteUserContractor(graphene.Mutation):
         """Deletes the rolodex entry."""
         UserContractorService().remove(user_contractor_id=user_contractor_id)
         return DeleteUserContractor(success=True)
-
-
-class UserContractorsQuery(graphene.ObjectType):
-    """Rolodex reads."""
-
-    user_contractors = graphene.List(
-        graphene.NonNull(UserContractorType), required=True, description="The caller's saved contractors."
-    )
-
-    @login_required
-    def resolve_user_contractors(self, info):
-        """Returns the caller's rolodex entries."""
-        return UserContractor.objects.list_owned_by(current_user(info))
 
 
 class UserContractorsMutation(graphene.ObjectType):

@@ -1,11 +1,22 @@
 ---
 name: api-schema
-description: Guide for <app>/schema.py — queries, mutations, input enums, auth decorators and error codes. Object types live in types.py (see types.md).
+description: Guide for <app>/queries.py and <app>/mutations.py — the GraphQL read and write surface, input enums, auth decorators and error codes. Object types live in types.py (see types.md).
 ---
 
 # API Schema
 
-Each app's `schema.py` holds its mutations and contributes a `Query` and a `Mutation` class; `config/schema.py` combines them. There are no routes and no request-validation schemas — the schema is the contract, and it validates input.
+Each app splits its GraphQL surface in two:
+
+```
+<app>/
+  queries.py     class JobsQuery(graphene.ObjectType): fields + resolve_* methods
+  mutations.py   one graphene.Mutation per write, then class JobsMutation listing them
+```
+
+`config/schema.py` combines every app's `Query` and `Mutation` class; it never lists
+individual operations. The full surface is readable in one place in the generated
+`apps/api/schema.graphql`. There are no routes and no request-validation schemas — the
+schema is the contract, and it validates input.
 
 ## Types
 
@@ -49,7 +60,7 @@ class CreateJob(graphene.Mutation):
 - **A mutation always calls a service** (`XService().method(...)`) and never writes through a manager itself. It declares access with a decorator, then delegates.
 - **Pass `**data` through untouched for updates.** Graphene leaves omitted arguments out, so the service sees them as `UNSET`, and an explicit `null` arrives as `None` (see `service.md`).
 - **Queries read through a manager composition or a queryset chain directly.** There is no service in between.
-- Never import a client in `schema.py`.
+- Never import a client in `queries.py` or `mutations.py`.
 
 ## Auth
 

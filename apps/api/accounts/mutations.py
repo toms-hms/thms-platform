@@ -1,4 +1,4 @@
-"""GraphQL surface for accounts: registration, login, token refresh and `me`."""
+"""GraphQL writes for accounts: registration, login, token refresh and logout."""
 
 import graphene
 
@@ -67,17 +67,6 @@ class Logout(graphene.Mutation):
         """Clears the stored refresh-token hash for the authenticated user."""
         AuthService().logout(user=current_user(info))
         return Logout(success=True)
-
-
-class AccountsQuery(graphene.ObjectType):
-    """Account reads."""
-
-    me = graphene.Field(UserType, description="The authenticated user.")
-
-    @login_required
-    def resolve_me(self, info):
-        """Returns the authenticated user's own record."""
-        return current_user(info)
 
 
 class AccountsMutation(graphene.ObjectType):

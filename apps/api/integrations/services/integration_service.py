@@ -17,23 +17,23 @@ class IntegrationService:
     def __init__(
         self, *, google: GoogleClient | None = None, microsoft: MicrosoftClient | None = None
     ) -> None:
-        self.google = google or GoogleClient()
-        self.microsoft = microsoft or MicrosoftClient()
+        self._google = google or GoogleClient()
+        self._microsoft = microsoft or MicrosoftClient()
 
     def google_auth_url(self, *, user_id: str) -> str:
         """Returns the Google consent URL for the user."""
-        return self.google.auth_url(state=str(user_id))
+        return self._google.auth_url(state=str(user_id))
 
     def microsoft_auth_url(self, *, user_id: str) -> str:
         """Returns the Microsoft consent URL for the user."""
-        return self.microsoft.auth_url(state=str(user_id))
+        return self._microsoft.auth_url(state=str(user_id))
 
     def connect_google(self, *, user_id: str, code: str) -> Integration:
         """Exchanges the authorization code and stores the user's Gmail connection."""
         return self._store_email_connection(
             user_id=user_id,
             provider=IntegrationProvider.GOOGLE,
-            connection=self.google.exchange_code(code=code),
+            connection=self._google.exchange_code(code=code),
         )
 
     def connect_microsoft(self, *, user_id: str, code: str) -> Integration:
@@ -41,7 +41,7 @@ class IntegrationService:
         return self._store_email_connection(
             user_id=user_id,
             provider=IntegrationProvider.MICROSOFT,
-            connection=self.microsoft.exchange_code(code=code),
+            connection=self._microsoft.exchange_code(code=code),
         )
 
     def _store_email_connection(

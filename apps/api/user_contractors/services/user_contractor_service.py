@@ -10,7 +10,7 @@ class UserContractorService:
     """Adds contractors to, and removes them from, a user's rolodex."""
 
     def __init__(self, *, contractors: ContractorService | None = None) -> None:
-        self.contractors = contractors or ContractorService()
+        self._contractors = contractors or ContractorService()
 
     def add(
         self,
@@ -33,7 +33,7 @@ class UserContractorService:
         if contractor_id:
             Contractor.objects.get_or_404(pk=contractor_id)
         elif name:
-            contractor_id = self.contractors.create(
+            contractor_id = self._contractors.create(
                 name=name,
                 categories=categories or [],
                 is_global=False,

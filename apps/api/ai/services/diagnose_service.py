@@ -11,12 +11,12 @@ class DiagnoseService:
     """Runs the assistant's diagnostic conversation and persists the transcript on the job."""
 
     def __init__(self, *, openai: OpenAIClient | None = None) -> None:
-        self.openai = openai or OpenAIClient()
+        self._openai = openai or OpenAIClient()
 
     def _ask(self, *, job: Job, history: list[dict[str, Any]]) -> Any:
         """Returns the assistant's next message given the transcript so far."""
         context = job_context(title=job.title, category=job.category, description=job.description)
-        return self.openai.chat(
+        return self._openai.chat(
             model=DIAGNOSE_MODEL,
             messages=[
                 {"role": "system", "content": f"{system_prompt_for(job.intent)}\n\n{context}"},

@@ -43,7 +43,7 @@ class JWTAuthenticationMiddleware:
     """Attaches `request.user` from the `Authorization: Bearer <token>` header."""
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]):
-        self.get_response = get_response
+        self._get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """Resolves the bearer token lazily and hands the request on to the next middleware."""
@@ -53,4 +53,4 @@ class JWTAuthenticationMiddleware:
             request.user = SimpleLazyObject(lambda: _load_user(token))
         else:
             request.user = AnonymousUser()
-        return self.get_response(request)
+        return self._get_response(request)

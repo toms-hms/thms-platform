@@ -14,7 +14,6 @@ class AppError(Exception):
 
     def __init__(self, message: str | None = None):
         super().__init__(message or self.default_message)
-        self.message = message or self.default_message
 
 
 class NotFoundError(AppError):

@@ -49,7 +49,7 @@ class ThmsGraphQLView(GraphQLView):
                 error = RateLimitError()
                 return JsonResponse(
                     {
-                        "errors": [{"message": error.message, "extensions": {"code": error.code}}],
+                        "errors": [{"message": str(error), "extensions": {"code": error.code}}],
                         "data": None,
                     },
                     status=429,

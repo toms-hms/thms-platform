@@ -13,8 +13,8 @@ class ImageGenerationService:
     """Generates an image, stores it as a job image and records the generation."""
 
     def __init__(self, *, openai: OpenAIClient | None = None, storage: StorageService | None = None) -> None:
-        self.openai = openai or OpenAIClient()
-        self.storage = storage or StorageService()
+        self._openai = openai or OpenAIClient()
+        self._storage = storage or StorageService()
 
     def generate(
         self,
@@ -33,7 +33,7 @@ class ImageGenerationService:
 
         generation = AIGeneration.objects.create(
             job_id=job_id,
-            original_image_url=self.storage.download_url(key=source_image.storage_key),
+            original_image_url=self._storage.download_url(key=source_image.storage_key),
             prompt=prompt,
             provider=provider,
             status=AIGenerationStatus.PROCESSING,
@@ -41,9 +41,9 @@ class ImageGenerationService:
             created_by_id=user_id,
         )
         try:
-            image_bytes = self.openai.generate_image(model=IMAGE_MODEL, prompt=visualisation_prompt(prompt))
-            key = self.storage.job_file_key(job_id=job_id, folder="generated", extension="png")
-            self.storage.put(key=key, body=image_bytes, content_type="image/png")
+            image_bytes = self._openai.generate_image(model=IMAGE_MODEL, prompt=visualisation_prompt(prompt))
+            key = self._storage.job_file_key(job_id=job_id, folder="generated", extension="png")
+            self._storage.put(key=key, body=image_bytes, content_type="image/png")
             JobImage.objects.create(
                 job_id=job_id,
                 storage_key=key,
@@ -54,7 +54,7 @@ class ImageGenerationService:
             )
             return AIGeneration.objects.apply_updates(
                 generation,
-                generated_image_url=self.storage.download_url(key=key),
+                generated_image_url=self._storage.download_url(key=key),
                 status=AIGenerationStatus.COMPLETED,
             )
         except Exception:

@@ -15,8 +15,8 @@ class EmailService:
     def __init__(
         self, *, google: GoogleClient | None = None, communications: CommunicationService | None = None
     ) -> None:
-        self.google = google or GoogleClient()
-        self.communications = communications or CommunicationService()
+        self._google = google or GoogleClient()
+        self._communications = communications or CommunicationService()
 
     def send(
         self,
@@ -43,13 +43,13 @@ class EmailService:
         if not integration:
             raise NotFoundError("Integration")
 
-        sent = self.google.send_message(
+        sent = self._google.send_message(
             access_token=decrypt(integration.access_token_enc),
             refresh_token=decrypt(integration.refresh_token_enc) if integration.refresh_token_enc else None,
             scopes=list(integration.scopes or []),
             raw_message=build_raw_message(to=to, subject=subject, body_text=body_text, body_html=body_html),
         )
-        return self.communications.record(
+        return self._communications.record(
             direction=CommunicationDirection.SENT,
             job_id=job_id,
             contractor_id=contractor_id,

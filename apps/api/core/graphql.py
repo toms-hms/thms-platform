@@ -108,7 +108,7 @@ def owner_required(*, resource: type, arg: str) -> Callable[[Callable], Callable
 def to_graphql_error(error: Exception) -> GraphQLError:
     """Returns a GraphQLError carrying the domain error's stable `extensions.code`."""
     if isinstance(error, AppError):
-        return GraphQLError(error.message, extensions={"code": error.code})
+        return GraphQLError(str(error), extensions={"code": error.code})
     if isinstance(error, DjangoValidationError):
         # A malformed id (not a UUID) that reached a query unguarded.
         return GraphQLError("Invalid input", extensions={"code": "BAD_REQUEST"})

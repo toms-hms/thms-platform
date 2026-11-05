@@ -15,7 +15,7 @@ class StorageService:
     """Stores and serves files through S3-compatible storage."""
 
     def __init__(self, *, s3: S3Client | None = None) -> None:
-        self.s3 = s3 or S3Client()
+        self._s3 = s3 or S3Client()
 
     def job_file_key(self, *, job_id: str, folder: str, extension: str) -> str:
         """Returns a fresh, collision-free key for a file belonging to a job."""
@@ -23,18 +23,18 @@ class StorageService:
 
     def upload_url(self, *, key: str, content_type: str) -> str:
         """Returns a presigned PUT URL for writing the object at key."""
-        return self.s3.presigned_put(
+        return self._s3.presigned_put(
             key=key, content_type=content_type, expires_in=settings.UPLOAD_URL_EXPIRES_IN
         )
 
     def download_url(self, *, key: str) -> str:
         """Returns a presigned GET URL for reading the object at key."""
-        return self.s3.presigned_get(key=key, expires_in=settings.DOWNLOAD_URL_EXPIRES_IN)
+        return self._s3.presigned_get(key=key, expires_in=settings.DOWNLOAD_URL_EXPIRES_IN)
 
     def put(self, *, key: str, body: bytes, content_type: str) -> None:
         """Writes bytes to storage under key."""
-        self.s3.put_object(key=key, body=body, content_type=content_type)
+        self._s3.put_object(key=key, body=body, content_type=content_type)
 
     def delete(self, *, key: str) -> None:
         """Removes the object at key."""
-        self.s3.delete_object(key=key)
+        self._s3.delete_object(key=key)

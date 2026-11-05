@@ -58,6 +58,7 @@ See `.ai/recipes/api/queryset.md` and `.ai/recipes/api/manager.md`.
 - **Business logic lives in services:** classes in `<app>/services/<domain>_service.py`. Every mutation calls one; queries read through managers and querysets directly.
 - **Every vendor SDK is wrapped in a client:** a class in `<app>/clients/<vendor>_client.py`. Only that file imports the SDK, and only services use clients.
 - Services take their clients and other services as keyword-only `__init__` arguments that default to the real ones. Tests pass fakes there instead of patching module paths.
+- **Instance attributes are private** (`self._sdk`, `self._openai`) in services, clients and other plain classes. If a caller needs a value, add a method. This doesn't apply to model fields, Graphene types or test-case fixtures.
 - **Updates use `UNSET`:** optional fields default to `UNSET`, the method ends with `Model.objects.apply_updates(...)`, and `None` means "clear". Never use a `setattr` loop over a dict.
 - **Pure helpers are functions** in `<app>/utils/<topic>_utils.py`: no database, no network.
 - The role is in every file name: `model.py`, `queryset.py`, `manager.py`, `*_service.py`, `*_client.py`, `*_utils.py`, `*_factory.py`.

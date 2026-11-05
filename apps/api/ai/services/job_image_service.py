@@ -8,14 +8,14 @@ class JobImageService:
     """Uploads and removes the images attached to a job."""
 
     def __init__(self, *, storage: StorageService | None = None) -> None:
-        self.storage = storage or StorageService()
+        self._storage = storage or StorageService()
 
     def request_upload(self, *, job_id: str, file_name: str, content_type: str, kind: str) -> dict[str, str]:
         """Returns a presigned upload URL and the key the client must confirm with."""
         extension = file_name.rsplit(".", 1)[-1] if "." in file_name else "bin"
-        key = self.storage.job_file_key(job_id=job_id, folder=kind, extension=extension)
+        key = self._storage.job_file_key(job_id=job_id, folder=kind, extension=extension)
         return {
-            "upload_url": self.storage.upload_url(key=key, content_type=content_type),
+            "upload_url": self._storage.upload_url(key=key, content_type=content_type),
             "key": key,
             "kind": kind,
         }
@@ -35,5 +35,5 @@ class JobImageService:
     def delete(self, *, image_id: str) -> None:
         """Deletes the image row and its stored object. The caller has already checked access."""
         image = JobImage.objects.get_or_404(pk=image_id)
-        self.storage.delete(key=image.storage_key)
+        self._storage.delete(key=image.storage_key)
         image.delete()

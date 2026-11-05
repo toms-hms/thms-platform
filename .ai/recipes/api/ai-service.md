@@ -16,7 +16,7 @@ class DiagnoseService:
     """Runs the assistant's diagnostic conversation and persists the transcript on the job."""
 
     def __init__(self, *, openai: OpenAIClient | None = None) -> None:
-        self.openai = openai or OpenAIClient()
+        self._openai = openai or OpenAIClient()
 ```
 
 `OpenAIClient` creates the SDK on first use, so a missing key is a `BAD_REQUEST` to the
@@ -28,7 +28,7 @@ one caller that needed it, not an import-time crash. A per-user key is
 The assistant is given tools and required to use one. A turn may carry several tool calls, so read them all:
 
 ```python
-message = self.openai.chat(
+message = self._openai.chat(
     model=DIAGNOSE_MODEL,
     messages=[{"role": "system", "content": f"{system_prompt_for(job.intent)}\n\n{context}"}, *history],
     tools=tools_for(job.intent),
@@ -56,7 +56,7 @@ system_prompt_for(intent)  # prompt_utils: SYSTEM_PROMPTS.get(intent, SYSTEM_PRO
 For a structured result with no tool semantics, ask for JSON directly:
 
 ```python
-message = self.openai.chat(model=EMAIL_MODEL, messages=[...], response_format={"type": "json_object"})
+message = self._openai.chat(model=EMAIL_MODEL, messages=[...], response_format={"type": "json_object"})
 parsed = json.loads(message.content)
 ```
 

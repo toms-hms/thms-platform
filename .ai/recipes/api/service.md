@@ -75,13 +75,14 @@ class ImageGenerationService:
     """Generates an image, stores it as a job image and records the generation."""
 
     def __init__(self, *, openai: OpenAIClient | None = None, storage: StorageService | None = None) -> None:
-        self.openai = openai or OpenAIClient()
-        self.storage = storage or StorageService()
+        self._openai = openai or OpenAIClient()
+        self._storage = storage or StorageService()
 ```
 
 - Production code constructs services with no arguments: `ImageGenerationService().generate(...)`.
 - Tests pass fakes: `ImageGenerationService(openai=MagicMock(spec=OpenAIClient))`.
-- Constructing a service must be cheap. Clients create their SDK object on first use (see `client.md`).
+- Collaborators are stored as private attributes (`self._openai`), never public ones.
+- Constructing a service builds its clients, and a client checks its configuration as it is built (see `client.md`). Construct services inside the resolver that uses them, never at module level.
 - Managers, querysets and utils are **not** injected. Call them directly.
 
 ## What a service may call

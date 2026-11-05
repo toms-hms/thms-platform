@@ -13,7 +13,7 @@ class EmailDraftService:
     """Drafts one outreach email per contractor and records each generation against the job."""
 
     def __init__(self, *, openai: OpenAIClient | None = None) -> None:
-        self.openai = openai or OpenAIClient()
+        self._openai = openai or OpenAIClient()
 
     def draft(
         self,
@@ -39,7 +39,7 @@ class EmailDraftService:
                 state=job.home.state,
                 custom_instructions=custom_instructions,
             )
-            message = self.openai.chat(
+            message = self._openai.chat(
                 model=EMAIL_MODEL,
                 messages=[
                     {"role": "system", "content": EMAIL_SYSTEM_PROMPT.format(tone=tone)},

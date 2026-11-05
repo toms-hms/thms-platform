@@ -114,3 +114,28 @@ class HomeAuthorizationTests(GraphQLTestCase):
         """A home that does not exist is indistinguishable from one the caller cannot see."""
         body = self.execute(HOME, {"homeId": "does-not-exist"}, token=self.token_for(self.owner))
         self.assert_error_code(body, "FORBIDDEN")
+
+
+HOME_MEMBERS = "query($homeIds: [ID!]!) { homeMembers(homeIds: $homeIds) { role user { email } } }"
+
+
+class HomeMembersQueryTests(GraphQLTestCase):
+    """query homeMembers"""
+
+    def setUp(self):
+        """Creates an owner with one other member, and a stranger."""
+        super().setUp()
+        self.owner, self.member, self.other = UserFactory(), UserFactory(), UserFactory()
+        self.home = HomeFactory(owner=self.owner)
+        UserHome.objects.upsert(user_id=self.member.pk, home_id=self.home.pk, role=HomeRole.MEMBER)
+
+    def test_lists_every_member_of_the_home(self):
+        """Every membership of the requested home comes back."""
+        body = self.execute(HOME_MEMBERS, {"homeIds": [self.home.pk]}, token=self.token_for(self.owner))
+        emails = {m["user"]["email"] for m in self.assert_ok(body)["homeMembers"]}
+        self.assertEqual(emails, {self.owner.email, self.member.email})
+
+    def test_a_stranger_sees_no_members(self):
+        """Someone outside the home gets an empty list."""
+        body = self.execute(HOME_MEMBERS, {"homeIds": [self.home.pk]}, token=self.token_for(self.other))
+        self.assertEqual(self.assert_ok(body)["homeMembers"], [])

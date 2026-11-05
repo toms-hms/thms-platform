@@ -7,7 +7,7 @@ from jobs.factories import JobFactory
 from quotes.factories import QuoteFactory
 from quotes.models import Quote
 
-QUOTES = "query($jobId: ID!) { quotes(jobId: $jobId) { id amount status contractor { id } } }"
+QUOTES = "query($jobIds: [ID!]!) { quotes(jobIds: $jobIds) { id amount status contractor { id } } }"
 CREATE = """
 mutation($jobId: ID!, $contractorId: ID!, $amount: Float!) {
   createQuote(jobId: $jobId, contractorId: $contractorId, amount: $amount) { quote { id amount status } }
@@ -39,13 +39,15 @@ class QuotesTests(GraphQLTestCase):
 
     def test_lists_quotes_for_a_visible_job(self):
         """The owner sees the quotes on their job."""
-        data = self.assert_ok(self.execute(QUOTES, {"jobId": self.job.pk}, token=self.token_for(self.user)))
+        data = self.assert_ok(
+            self.execute(QUOTES, {"jobIds": [self.job.pk]}, token=self.token_for(self.user))
+        )
         self.assertEqual(data["quotes"][0]["id"], str(self.quote.pk))
 
-    def test_is_forbidden_for_a_stranger(self):
-        """Someone outside the home cannot read the job's quotes."""
-        body = self.execute(QUOTES, {"jobId": self.job.pk}, token=self.token_for(self.other))
-        self.assert_error_code(body, "FORBIDDEN")
+    def test_a_stranger_sees_no_quotes(self):
+        """Someone outside the home gets an empty list for the job's quotes."""
+        body = self.execute(QUOTES, {"jobIds": [self.job.pk]}, token=self.token_for(self.other))
+        self.assertEqual(self.assert_ok(body)["quotes"], [])
 
     def test_creates_a_quote(self):
         """A quote is recorded against the job in DRAFT."""

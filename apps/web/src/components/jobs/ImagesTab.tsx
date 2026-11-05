@@ -26,7 +26,7 @@ export default function ImagesTab({ jobId }: Props) {
   async function load() {
     setLoading(true);
     try {
-      const res = await listImages({ jobId });
+      const res = await listImages({ jobIds: [jobId] });
       setImagesList(res.data);
     } catch {}
     setLoading(false);

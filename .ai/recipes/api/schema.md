@@ -84,4 +84,4 @@ Anything else is logged server-side and returned as `INTERNAL_ERROR` with a gene
 
 ## Naming across the boundary
 
-List filters that can hold several values are plural arrays: `tradeCategories`, `zipCodes`. A client filtering by one category still sends `tradeCategories: [PLUMBING]`. Do not add singular aliases.
+Every list-query argument is a plural array: `homeIds`, `jobIds`, `statuses`, `tradeCategories`, `zipCodes`. That includes the parent of a nested list (`quotes(jobIds: [ID!]!)`). A client filtering by one category still sends `tradeCategories: [PLUMBING]`. Do not add singular aliases. Single-object reads and mutations take one id.

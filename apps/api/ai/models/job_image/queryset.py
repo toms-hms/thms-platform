@@ -16,7 +16,7 @@ class JobImageQuerySet(HomeScopedQuerySet):
             return self
         return self.filter(job_id__in=job_ids)
 
-    def filter_kinds(self, kinds: list[str] | None) -> Self:
+    def filter_job_image_kinds(self, kinds: list[str] | None) -> Self:
         """Returns images of any of the kinds."""
         if kinds is None:
             return self

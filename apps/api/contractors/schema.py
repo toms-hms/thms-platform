@@ -95,7 +95,9 @@ class ContractorsQuery(graphene.ObjectType):
     )
     contractor = graphene.Field(ContractorType, contractor_id=graphene.ID(required=True))
     contractor_job_history = graphene.List(
-        graphene.NonNull(ContractorJobHistoryType), contractor_id=graphene.ID(required=True), required=True
+        graphene.NonNull(ContractorJobHistoryType),
+        contractor_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
+        required=True,
     )
 
     @login_required
@@ -111,11 +113,11 @@ class ContractorsQuery(graphene.ObjectType):
         return Contractor.objects.get_or_404(pk=contractor_id)
 
     @login_required
-    def resolve_contractor_job_history(self, info, contractor_id: str):
-        """Returns the contractor's job history, most recent first."""
+    def resolve_contractor_job_history(self, info, contractor_ids: list[str]):
+        """Returns the contractors' job history, most recent first."""
         return [
             ContractorJobHistoryType(**row)
-            for row in Contractor.objects.list_job_history(contractor_id=contractor_id)
+            for row in Contractor.objects.list_job_history(contractor_ids=contractor_ids)
         ]
 
 

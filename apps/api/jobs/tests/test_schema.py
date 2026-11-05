@@ -20,7 +20,7 @@ query($jobId: ID!) {
   }
 }
 """
-JOBS = "query($homeId: ID) { jobs(homeId: $homeId) { id title } }"
+JOBS = "query($homeIds: [ID!]) { jobs(homeIds: $homeIds) { id title } }"
 CREATE_JOB = """
 mutation($homeId: ID!, $title: String!, $category: TradeCategory!) {
   createJob(homeId: $homeId, title: $title, category: $category) { job { id title status } }
@@ -64,11 +64,12 @@ class JobQueryTests(GraphQLTestCase):
         """Reading a job without a token is UNAUTHORIZED."""
         self.assert_error_code(self.execute(JOB, {"jobId": self.job.pk}), "UNAUTHORIZED")
 
-    def test_listing_by_a_home_the_caller_cannot_see_is_forbidden(self):
-        """Filtering by someone else's home is refused."""
+    def test_listing_by_a_home_the_caller_cannot_see_is_empty(self):
+        """Filtering by someone else's home narrows to nothing; it never widens what the caller sees."""
         stranger_home = HomeFactory(owner=self.other)
-        body = self.execute(JOBS, {"homeId": stranger_home.pk}, token=self.token_for(self.user))
-        self.assert_error_code(body, "FORBIDDEN")
+        JobFactory(home=stranger_home, created_by=self.other)
+        body = self.execute(JOBS, {"homeIds": [stranger_home.pk]}, token=self.token_for(self.user))
+        self.assertEqual(self.assert_ok(body)["jobs"], [])
 
 
 class CreateJobTests(GraphQLTestCase):

@@ -3,7 +3,7 @@
 import graphene
 
 from core.enums import JobContractorStatusEnum, JobIntentEnum, JobStatusEnum, TradeCategoryEnum
-from core.graphql import authorize, current_user
+from core.graphql import authorize, current_user, login_required
 from core.services.permission_service import Permission
 from homes.models import Home
 from jobs.models import Job, JobContractor
@@ -131,24 +131,26 @@ class JobsQuery(graphene.ObjectType):
 
     jobs = graphene.List(
         graphene.NonNull(JobType),
-        home_id=graphene.ID(),
-        status=JobStatusEnum(),
-        category=TradeCategoryEnum(),
+        home_ids=graphene.List(graphene.NonNull(graphene.ID)),
+        statuses=graphene.List(graphene.NonNull(JobStatusEnum)),
+        trade_categories=graphene.List(graphene.NonNull(TradeCategoryEnum)),
         required=True,
     )
     job = graphene.Field(JobType, job_id=graphene.ID(required=True))
     job_contractors = graphene.List(
-        graphene.NonNull(JobContractorType), job_id=graphene.ID(required=True), required=True
+        graphene.NonNull(JobContractorType),
+        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
+        required=True,
     )
 
-    @authorize(Permission.JOBS_VIEW, resource=Home, arg="home_id", optional=True)
-    def resolve_jobs(self, info, home_id=None, status=None, category=None):
-        """Returns the jobs the caller can see, narrowed by home, status and category."""
+    @login_required
+    def resolve_jobs(self, info, home_ids=None, statuses=None, trade_categories=None):
+        """Returns the jobs the caller can see, narrowed by homes, statuses and trade categories."""
         return (
             Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
-            .filter_home_ids([home_id] if home_id else None)
-            .filter_statuses([status] if status else None)
-            .filter_trade_categories([category] if category else None)
+            .filter_home_ids(home_ids)
+            .filter_statuses(statuses)
+            .filter_trade_categories(trade_categories)
         )
 
     @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
@@ -156,10 +158,14 @@ class JobsQuery(graphene.ObjectType):
         """Returns one job."""
         return Job.objects.get_or_404(pk=job_id)
 
-    @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
-    def resolve_job_contractors(self, info, job_id: str):
-        """Returns the contractor assignments on a job."""
-        return JobContractor.objects.list_for_job(job_id)
+    @login_required
+    def resolve_job_contractors(self, info, job_ids: list[str]):
+        """Returns the contractor assignments on the jobs the caller can see."""
+        return (
+            JobContractor.objects.filter_job_ids(job_ids)
+            .select_related("contractor")
+            .visible_to(current_user(info), Permission.JOBS_VIEW)
+        )
 
 
 class JobsMutation(graphene.ObjectType):

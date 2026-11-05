@@ -27,6 +27,13 @@ class BaseQuerySet(models.QuerySet):
             return self
         return self.filter(pk__in=ids)
 
+    def find(self, **kwargs: Any):
+        """Returns the single row matching the filters, or None when absent."""
+        try:
+            return self.get(**kwargs)
+        except (self.model.DoesNotExist, ValidationError):
+            return None
+
     def get_or_404(self, **kwargs: Any):
         """Returns the single row matching the filters, raising NotFoundError when absent."""
         try:

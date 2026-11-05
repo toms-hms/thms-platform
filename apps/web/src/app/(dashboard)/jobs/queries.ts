@@ -9,17 +9,17 @@ export async function listHomes(): Promise<{ data: HomeDto[] }> {
   return { data: data.homes };
 }
 
-/** Lists jobs, optionally filtered by homeId, status, or category. */
+/** Lists jobs, optionally filtered by homes, statuses, or trade categories. */
 export async function listJobs(params?: {
-  homeId?: string;
-  status?: string;
-  category?: string;
+  homeIds?: string[];
+  statuses?: string[];
+  tradeCategories?: string[];
 }): Promise<{ data: JobDto[] }> {
   const data = await gqlRequest<{ jobs: JobDto[] }>(
-    `query Jobs($homeId: ID, $status: JobStatus, $category: TradeCategory) {
-       jobs(homeId: $homeId, status: $status, category: $category) { ${JOB_FIELDS} }
+    `query Jobs($homeIds: [ID!], $statuses: [JobStatus!], $tradeCategories: [TradeCategory!]) {
+       jobs(homeIds: $homeIds, statuses: $statuses, tradeCategories: $tradeCategories) { ${JOB_FIELDS} }
      }`,
-    { homeId: params?.homeId, status: params?.status, category: params?.category }
+    params
   );
   return { data: data.jobs };
 }

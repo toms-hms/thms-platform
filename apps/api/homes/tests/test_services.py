@@ -20,7 +20,7 @@ class CreateHomeTests(TestCase):
         """The creator becomes the home's owner."""
         user = UserFactory()
         home = HomeService().create(user_id=user.pk, **HOME_INPUT)
-        membership = UserHome.objects.find_membership(user_id=user.pk, home_id=home.pk)
+        membership = UserHome.objects.find(user_id=user.pk, home_id=home.pk)
         self.assertEqual(membership.role, HomeRole.OWNER)
 
     def test_full_address_renders_on_one_line(self):
@@ -63,7 +63,7 @@ class MembershipServiceTests(TestCase):
         owner, invitee = UserFactory(), UserFactory()
         home = HomeFactory(owner=owner)
         HomeService().add_member(home_id=home.pk, email=invitee.email, role=HomeRole.MEMBER)
-        self.assertIsNotNone(UserHome.objects.find_membership(user_id=invitee.pk, home_id=home.pk))
+        self.assertIsNotNone(UserHome.objects.find(user_id=invitee.pk, home_id=home.pk))
 
     def test_unknown_email_is_not_found(self):
         """Adding an email with no account raises NotFoundError."""
@@ -77,7 +77,7 @@ class MembershipServiceTests(TestCase):
         home = HomeFactory(owner=owner)
         UserHome.objects.upsert(user_id=member.pk, home_id=home.pk, role=HomeRole.MEMBER)
         HomeService().remove_member(home_id=home.pk, user_id=member.pk)
-        self.assertIsNone(UserHome.objects.find_membership(user_id=member.pk, home_id=home.pk))
+        self.assertIsNone(UserHome.objects.find(user_id=member.pk, home_id=home.pk))
 
     def test_changing_a_role_takes_effect_despite_the_cache(self):
         """Re-adding an owner as a member invalidates their cached OWNER role."""

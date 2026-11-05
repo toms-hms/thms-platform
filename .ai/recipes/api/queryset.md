@@ -23,13 +23,15 @@ other models **inside the method** (`from contractors.models import ContractorZi
 | --- | --- | --- |
 | `HomeScopedQuerySet` | Access comes from membership of a home (homes, jobs, quotes, …) | `filter_home_ids`, `home_id_for`, `visible_to(user, permission)` |
 | `UserOwnedQuerySet` | Each row belongs to one user (rolodex, integrations) | `owner_id_for`, `owned_by(user)` |
-| `BaseQuerySet` | Readable by every authenticated user (the contractor directory) | `filter_ids`, `get_or_404` |
+| `BaseQuerySet` | Readable by every authenticated user (the contractor directory) | `filter_ids`, `find`, `get_or_404` |
 
-All three include `filter_ids` and `get_or_404`.
+All three include `filter_ids`, `find` (the row or `None`) and `get_or_404` (the row or NOT_FOUND).
 
 A `HomeScopedQuerySet` subclass **must** set `home_id_path`, the lookup from the
 row to its home's id: `"id"` for Home, `"home_id"` for a direct FK, and
 `"job__home_id"` for a row that hangs off a job. `@authorize` and `visible_to` both use it.
+
+Filter names carry the domain, not just the column: `filter_job_image_kinds`, not `filter_kinds`.
 
 ## Filter methods
 

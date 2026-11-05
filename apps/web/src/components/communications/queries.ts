@@ -7,19 +7,19 @@ export const COMMUNICATION_FIELDS = `
   contractor { ${CONTRACTOR_FIELDS} }
 `;
 
-/** Lists communications filtered by job, contractor, review status, or direction. */
+/** Lists communications filtered by jobs, contractors, review status, or directions. */
 export async function listCommunications(params: {
-  jobId: string;
-  contractorId?: string;
+  jobIds: string[];
+  contractorIds?: string[];
   needsReview?: boolean;
-  direction?: string;
+  directions?: string[];
 }): Promise<{ data: CommunicationDto[] }> {
   const data = await gqlRequest<{ communications: CommunicationDto[] }>(
     `query Communications(
-       $jobId: ID!, $contractorId: ID, $needsReview: Boolean, $direction: CommunicationDirection
+       $jobIds: [ID!]!, $contractorIds: [ID!], $needsReview: Boolean, $directions: [CommunicationDirection!]
      ) {
        communications(
-         jobId: $jobId, contractorId: $contractorId, needsReview: $needsReview, direction: $direction
+         jobIds: $jobIds, contractorIds: $contractorIds, needsReview: $needsReview, directions: $directions
        ) { ${COMMUNICATION_FIELDS} }
      }`,
     params

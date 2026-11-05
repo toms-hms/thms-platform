@@ -1,6 +1,6 @@
 ---
 name: api-manager
-description: Guide for <app>/models/<model_name>/manager.py — composing queryset filters into named lookups (filter_contractors, list_for_job), writes, and methods that return values. Managers make no access decisions.
+description: Guide for <app>/models/<model_name>/manager.py — composing several queryset filters into one named lookup (filter_contractors, filter_communications), writes, and methods that return values. Managers make no access decisions.
 ---
 
 # API Manager
@@ -56,12 +56,15 @@ def filter_contractors(
         .filter_is_global(is_global)
         .search(search)
     )
-
-
-def list_for_job(self, job_id: str) -> QuoteQuerySet:
-    """Returns the quotes on a job with contractors preloaded."""
-    return self.filter_job_ids([job_id]).select_related("contractor")
 ```
+
+- **A composition combines several filters.** One filter, with or without a preload, is
+  not a manager method. Call it at the call site:
+  `Quote.objects.filter_job_ids(job_ids).select_related("contractor")`.
+- **Name it `filter_<plural model>`** (`filter_contractors`, `filter_communications`), with
+  every argument optional and defaulting to `None`.
+- **Preloads belong to the caller.** Only the resolver knows which relations the response
+  reads, so `select_related` / `prefetch_related` go there, not in the composition.
 
 - **Keyword-only arguments** for every filter and for any method with more than one parameter of the same type (`upsert(*, user_id, home_id, role)`). Names are plural and domain-explicit,
   matching the queryset method they feed (`trade_categories`, not `categories`).
@@ -73,11 +76,25 @@ def list_for_job(self, job_id: str) -> QuoteQuerySet:
 - A write touching more than one table is orchestration. It belongs in a service, under `@transaction.atomic` there.
 - Use `get_or_404(pk=...)` where the row must exist. It raises `NotFoundError`.
 
+## Single-row lookups
+
+Don't wrap a single lookup in a per-model method (`find_by_id`, `find_by_email`). Use the
+generic methods on `BaseQuerySet`:
+
+| A missing row means | Use |
+| --- | --- |
+| NOT_FOUND | `Model.objects.get_or_404(**filters)` |
+| a normal branch (login, refresh) | `Model.objects.find(**filters)`, which returns the row or `None` |
+| a yes/no question | `Model.objects.filter(**filters).exists()` |
+
+A `find_<thing>` method is only for a lookup that encodes a domain rule, e.g.
+`JobImage.objects.find_source_image(job_id)`.
+
 ## Rules
 
 - **No access decisions.** No `user.role`, `is_admin` or membership checks, and no
   `user_id` parameter used to decide visibility. Resolvers declare access with
   `@authorize` / `@owner_required` and scope collections with `visible_to` / `owned_by`.
 - **Filter in the database**, never in Python.
-- **No N+1.** Add `select_related` / `prefetch_related` in the composition that needs it.
+- **No N+1.** The caller adds `select_related` / `prefetch_related` for the relations it reads.
 - One-line docstring on every public method: what it returns and any assumption.

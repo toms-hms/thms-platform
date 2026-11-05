@@ -54,7 +54,7 @@ export default function ContractorDetailPage() {
     try {
       const [cRes, jRes] = await Promise.all([
         getContractor(contractorId),
-        getContractorJobs(contractorId),
+        getContractorJobs([contractorId]),
       ]);
       setContractor(cRes.data);
       setJobHistory(jRes.data);

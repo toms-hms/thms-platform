@@ -10,7 +10,7 @@ from core.testing import GraphQLTestCase
 from homes.factories import HomeFactory
 from jobs.factories import JobFactory
 
-IMAGES = "query($jobId: ID!) { jobImages(jobId: $jobId) { id kind url } }"
+IMAGES = "query($jobIds: [ID!]!) { jobImages(jobIds: $jobIds) { id kind url } }"
 UPLOAD_URL = """
 mutation($jobId: ID!, $fileName: String!, $contentType: String!, $kind: String!) {
   requestUploadUrl(jobId: $jobId, fileName: $fileName, contentType: $contentType, kind: $kind) {
@@ -40,14 +40,14 @@ class JobImagesTests(GraphQLTestCase):
         """Each image comes back with a URL the client can read it from."""
         with patch.object(StorageService, "download_url", return_value="https://signed.test/image.png"):
             data = self.assert_ok(
-                self.execute(IMAGES, {"jobId": self.job.pk}, token=self.token_for(self.user))
+                self.execute(IMAGES, {"jobIds": [self.job.pk]}, token=self.token_for(self.user))
             )
         self.assertEqual(data["jobImages"][0]["url"], "https://signed.test/image.png")
 
-    def test_is_forbidden_for_a_stranger(self):
-        """Someone outside the home cannot list the job's images."""
-        body = self.execute(IMAGES, {"jobId": self.job.pk}, token=self.token_for(self.other))
-        self.assert_error_code(body, "FORBIDDEN")
+    def test_a_stranger_sees_no_images(self):
+        """Someone outside the home gets an empty list for the job's images."""
+        body = self.execute(IMAGES, {"jobIds": [self.job.pk]}, token=self.token_for(self.other))
+        self.assertEqual(self.assert_ok(body)["jobImages"], [])
 
     def test_issues_an_upload_url_for_a_visible_job(self):
         """The owner gets a presigned PUT target keyed under the job."""

@@ -37,6 +37,23 @@ class GetOr404Tests(TestCase):
             Home.objects.get_or_404(pk="not-a-uuid")
 
 
+class FindTests(TestCase):
+    """BaseQuerySet.find()"""
+
+    def test_returns_the_matching_row(self):
+        """A lookup that matches one row returns it."""
+        home = HomeFactory(owner=UserFactory())
+        self.assertEqual(Home.objects.find(pk=home.pk), home)
+
+    def test_none_for_an_unknown_id(self):
+        """A lookup that matches nothing returns None rather than raising."""
+        self.assertIsNone(Home.objects.find(pk=str(uuid.uuid4())))
+
+    def test_none_for_a_malformed_id(self):
+        """An id that is not a UUID returns None rather than a validation error."""
+        self.assertIsNone(Home.objects.find(pk="not-a-uuid"))
+
+
 class VisibleToTests(TestCase):
     """HomeQuerySet.visible_to()"""
 

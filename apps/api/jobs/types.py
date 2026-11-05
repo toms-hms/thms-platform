@@ -84,28 +84,28 @@ class JobType(DjangoObjectType):
 
     def resolve_contractors(self, info):
         """Returns the contractors assigned to this job."""
-        return JobContractor.objects.list_for_job(self.pk)
+        return JobContractor.objects.filter_job_ids([self.pk]).select_related("contractor")
 
     def resolve_images(self, info):
         """Returns the images attached to this job."""
         from ai.models import JobImage
 
-        return JobImage.objects.list_for_job(self.pk)
+        return JobImage.objects.filter_job_ids([self.pk])
 
     def resolve_quotes(self, info):
         """Returns the quotes recorded against this job."""
         from quotes.models import Quote
 
-        return Quote.objects.list_for_job(self.pk)
+        return Quote.objects.filter_job_ids([self.pk]).select_related("contractor")
 
     def resolve_communications(self, info):
         """Returns the messages exchanged about this job."""
         from communications.models import Communication
 
-        return Communication.objects.list_for_job(self.pk)
+        return Communication.objects.filter_communications(job_ids=[self.pk]).select_related("contractor")
 
     def resolve_ai_generations(self, info):
         """Returns the AI generations recorded against this job."""
         from ai.models import AIGeneration
 
-        return AIGeneration.objects.list_for_job(self.pk)
+        return AIGeneration.objects.filter_job_ids([self.pk])

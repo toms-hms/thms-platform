@@ -56,16 +56,13 @@ def admin_required(resolver: Callable) -> Callable:
     return wrapper
 
 
-def authorize(
-    permission: Permission, *, resource: type, arg: str, optional: bool = False
-) -> Callable[[Callable], Callable]:
+def authorize(permission: Permission, *, resource: type, arg: str) -> Callable[[Callable], Callable]:
     """Wraps a resolver so it runs only when the caller holds the permission in the row's home.
 
     `resource` is a model whose queryset is home-scoped; `arg` names the resolver
     argument carrying that row's id. A row that does not exist is FORBIDDEN, the
-    same as one the caller cannot see. With `optional=True` an omitted argument
-    skips the check — the resolver is then a collection and must scope its result
-    with `visible_to`.
+    same as one the caller cannot see. List resolvers don't use this: they scope
+    their result with `visible_to`.
     """
 
     def decorator(resolver: Callable) -> Callable:
@@ -73,8 +70,6 @@ def authorize(
         def wrapper(root, info, **kwargs):
             user = current_user(info)
             resource_id = kwargs.get(arg)
-            if resource_id is None and optional:
-                return resolver(root, info, **kwargs)
             home_id = resource.objects.home_id_for(resource_id) if resource_id else None
             PermissionService().require(user, permission, home_id)
             return resolver(root, info, **kwargs)

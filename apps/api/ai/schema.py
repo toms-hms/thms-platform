@@ -19,7 +19,7 @@ from ai.types import (
     JobImageType,
     UploadUrlType,
 )
-from core.graphql import authorize, current_user
+from core.graphql import authorize, current_user, login_required
 from core.services.permission_service import Permission
 from jobs.models import Job
 
@@ -191,21 +191,27 @@ class AiQuery(graphene.ObjectType):
     """Image and generation reads."""
 
     job_images = graphene.List(
-        graphene.NonNull(JobImageType), job_id=graphene.ID(required=True), required=True
+        graphene.NonNull(JobImageType),
+        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
+        required=True,
     )
     ai_generations = graphene.List(
-        graphene.NonNull(AIGenerationType), job_id=graphene.ID(required=True), required=True
+        graphene.NonNull(AIGenerationType),
+        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
+        required=True,
     )
 
-    @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
-    def resolve_job_images(self, info, job_id: str):
-        """Returns the images on a job."""
-        return JobImage.objects.list_for_job(job_id)
+    @login_required
+    def resolve_job_images(self, info, job_ids: list[str]):
+        """Returns the images on the jobs the caller can see."""
+        return JobImage.objects.filter_job_ids(job_ids).visible_to(current_user(info), Permission.JOBS_VIEW)
 
-    @authorize(Permission.JOBS_VIEW, resource=Job, arg="job_id")
-    def resolve_ai_generations(self, info, job_id: str):
-        """Returns the generations recorded against a job."""
-        return AIGeneration.objects.list_for_job(job_id)
+    @login_required
+    def resolve_ai_generations(self, info, job_ids: list[str]):
+        """Returns the generations recorded against the jobs the caller can see."""
+        return AIGeneration.objects.filter_job_ids(job_ids).visible_to(
+            current_user(info), Permission.JOBS_VIEW
+        )
 
 
 class AiMutation(graphene.ObjectType):

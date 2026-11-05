@@ -23,37 +23,37 @@ export const AI_GENERATION_FIELDS = `
   id jobId prompt provider status originalImageUrl generatedImageUrl createdAt
 `;
 
-/** Lists job-contractor assignments for a given job. */
-export async function listJobContractors(params: { jobId: string }): Promise<{ data: JobContractorDto[] }> {
+/** Lists job-contractor assignments for the given jobs. */
+export async function listJobContractors(params: { jobIds: string[] }): Promise<{ data: JobContractorDto[] }> {
   const data = await gqlRequest<{ jobContractors: JobContractorDto[] }>(
-    `query JobContractors($jobId: ID!) { jobContractors(jobId: $jobId) { ${JOB_CONTRACTOR_FIELDS} } }`,
+    `query JobContractors($jobIds: [ID!]!) { jobContractors(jobIds: $jobIds) { ${JOB_CONTRACTOR_FIELDS} } }`,
     params
   );
   return { data: data.jobContractors };
 }
 
-/** Lists quotes for a given job. */
-export async function listQuotes(params: { jobId: string }): Promise<{ data: QuoteDto[] }> {
+/** Lists quotes for the given jobs. */
+export async function listQuotes(params: { jobIds: string[] }): Promise<{ data: QuoteDto[] }> {
   const data = await gqlRequest<{ quotes: QuoteDto[] }>(
-    `query Quotes($jobId: ID!) { quotes(jobId: $jobId) { ${QUOTE_FIELDS} } }`,
+    `query Quotes($jobIds: [ID!]!) { quotes(jobIds: $jobIds) { ${QUOTE_FIELDS} } }`,
     params
   );
   return { data: data.quotes };
 }
 
-/** Lists uploaded images for a given job. */
-export async function listImages(params: { jobId: string }): Promise<{ data: JobImageDto[] }> {
+/** Lists uploaded images for the given jobs. */
+export async function listImages(params: { jobIds: string[] }): Promise<{ data: JobImageDto[] }> {
   const data = await gqlRequest<{ jobImages: JobImageDto[] }>(
-    `query JobImages($jobId: ID!) { jobImages(jobId: $jobId) { ${JOB_IMAGE_FIELDS} } }`,
+    `query JobImages($jobIds: [ID!]!) { jobImages(jobIds: $jobIds) { ${JOB_IMAGE_FIELDS} } }`,
     params
   );
   return { data: data.jobImages };
 }
 
-/** Lists AI generations for a given job. */
-export async function listAIGenerations(params: { jobId: string }): Promise<{ data: AIGenerationDto[] }> {
+/** Lists AI generations for the given jobs. */
+export async function listAIGenerations(params: { jobIds: string[] }): Promise<{ data: AIGenerationDto[] }> {
   const data = await gqlRequest<{ aiGenerations: AIGenerationDto[] }>(
-    `query AiGenerations($jobId: ID!) { aiGenerations(jobId: $jobId) { ${AI_GENERATION_FIELDS} } }`,
+    `query AiGenerations($jobIds: [ID!]!) { aiGenerations(jobIds: $jobIds) { ${AI_GENERATION_FIELDS} } }`,
     params
   );
   return { data: data.aiGenerations };

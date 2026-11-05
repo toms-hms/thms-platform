@@ -38,8 +38,8 @@ class QuoteType(DjangoObjectType):
   strings, which is what clients compare against.
 - **Expose flat FK ids** (`job_id`, `contractor_id`) next to the nested object, each with
   a one-line resolver returning `self.<fk>_id`.
-- **Nested relations** are fields resolved through the related model's manager composition,
-  e.g. `Quote.objects.list_for_job(self.pk)`. Import the other app's model inside the resolver.
+- **Nested relations** are fields resolved through the related model's queryset filters,
+  e.g. `Quote.objects.filter_job_ids([self.pk]).select_related("contractor")`. Import the other app's model inside the resolver.
 - **Payloads that are not models** (upload targets, AI results) are plain
   `graphene.ObjectType` classes in the same file.
 - **Cross-app references:**

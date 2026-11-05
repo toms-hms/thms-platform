@@ -5,7 +5,6 @@ permission check re-reads the database.
 """
 
 from accounts.models import User
-from core.errors import NotFoundError
 from core.services.permission_service import PermissionService
 from core.utils.unset_utils import UNSET, Unset
 from homes.models import Home, HomeRole, UserHome
@@ -76,9 +75,7 @@ class HomeService:
 
     def add_member(self, *, home_id: str, email: str, role: str) -> UserHome:
         """Adds the user with this email to the home, or changes their role if already a member."""
-        target = User.objects.find_by_email(email)
-        if not target:
-            raise NotFoundError("User")
+        target = User.objects.get_or_404(email=email)
         membership = UserHome.objects.upsert(user_id=target.pk, home_id=home_id, role=role)
         PermissionService().invalidate(user_id=target.pk, home_id=home_id)
         return membership

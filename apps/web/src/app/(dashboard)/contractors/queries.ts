@@ -35,17 +35,17 @@ export async function getContractor(contractorId: string): Promise<{ data: Contr
   return { data: data.contractor };
 }
 
-/** Returns the job history for a contractor. */
+/** Returns the job history for the given contractors. */
 export async function getContractorJobs(
-  contractorId: string
+  contractorIds: string[]
 ): Promise<{ data: ContractorJobHistoryDto[] }> {
   const data = await gqlRequest<{ contractorJobHistory: ContractorJobHistoryDto[] }>(
-    `query ContractorJobs($contractorId: ID!) {
-       contractorJobHistory(contractorId: $contractorId) {
+    `query ContractorJobs($contractorIds: [ID!]!) {
+       contractorJobHistory(contractorIds: $contractorIds) {
          jobId jobTitle jobStatus homeId homeName contractorStatus
        }
      }`,
-    { contractorId }
+    { contractorIds }
   );
   return { data: data.contractorJobHistory };
 }

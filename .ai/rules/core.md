@@ -27,7 +27,7 @@ The API is GraphQL. Errors carry a stable `extensions.code` — `NOT_FOUND`, `UN
 
 ## API and client contracts
 
-Use explicit domain names and plural arrays for list filters whenever a field can hold multiple values. Do not add singular aliases for convenience. A client filtering contractors by one category still sends `tradeCategories: [value]`, not `category: value`; one ZIP still uses `zipCodes: [value]`. Prefer `tradeCategories` over generic `categories` at API and client boundaries.
+Every argument to a list query is a plural array: ids (`homeIds`, `jobIds`, including a required parent like `quotes(jobIds)`), enums (`statuses`, `directions`) and values. Do not add singular aliases for convenience. Backend `list` / `filter` methods take the same plural lists (`filter_job_ids(job_ids)`). Single-object reads (`job(jobId)`) and mutations stay singular, because they act on exactly one row. A client filtering contractors by one category still sends `tradeCategories: [value]`, not `category: value`; one ZIP still uses `zipCodes: [value]`. Prefer `tradeCategories` over generic `categories` at API and client boundaries.
 
 ## Enums and model constants
 
@@ -72,7 +72,7 @@ Declared on the resolver, decided in one place (`PermissionService.can` in `core
 - `@authorize(Permission.X, resource=Model, arg="model_id")` for home-scoped rows
 - `@owner_required(resource=Model, arg="model_id")` for user-owned rows
 - `@login_required` / `@admin_required` for everything else
-- Collections start from `Model.objects.visible_to(user, Permission.X)` or `owned_by(user)`, never from `.all()`
+- Collections are `@login_required` and start from `Model.objects.visible_to(user, Permission.X)` or `owned_by(user)`, never from `.all()` and never behind `@authorize`. An id the caller cannot see drops out of the result; it is not FORBIDDEN.
 
 No role or membership checks in managers, querysets or services. See `.ai/recipes/api/permissioning.md`.
 

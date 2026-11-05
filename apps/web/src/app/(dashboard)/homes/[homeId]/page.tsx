@@ -32,7 +32,7 @@ export default function HomeDetailPage() {
     try {
       const [homeRes, jobsRes] = await Promise.all([
         getHome(homeId),
-        listJobs(homeId),
+        listJobs({ homeIds: [homeId] }),
       ]);
       setHome(homeRes.data);
       setJobsList(jobsRes.data);

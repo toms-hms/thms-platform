@@ -23,8 +23,8 @@ export default function CommunicationsTab({ jobId }: Props) {
     try {
       const params =
         filter === 'needsReview'
-          ? { jobId, needsReview: true }
-          : { jobId };
+          ? { jobIds: [jobId], needsReview: true }
+          : { jobIds: [jobId] };
       const res = await listCommunications(params);
       setComms(res.data);
     } catch {}

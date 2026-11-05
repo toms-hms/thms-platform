@@ -109,7 +109,9 @@ class HomesQuery(graphene.ObjectType):
     )
     home = graphene.Field(HomeType, home_id=graphene.ID(required=True))
     home_members = graphene.List(
-        graphene.NonNull(HomeMemberType), home_id=graphene.ID(required=True), required=True
+        graphene.NonNull(HomeMemberType),
+        home_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
+        required=True,
     )
 
     @login_required
@@ -122,10 +124,14 @@ class HomesQuery(graphene.ObjectType):
         """Returns one home."""
         return Home.objects.get_or_404(pk=home_id)
 
-    @authorize(Permission.HOME_VIEW, resource=Home, arg="home_id")
-    def resolve_home_members(self, info, home_id: str):
-        """Returns the home's members."""
-        return UserHome.objects.list_members_for_home(home_id=home_id)
+    @login_required
+    def resolve_home_members(self, info, home_ids: list[str]):
+        """Returns the members of the homes the caller can see."""
+        return (
+            UserHome.objects.filter_home_ids(home_ids)
+            .select_related("user")
+            .visible_to(current_user(info), Permission.HOME_VIEW)
+        )
 
 
 class HomesMutation(graphene.ObjectType):

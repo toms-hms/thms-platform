@@ -25,14 +25,14 @@ class AuthService:
 
     def register(self, *, email: str, password: str, first_name: str, last_name: str) -> dict[str, Any]:
         """Creates a user and returns them with a fresh token pair. Rejects an email already in use."""
-        if User.objects.find_by_email(email):
+        if User.objects.filter(email=email).exists():
             raise ConflictError("Email already registered")
         user = User.objects.create_user(email, password, first_name=first_name, last_name=last_name)
         return {"user": user, "tokens": self._issue_tokens(user=user)}
 
     def login(self, *, email: str, password: str) -> dict[str, Any]:
         """Returns the user and a fresh token pair, or raises UnauthorizedError for bad credentials."""
-        user = User.objects.find_by_email(email)
+        user = User.objects.find(email=email)
         if not user or not user.check_password(password):
             raise UnauthorizedError("Invalid credentials")
         return {"user": user, "tokens": self._issue_tokens(user=user)}
@@ -40,7 +40,7 @@ class AuthService:
     def refresh(self, *, refresh_token: str) -> dict[str, Any]:
         """Exchanges the current refresh token for a new pair; any earlier token is rejected."""
         claims = verify_refresh_token(refresh_token)
-        user = User.objects.find_by_id(claims.get("sub"))
+        user = User.objects.find(pk=claims.get("sub"))
         if not user or not verify_token(refresh_token, user.refresh_token_hash):
             raise UnauthorizedError("Invalid refresh token")
         return {"user": user, "tokens": self._issue_tokens(user=user)}

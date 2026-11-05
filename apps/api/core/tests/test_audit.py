@@ -9,8 +9,8 @@ from jobs.factories import JobFactory
 from jobs.models import Job
 
 AUDIT_LOG = """
-query($objectType: String, $objectId: String) {
-  auditLog(objectType: $objectType, objectId: $objectId) {
+query($objectTypes: [String!], $objectIds: [String!]) {
+  auditLog(objectTypes: $objectTypes, objectIds: $objectIds) {
     action objectType objectId actorEmail changes
   }
 }
@@ -81,7 +81,7 @@ class AuditLogQueryTests(GraphQLTestCase):
     def test_admin_can_read_the_log(self):
         """An admin reads entries, most recent first."""
         data = self.assert_ok(
-            self.execute(AUDIT_LOG, {"objectType": "job"}, token=self.token_for(AdminFactory()))
+            self.execute(AUDIT_LOG, {"objectTypes": ["job"]}, token=self.token_for(AdminFactory()))
         )
         self.assertTrue(data["auditLog"])
         self.assertEqual(data["auditLog"][0]["objectType"], "job")
@@ -90,7 +90,9 @@ class AuditLogQueryTests(GraphQLTestCase):
         """Entries can be narrowed to a single object."""
         other = JobFactory()
         body = self.execute(
-            AUDIT_LOG, {"objectType": "job", "objectId": self.job.pk}, token=self.token_for(AdminFactory())
+            AUDIT_LOG,
+            {"objectTypes": ["job"], "objectIds": [self.job.pk]},
+            token=self.token_for(AdminFactory()),
         )
         object_ids = {entry["objectId"] for entry in self.assert_ok(body)["auditLog"]}
         self.assertEqual(object_ids, {str(self.job.pk)})

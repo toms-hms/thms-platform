@@ -6,6 +6,7 @@ domain models. The log is admin-only: it names who changed what, and when.
 
 import graphene
 from auditlog.models import LogEntry
+from django.db.models import Q
 
 from core.graphql import admin_required
 from core.types import ACTIONS, AuditLogEntryType
@@ -16,27 +17,24 @@ class AuditQuery(graphene.ObjectType):
 
     audit_log = graphene.List(
         graphene.NonNull(AuditLogEntryType),
-        object_type=graphene.String(),
-        object_id=graphene.String(),
-        actor_id=graphene.ID(),
+        object_types=graphene.List(graphene.NonNull(graphene.String)),
+        object_ids=graphene.List(graphene.NonNull(graphene.String)),
+        actor_ids=graphene.List(graphene.NonNull(graphene.ID)),
         limit=graphene.Int(),
         required=True,
     )
 
     @admin_required
-    def resolve_audit_log(self, info, object_type=None, object_id=None, actor_id=None, limit=None):
-        """Returns audit entries, most recent first, narrowed by object or actor."""
+    def resolve_audit_log(self, info, object_types=None, object_ids=None, actor_ids=None, limit=None):
+        """Returns audit entries, most recent first, narrowed by object types, objects or actors."""
         entries = LogEntry.objects.select_related("content_type", "actor").order_by("-timestamp")
-        if object_type:
-            entries = entries.filter(content_type__model=object_type.lower())
-        if object_id:
-            entries = (
-                entries.filter(object_id=object_id)
-                if str(object_id).isdigit()
-                else entries.filter(object_pk=object_id)
-            )
-        if actor_id:
-            entries = entries.filter(actor_id=actor_id)
+        if object_types is not None:
+            entries = entries.filter(content_type__model__in=[t.lower() for t in object_types])
+        if object_ids is not None:
+            numeric = [int(i) for i in object_ids if str(i).isdigit()]
+            entries = entries.filter(Q(object_pk__in=object_ids) | Q(object_id__in=numeric))
+        if actor_ids is not None:
+            entries = entries.filter(actor_id__in=actor_ids)
         return [
             AuditLogEntryType(
                 id=entry.pk,

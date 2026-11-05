@@ -27,12 +27,12 @@ class ContractorManager(BaseManager.from_queryset(ContractorQuerySet)):
             .search(search)
         )
 
-    def list_job_history(self, *, contractor_id: str) -> list[dict]:
-        """Returns the contractor's job assignments, most recent first."""
+    def list_job_history(self, *, contractor_ids: list[str]) -> list[dict]:
+        """Returns the contractors' job assignments, most recent first."""
         from jobs.models import JobContractor
 
         rows = (
-            JobContractor.objects.filter(contractor_id=contractor_id)
+            JobContractor.objects.filter(contractor_id__in=contractor_ids)
             .select_related("job", "job__home")
             .order_by("-created_at")
         )

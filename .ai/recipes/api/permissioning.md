@@ -42,22 +42,29 @@ def mutate(self, info, quote_id: str, **data):
 ## Collections
 
 ```python
-@authorize(Permission.JOBS_VIEW, resource=Home, arg="home_id", optional=True)
-def resolve_jobs(self, info, home_id=None, status=None):
-    """Returns the jobs the caller can see, narrowed by home and status."""
+@login_required
+def resolve_jobs(self, info, home_ids=None, statuses=None):
+    """Returns the jobs the caller can see, narrowed by homes and statuses."""
     return (
         Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
-        .filter_home_ids([home_id] if home_id else None)
-        .filter_statuses([status] if status else None)
+        .filter_home_ids(home_ids)
+        .filter_statuses(statuses)
+    )
+
+@login_required
+def resolve_quotes(self, info, job_ids: list[str]):
+    """Returns the quotes on the jobs the caller can see."""
+    return Quote.objects.filter_job_ids(job_ids).select_related("contractor").visible_to(
+        current_user(info), Permission.QUOTES_VIEW
     )
 ```
 
-- A list without a required parent argument **starts from `visible_to` or `owned_by`**,
-  never from `Model.objects.all()`.
-- `optional=True` skips the check when the argument is omitted. Use it only where the
-  resolver scopes with `visible_to`.
-- A list under a required parent (`quotes(jobId)`) is gated by `@authorize` on that
-  parent, then calls the manager composition.
+- **A list resolver is `@login_required` and scopes with `visible_to` or `owned_by`.** Never
+  `@authorize`, and never `Model.objects.all()`.
+- **Id arguments narrow, they never widen.** An id the caller cannot see drops out of the
+  result. It is not FORBIDDEN, so a list never reveals whether a row exists.
+- This holds for lists under a parent too: `quotes(jobIds)` filters by the job ids, then
+  scopes with `visible_to`.
 
 ## User-owned rows
 

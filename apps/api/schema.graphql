@@ -1,0 +1,660 @@
+"""Every read operation the API exposes."""
+type Query {
+  auditLog(objectTypes: [String!], objectIds: [String!], actorIds: [ID!], limit: Int): [AuditLogEntryType!]!
+
+  """The caller's connected accounts."""
+  integrations: [IntegrationType!]!
+
+  """Consent URL for connecting Gmail."""
+  googleAuthUrl: String!
+
+  """Consent URL for connecting Outlook."""
+  microsoftAuthUrl: String!
+  jobImages(jobIds: [ID!]!): [JobImageType!]!
+  aiGenerations(jobIds: [ID!]!): [AIGenerationType!]!
+  communications(jobIds: [ID!]!, contractorIds: [ID!], needsReview: Boolean, directions: [CommunicationDirection!]): [CommunicationType!]!
+  communication(communicationId: ID!): CommunicationType
+  quotes(jobIds: [ID!]!): [QuoteType!]!
+  jobs(homeIds: [ID!], statuses: [JobStatus!], tradeCategories: [TradeCategory!]): [JobType!]!
+  job(jobId: ID!): JobType
+  jobContractors(jobIds: [ID!]!): [JobContractorType!]!
+
+  """The caller's saved contractors."""
+  userContractors: [UserContractorType!]!
+  contractors(search: String, tradeCategories: [TradeCategory!], zipCodes: [String!]): [ContractorType!]!
+  contractor(contractorId: ID!): ContractorType
+  contractorJobHistory(contractorIds: [ID!]!): [ContractorJobHistoryType!]!
+
+  """Homes the caller can access."""
+  homes: [HomeType!]!
+  home(homeId: ID!): HomeType
+  homeMembers(homeIds: [ID!]!): [HomeMemberType!]!
+
+  """The authenticated user."""
+  me: UserType
+}
+
+"""One recorded change to a domain object."""
+type AuditLogEntryType {
+  id: ID!
+  action: String!
+
+  """Model name, e.g. 'job'."""
+  objectType: String!
+  objectId: String!
+  objectRepr: String!
+
+  """The user who made the change, when one was authenticated."""
+  actorId: ID
+
+  """Field-level before/after values."""
+  changes: JSONString!
+  remoteAddr: String
+  timestamp: DateTime!
+}
+
+"""
+Allows use of a JSON String for input / output from the GraphQL schema.
+
+Use of this type is *not recommended* as you lose the benefits of having a defined, static
+schema (one of the key benefits of GraphQL).
+"""
+scalar JSONString
+
+"""
+The `DateTime` scalar type represents a DateTime
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar DateTime
+
+"""
+A connected third-party account. Encrypted tokens are deliberately not exposed.
+"""
+type IntegrationType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  type: String!
+  provider: String!
+  email: String
+  scopes: [String!]!
+  status: String!
+}
+
+"""An image attached to a job, with a presigned URL to read it."""
+type JobImageType {
+  id: String!
+  createdAt: DateTime!
+  job: JobType!
+  storageKey: String!
+  kind: String!
+  label: String
+  aiGeneration: AIGenerationType
+  uploadedBy: UserType!
+
+  """Presigned download URL, valid for one hour."""
+  url: String!
+}
+
+"""A piece of work on a home, with everything hanging off it."""
+type JobType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  home: HomeType!
+  title: String!
+  intent: String!
+  category: String!
+  description: String
+  notes: String
+  status: String!
+  createdBy: UserType!
+  aiSession: JSONString
+  contractors: [JobContractorType!]!
+  images: [JobImageType!]!
+  quotes: [QuoteType!]!
+  communications: [CommunicationType!]!
+  aiGenerations: [AIGenerationType!]!
+}
+
+"""A property the user is a member of."""
+type HomeType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  name: String!
+  address1: String!
+  address2: String
+  city: String!
+  state: String!
+  zipCode: String!
+  country: String!
+  notes: String
+
+  """The address rendered as one display line."""
+  fullAddress: String!
+}
+
+"""A user account. Password and refresh-token hashes are never exposed."""
+type UserType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  email: String!
+  firstName: String!
+  lastName: String!
+  role: String!
+}
+
+"""A contractor's involvement in a job."""
+type JobContractorType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  job: JobType!
+  contractor: ContractorType!
+  status: String!
+  lastContactedAt: DateTime
+  lastResponseAt: DateTime
+  notes: String
+}
+
+"""A tradesperson or company in the directory."""
+type ContractorType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  name: String!
+  companyName: String
+  email: String
+  phone: String
+  notes: String
+  isGlobal: Boolean!
+  zipCodes: [String!]!
+  categories: [String!]!
+}
+
+"""A price a contractor gave for a job."""
+type QuoteType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  job: JobType!
+  contractor: ContractorType!
+  amount: Float!
+  description: String
+  status: String!
+  sourceCommunication: CommunicationType
+}
+
+"""One message sent to, or received from, a contractor."""
+type CommunicationType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  job: JobType
+  contractor: ContractorType
+  channel: String!
+  direction: String!
+  subject: String
+  bodyText: String
+  bodyHtml: String
+  externalThreadId: String
+  externalMessageId: String
+  sentAt: DateTime
+  receivedAt: DateTime
+  parsedSummary: String
+  needsReview: Boolean!
+}
+
+"""One recorded call to an AI provider."""
+type AIGenerationType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  job: JobType!
+  originalImageUrl: String
+  prompt: String!
+  generatedImageUrl: String
+  provider: String!
+  status: String!
+  createdBy: UserType!
+  metadata: JSONString
+}
+
+"""Whether the platform sent the message or received it."""
+enum CommunicationDirection {
+  SENT
+  RECEIVED
+}
+
+"""
+Where the job sits in its lifecycle. Only the user moves a job between states.
+"""
+enum JobStatus {
+  DRAFT
+  PLANNING
+  REACHING_OUT
+  COMPARING_QUOTES
+  SCHEDULED
+  IN_PROGRESS
+  AWAITING_PAYMENT
+  COMPLETED
+}
+
+"""The trade a contractor works in, and the category a job falls under."""
+enum TradeCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  ROOFING
+  PAINTING
+  LANDSCAPING
+  GENERAL_CONTRACTING
+  CARPENTRY
+  FLOORING
+  PEST_CONTROL
+  DOORS_AND_WINDOWS
+  POOL_AND_SPA
+}
+
+"""A contractor saved to a user's rolodex, with the contractor attached."""
+type UserContractorType {
+  id: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  contractor: ContractorType!
+  note: String
+}
+
+"""One row of a contractor's job history."""
+type ContractorJobHistoryType {
+  jobId: ID!
+  jobTitle: String!
+  jobStatus: String!
+  homeId: ID!
+  homeName: String!
+  contractorStatus: String!
+}
+
+"""A user's membership of a home."""
+type HomeMemberType {
+  createdAt: DateTime!
+  user: UserType!
+  role: String!
+}
+
+"""Every write operation the API exposes."""
+type Mutation {
+  """Stores an AI provider API key for the caller."""
+  createAiIntegration(apiKey: String!, provider: String!): CreateAiIntegration
+
+  """Removes one of the caller's connected accounts."""
+  deleteIntegration(integrationId: ID!): DeleteIntegration
+
+  """
+  Sends an email through the caller's Gmail connection and records it against the job.
+  """
+  sendEmail(bodyHtml: String, bodyText: String!, contractorId: ID, integrationId: ID!, jobId: ID!, subject: String!, to: String!): SendEmail
+
+  """Returns a presigned URL for uploading an image to a job."""
+  requestUploadUrl(contentType: String!, fileName: String!, jobId: ID!, kind: String!): RequestUploadUrl
+
+  """Records a completed upload as a job image."""
+  createJobImage(jobId: ID!, key: String!, kind: String, label: String): CreateJobImage
+
+  """Deletes a job image and the object behind it."""
+  deleteJobImage(imageId: ID!): DeleteJobImage
+
+  """Generates a visualisation from an uploaded source image."""
+  createAiGeneration(jobId: ID!, metadata: JSONString, prompt: String!, provider: String, sourceImageId: ID!): CreateAiGeneration
+
+  """Opens the diagnostic conversation for a job."""
+  startDiagnose(jobId: ID!): StartDiagnose
+
+  """Answers the assistant's last question and returns its next turn."""
+  diagnoseJob(jobId: ID!, message: String!): DiagnoseJob
+
+  """Generates outreach email drafts for up to three contractors on a job."""
+  draftEmail(contractorIds: [ID!]!, customInstructions: String, includeImages: Boolean, jobId: ID!, tone: String): DraftEmail
+
+  """Updates the review flag or parsed summary on a message."""
+  updateCommunication(communicationId: ID!, needsReview: Boolean, parsedSummary: String): UpdateCommunication
+
+  """Records a quote against a job."""
+  createQuote(amount: Float!, contractorId: ID!, description: String, jobId: ID!, sourceCommunicationId: ID, status: QuoteStatus): CreateQuote
+
+  """Updates a quote."""
+  updateQuote(amount: Float, description: String, quoteId: ID!, status: QuoteStatus): UpdateQuote
+
+  """Deletes a quote."""
+  deleteQuote(quoteId: ID!): DeleteQuote
+
+  """Creates a job on a home the caller can access."""
+  createJob(aiSession: JSONString, categories: [TradeCategory!], category: TradeCategory!, description: String, homeId: ID!, intent: JobIntent, notes: String, status: JobStatus, title: String!): CreateJob
+
+  """Updates a job the caller can access."""
+  updateJob(aiSession: JSONString, categories: [TradeCategory!], category: TradeCategory, description: String, intent: JobIntent, jobId: ID!, notes: String, status: JobStatus, title: String): UpdateJob
+
+  """Deletes a job the caller can access."""
+  deleteJob(jobId: ID!): DeleteJob
+
+  """Assigns a contractor to a job."""
+  createJobContractor(contractorId: ID!, jobId: ID!, notes: String): CreateJobContractor
+
+  """Moves a contractor assignment to a new status."""
+  updateJobContractor(jobContractorId: ID!, notes: String, status: JobContractorStatus!): UpdateJobContractor
+
+  """Removes a contractor from a job."""
+  deleteJobContractor(jobContractorId: ID!): DeleteJobContractor
+
+  """
+  Saves a contractor to the caller's rolodex.
+  
+  Either reference an existing contractor with contractorId, or supply `name`
+  (and optionally the other fields) to create a private contractor in place.
+  """
+  createUserContractor(categories: [TradeCategory!], companyName: String, contractorId: ID, email: String, name: String, note: String, notes: String, phone: String, zipCodes: [String!]): CreateUserContractor
+
+  """Removes a contractor from the caller's rolodex."""
+  deleteUserContractor(userContractorId: ID!): DeleteUserContractor
+
+  """Adds a contractor to the global directory. Admin only."""
+  createContractor(categories: [TradeCategory!]!, companyName: String, email: String, name: String!, notes: String, phone: String, zipCodes: [String!]): CreateContractor
+
+  """Updates a contractor. Admin only."""
+  updateContractor(categories: [TradeCategory!], companyName: String, contractorId: ID!, email: String, name: String, notes: String, phone: String, zipCodes: [String!]): UpdateContractor
+
+  """Promotes a private contractor into the global directory. Admin only."""
+  promoteContractor(contractorId: ID!): PromoteContractor
+
+  """Deletes a contractor. Admin only."""
+  deleteContractor(contractorId: ID!): DeleteContractor
+
+  """Creates a home owned by the caller."""
+  createHome(address1: String!, address2: String, city: String!, country: String, name: String!, notes: String, state: String!, zipCode: String!): CreateHome
+
+  """Updates fields on a home the caller can access."""
+  updateHome(address1: String, address2: String, city: String, homeId: ID!, name: String, notes: String, state: String, zipCode: String): UpdateHome
+
+  """Deletes a home. Only an owner may do this."""
+  deleteHome(homeId: ID!): DeleteHome
+
+  """Adds another user to a home by email address."""
+  createHomeMember(email: String!, homeId: ID!, role: HomeRole): CreateHomeMember
+
+  """Removes a user's access to a home."""
+  deleteHomeMember(homeId: ID!, userId: ID!): DeleteHomeMember
+
+  """Creates an account and signs the new user in."""
+  register(email: String!, firstName: String!, lastName: String!, password: String!): Register
+
+  """Exchanges credentials for a token pair."""
+  login(email: String!, password: String!): Login
+
+  """Exchanges a refresh token for a new token pair."""
+  refreshTokens(refreshToken: String!): RefreshTokens
+
+  """Revokes the caller's refresh token."""
+  logout: Logout
+}
+
+"""Stores an AI provider API key for the caller."""
+type CreateAiIntegration {
+  integration: IntegrationType
+}
+
+"""Removes one of the caller's connected accounts."""
+type DeleteIntegration {
+  success: Boolean!
+}
+
+"""
+Sends an email through the caller's Gmail connection and records it against the job.
+"""
+type SendEmail {
+  communication: CommunicationType
+}
+
+"""Returns a presigned URL for uploading an image to a job."""
+type RequestUploadUrl {
+  upload: UploadUrlType
+}
+
+"""A presigned upload target."""
+type UploadUrlType {
+  uploadUrl: String!
+  key: String!
+  kind: String!
+}
+
+"""Records a completed upload as a job image."""
+type CreateJobImage {
+  image: JobImageType
+}
+
+"""Deletes a job image and the object behind it."""
+type DeleteJobImage {
+  success: Boolean!
+}
+
+"""Generates a visualisation from an uploaded source image."""
+type CreateAiGeneration {
+  aiGeneration: AIGenerationType
+}
+
+"""Opens the diagnostic conversation for a job."""
+type StartDiagnose {
+  result: DiagnoseResultType
+}
+
+"""One turn of the diagnostic conversation."""
+type DiagnoseResultType {
+  question: String
+  options: [String!]!
+  summary: JSONString
+  suggestedCategories: [CategorySuggestionType!]
+  messages: JSONString!
+}
+
+"""A trade category the assistant thinks the job needs, and why."""
+type CategorySuggestionType {
+  category: String!
+  reason: String!
+}
+
+"""Answers the assistant's last question and returns its next turn."""
+type DiagnoseJob {
+  result: DiagnoseResultType
+}
+
+"""Generates outreach email drafts for up to three contractors on a job."""
+type DraftEmail {
+  drafts: [EmailDraftType!]!
+}
+
+"""One generated outreach email."""
+type EmailDraftType {
+  contractorId: ID!
+  subject: String!
+  bodyText: String!
+  bodyHtml: String!
+}
+
+"""Updates the review flag or parsed summary on a message."""
+type UpdateCommunication {
+  communication: CommunicationType
+}
+
+"""Records a quote against a job."""
+type CreateQuote {
+  quote: QuoteType
+}
+
+"""
+Whether the quote is still provisional or has been confirmed by the homeowner.
+"""
+enum QuoteStatus {
+  DRAFT
+  CONFIRMED
+}
+
+"""Updates a quote."""
+type UpdateQuote {
+  quote: QuoteType
+}
+
+"""Deletes a quote."""
+type DeleteQuote {
+  success: Boolean!
+}
+
+"""Creates a job on a home the caller can access."""
+type CreateJob {
+  job: JobType
+}
+
+"""
+What the homeowner is trying to achieve, which decides how the assistant scopes the work.
+"""
+enum JobIntent {
+  ISSUE
+  IMPROVEMENT
+  RECURRING_WORK
+}
+
+"""Updates a job the caller can access."""
+type UpdateJob {
+  job: JobType
+}
+
+"""Deletes a job the caller can access."""
+type DeleteJob {
+  success: Boolean!
+}
+
+"""Assigns a contractor to a job."""
+type CreateJobContractor {
+  jobContractor: JobContractorType
+}
+
+"""Moves a contractor assignment to a new status."""
+type UpdateJobContractor {
+  jobContractor: JobContractorType
+}
+
+"""Where a single contractor stands on a job."""
+enum JobContractorStatus {
+  NOT_CONTACTED
+  CONTACTED
+  RESPONDED
+  VISIT_REQUESTED
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  QUOTE_RECEIVED
+  DECLINED
+  ACCEPTED
+  WORK_IN_PROGRESS
+  WORK_COMPLETED
+  PAID
+}
+
+"""Removes a contractor from a job."""
+type DeleteJobContractor {
+  success: Boolean!
+}
+
+"""
+Saves a contractor to the caller's rolodex.
+
+Either reference an existing contractor with contractorId, or supply `name`
+(and optionally the other fields) to create a private contractor in place.
+"""
+type CreateUserContractor {
+  userContractor: UserContractorType
+}
+
+"""Removes a contractor from the caller's rolodex."""
+type DeleteUserContractor {
+  success: Boolean!
+}
+
+"""Adds a contractor to the global directory. Admin only."""
+type CreateContractor {
+  contractor: ContractorType
+}
+
+"""Updates a contractor. Admin only."""
+type UpdateContractor {
+  contractor: ContractorType
+}
+
+"""Promotes a private contractor into the global directory. Admin only."""
+type PromoteContractor {
+  contractor: ContractorType
+}
+
+"""Deletes a contractor. Admin only."""
+type DeleteContractor {
+  success: Boolean!
+}
+
+"""Creates a home owned by the caller."""
+type CreateHome {
+  home: HomeType
+}
+
+"""Updates fields on a home the caller can access."""
+type UpdateHome {
+  home: HomeType
+}
+
+"""Deletes a home. Only an owner may do this."""
+type DeleteHome {
+  success: Boolean!
+}
+
+"""Adds another user to a home by email address."""
+type CreateHomeMember {
+  member: HomeMemberType
+}
+
+"""A user's role within a single home. Only OWNER may delete the home."""
+enum HomeRole {
+  OWNER
+  MEMBER
+}
+
+"""Removes a user's access to a home."""
+type DeleteHomeMember {
+  success: Boolean!
+}
+
+"""Creates an account and signs the new user in."""
+type Register {
+  user: UserType
+  tokens: AuthTokensType
+}
+
+"""The token pair issued on login, registration and refresh."""
+type AuthTokensType {
+  accessToken: String!
+  refreshToken: String!
+}
+
+"""Exchanges credentials for a token pair."""
+type Login {
+  user: UserType
+  tokens: AuthTokensType
+}
+
+"""Exchanges a refresh token for a new token pair."""
+type RefreshTokens {
+  tokens: AuthTokensType
+}
+
+"""Revokes the caller's refresh token."""
+type Logout {
+  success: Boolean!
+}

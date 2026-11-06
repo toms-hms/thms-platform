@@ -1,0 +1,5 @@
+mutation DeleteJobImage($imageId: ID!) {
+  deleteJobImage(imageId: $imageId) {
+    success
+  }
+}

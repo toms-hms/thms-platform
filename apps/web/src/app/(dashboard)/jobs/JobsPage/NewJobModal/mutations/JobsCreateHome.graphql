@@ -1,0 +1,14 @@
+mutation JobsCreateHome(
+  $name: String!
+  $address1: String!
+  $city: String!
+  $state: String!
+  $zipCode: String!
+  $country: String
+) {
+  createHome(name: $name, address1: $address1, city: $city, state: $state, zipCode: $zipCode, country: $country) {
+    home {
+      id
+    }
+  }
+}

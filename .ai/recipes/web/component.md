@@ -8,11 +8,13 @@ description: Guide for writing React components — shared vs page-local placeme
 ## Where components live
 
 ```
-src/components/ui/      — shared across pages (Modal, StatusBadge, EmptyState, Navbar, Selector, Dropdown, Table)
-src/app/(dashboard)/{route}/_components/   — page-local components used only by that page
+src/components/ui/                      — design-system pieces shared by every page (Button, Field, Modal, …)
+src/components/<area>/<Component>/      — a feature component used by more than one page (JobContractorsTab)
+src/app/…/{route}/<Name>Page/<Section>/ — a section used only by one page, nested in the page's folder
 ```
 
-Create a shared component when it will be used in more than one page. Create a page-local `_components/` subfolder otherwise.
+Create a shared component when more than one page uses it; otherwise nest it as a section of
+the page that uses it.
 
 ## Shared component example — StatusBadge
 
@@ -78,32 +80,76 @@ interface Props {
 }
 ```
 
-## Page-local subcomponents
+## Pages and sections: one folder per component
 
-Place page-local components under `_components/` inside the page route folder. The `_` prefix prevents Next.js from treating the folder as a route segment.
+Every route's `page.tsx` is one line that re-exports a named page component, which lives in its
+own folder beside it. Next requires the `page.tsx` filename; the folder gives the code a real name.
 
 ```
-src/app/(dashboard)/jobs/new/
-  page.tsx
-  _components/
-    StepIntent.tsx
-    StepCategory.tsx
-    StepDescription.tsx
-    Stepper.tsx
+src/app/(dashboard)/contractors/
+  page.tsx                        export { default } from './ContractorsPage';
+  ContractorsPage/
+    index.ts                      export { default } from './ContractorsPage';
+    ContractorsPage.tsx           the page: its own query, shared state, and the sections
+    types.ts                      types the sections share (`Contractor`, filter values)
+    queries/Contractors.graphql
+    ContractorFilters/
+      index.ts
+      ContractorFilters.tsx
+    ContractorTable/
+      index.ts
+      ContractorTable.tsx
+      mutations/                  DeleteContractor, AddContractorToRolodex
+    ContractorFormModal/
+      index.ts
+      ContractorFormModal.tsx
+      mutations/                  CreateContractor, UpdateContractor
 ```
 
-These components receive state from the parent page via props and call back with `onChange` handlers. They do not fetch data themselves.
+- **Split at about 200 lines.** A component that grows past that splits into the visual sections
+  you can see on screen (filters, list, card, form, modal), each a folder nested in its parent.
+- **Every component folder has an `index.ts`** that re-exports the component, so imports read
+  `import ContractorTable from './ContractorTable'`.
+- **A section owns the operations it runs**, in its own `queries/` / `mutations/` folders. A query
+  several sections read (the page's list, `JobDetail`) stays with the component that loads it.
+- **The parent keeps shared data and state;** sections get it as props and report back through
+  callbacks (`onEdit`, `onSaved`, `onClose`). A section keeps its own UI state (a form's fields,
+  an "adding…" flag).
+- **Logic that isn't UI** — a group of writes a page runs together — can be a hook in its own
+  folder beside the sections (`NewJobWizardPage/useJobDraft/`).
+- A folder without a `page.tsx` is never a route, so section folders need no `_` prefix.
 
-## Tailwind utility classes (from globals.css)
+## UI components: never raw elements
 
-| Class | Element |
-|---|---|
-| `.btn-primary` | Primary button |
-| `.btn-secondary` | Secondary / outline button |
-| `.btn-danger` | Destructive button |
-| `.input` | Text, select, textarea inputs |
-| `.card` | Container surface |
-| `.badge` | Inline status chip |
+Pages and feature components build with `src/components/ui/`, never with raw form elements or
+copied Tailwind strings. ESLint enforces it (`.eslintrc.json`): a raw `<button>`, `<input>`,
+`<select>`, `<textarea>` or `<label>`, or an import of `next/link`, outside `components/ui/` fails
+`next lint` and therefore `next build`.
+
+| Component | Use for | Props |
+|---|---|---|
+| `Button` | every button | `variant`: `primary` (default) · `secondary` · `danger` · `muted` (text-only) · `bare` (bespoke UI styled by `className`); `size`: `md` · `sm`; `loading`, `loadingText`. Defaults to `type="button"`. |
+| `Link` | every internal link | `variant`: `plain` (default) · `brand` · `muted` · `subtle` · `card` (a whole card that links) · `primary` / `secondary` (button-styled) |
+| `Field` | a labelled control | `label` (text or JSX), `hint`, `error`, `name` (inside a `Form`, shows that field's validation message); links the label to its single child control |
+| `Form`, `SubmitButton`, `FormActions`, `FormSelector` | every form | react-hook-form + zod; see `form.md` |
+| `Alert` | an error, warning or note box | `tone`: `error` (default) · `warning` · `info` |
+| `Input`, `Textarea`, `Select` | form controls | the native props; style overrides via `className` |
+| `Selector` | a searchable select | `options`, `value`, `onChange` |
+| `Card` | a white bordered surface | add padding and layout with `className` |
+| `Badge` / `StatusBadge` | pills / job and contractor statuses | colour with `className` / `status`, `type` |
+| `PageHeader` | the top of a dashboard page | `title`, `subtitle`, `back={{ href, label }}`, `actions` |
+| `Modal`, `EmptyState`, `Table`, `Dropdown` | dialogs, empty lists, paged tables, menus | see each file |
+
+- **`className` overrides, it doesn't fight.** Every component merges with `cn()` (`@/lib/cn`,
+  `clsx` + `tailwind-merge`), so `<Button className="w-full">` or `<Input className="max-w-xs">`
+  wins over the default.
+- **Variants live in the component**, declared with `class-variance-authority`. A new look is a
+  new variant there, not a class string repeated across pages.
+- **Layout stays inline.** `flex gap-2`, `space-y-4`, grids and spacing are written where they
+  are used; only reusable *controls and surfaces* become components.
+- **An exception needs a reason.** The one raw element today is the `<label>` that opens the file
+  picker in `ImagesTab` (styled with `buttonVariants`), marked
+  `eslint-disable-next-line react/forbid-elements -- <why>`.
 
 ## Rules
 

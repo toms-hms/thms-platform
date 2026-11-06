@@ -1,0 +1,7 @@
+mutation WizardCreateJobContractor($jobId: ID!, $contractorId: ID!) {
+  createJobContractor(jobId: $jobId, contractorId: $contractorId) {
+    jobContractor {
+      id
+    }
+  }
+}

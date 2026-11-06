@@ -1,0 +1,14 @@
+mutation StartDiagnose($jobId: ID!) {
+  startDiagnose(jobId: $jobId) {
+    result {
+      question
+      options
+      summary
+      suggestedCategories {
+        category
+        reason
+      }
+      messages
+    }
+  }
+}

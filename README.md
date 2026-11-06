@@ -7,10 +7,11 @@ A full-stack home contractor management application. Homeowners can manage proje
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 14 (App Router), Tailwind CSS |
-| Backend | Node.js, Express, TypeScript |
-| Database | PostgreSQL via Prisma ORM |
+| Backend | Python 3.12, Django 5.2, Graphene (GraphQL) |
+| Database | PostgreSQL via the Django ORM |
 | Object Storage | MinIO (S3-compatible) |
-| Cache / Queue | Redis + BullMQ |
+| Cache | Redis |
+| Audit | django-auditlog |
 | Auth | JWT (access + refresh tokens) |
 | AI | OpenAI (DALL-E 3 + GPT-4o-mini) |
 | Email | Gmail API / Microsoft Graph API |
@@ -21,10 +22,8 @@ A full-stack home contractor management application. Homeowners can manage proje
 ```
 thms-platform/
 ├── apps/
-│   ├── api/          # Express REST API
+│   ├── api/          # Django + Graphene GraphQL API
 │   └── web/          # Next.js frontend
-├── packages/
-│   └── shared/       # Shared TypeScript types
 ├── docker-compose.yml          # Infrastructure services (postgres, redis, minio)
 ├── docker-compose.override.yml # Dev services (api + web hot reload)
 ├── docker-compose.prod.yml     # Production build
@@ -83,10 +82,11 @@ Open `http://localhost:3000` — done.
 | `make logs` | Tail logs for all services |
 | `make logs-api` | Tail API logs only |
 | `make logs-web` | Tail web logs only |
-| `make migrate` | Run database migrations |
-| `make migrate-deploy` | Deploy migrations (production) |
-| `make seed` | Seed database with test data |
-| `make studio` | Open Prisma Studio (DB browser) |
+| `make migrate` | Generate and apply database migrations |
+| `make migrate-deploy` | Apply migrations only (production) |
+| `make seed` | Seed database with demo data |
+| `make shell-db` | Open a psql shell |
+| `make graphql-schema` | Write the schema to `schema.graphql` |
 | `make test` | Run all tests |
 | `make test-api` | Run backend tests only |
 | `make test-web` | Run frontend tests only |
@@ -108,6 +108,8 @@ See `.env.example` for the full list. Key variables:
 
 | Variable | Description |
 |---|---|
+| `DJANGO_SECRET_KEY` | Django secret key (required in production) |
+| `DJANGO_ENV` | `development`, `test` or `production` |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL` | Redis connection URL |
 | `JWT_SECRET` | JWT signing secret (32+ chars) |
@@ -120,6 +122,7 @@ See `.env.example` for the full list. Key variables:
 | `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID |
 | `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth client secret |
 | `NEXT_PUBLIC_API_URL` | API URL for the frontend |
+| `GRAPHIQL_ENABLED` | Serve GraphiQL at `/graphql` (development only) |
 
 ## Running Tests
 
@@ -129,44 +132,62 @@ make test-api    # backend only
 make test-web    # frontend only
 ```
 
-Backend tests (`apps/api/src/__tests__/`) hit a real DB and cover:
-- Auth (register, login, refresh)
-- Homes CRUD
-- Jobs CRUD + filtering
-- Contractors CRUD + search
-- Quotes CRUD + status transitions
+Backend tests use Django's test runner against a real database, with every test in a
+rolled-back transaction. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py`
+and `tests/test_schema.py`, covering:
+- Auth (register, login, refresh rotation, logout)
+- Permission boundaries on every resource — owner, member, stranger, admin
+- Manager filters and visibility queries
+- The GraphQL surface end to end, including error codes
+- AI and email integrations, with OpenAI and Google mocked
+- The audit log: what is recorded, who it is attributed to, who may read it
 
 Frontend tests (`apps/web/src/__tests__/`) run in jsdom and cover:
-- `StatusBadge`, `Modal`, `EmptyState` components
-- `ApiError` class
+- `StatusBadge`, `Modal`, `EmptyState`, `Table`, `Dropdown`, `Selector` components
+- The GraphQL client: variables, auth header, error codes, session expiry
 
 ## API Overview
 
-Base path: `/api/v1`
+The API is GraphQL. One endpoint:
 
-| Resource | Endpoints |
-|---|---|
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me` |
-| Homes | `GET/POST /homes`, `GET/PATCH/DELETE /homes/:id` |
-| Jobs | `GET/POST /homes/:id/jobs`, `GET/PATCH/DELETE /jobs/:id` |
-| Contractors | `GET/POST /contractors`, `GET/PATCH/DELETE /contractors/:id` |
-| Job Contractors | `GET/POST /jobs/:id/contractors`, `PATCH/DELETE /jobs/:id/contractors/:jcId` |
-| Images | `GET /jobs/:id/images`, `POST /jobs/:id/images/upload-url`, `POST .../confirm` |
-| AI | `POST /jobs/:id/ai-generations`, `GET /jobs/:id/ai-generations` |
-| Email Drafts | `POST /jobs/:id/email-drafts` |
-| Send Email | `POST /jobs/:id/send-email` |
-| Communications | `GET /jobs/:id/communications`, `GET/PATCH /communications/:id` |
-| Quotes | `GET/POST /jobs/:id/quotes`, `PATCH/DELETE /quotes/:id` |
-| Integrations | `GET /integrations`, `GET .../email/google/start`, `POST .../ai` |
-
-All endpoints require `Authorization: Bearer <token>` header except auth endpoints.
-
-Response format:
-```json
-{ "data": {} }
-// or on error:
-{ "error": { "code": "STRING_CODE", "message": "Human readable" } }
 ```
+POST /graphql
+```
+
+In development GraphiQL is served at the same path — open http://localhost:3001/graphql to explore the schema.
+
+| Area | Operations |
+|---|---|
+| Auth | `login`, `register`, `refreshTokens`, `logout`, `me` |
+| Homes | `homes`, `home`, `homeMembers`, `createHome`, `updateHome`, `deleteHome`, `addHomeUser`, `removeHomeUser` |
+| Jobs | `jobs`, `job`, `createJob`, `updateJob`, `deleteJob` |
+| Contractors | `contractors`, `contractor`, `contractorJobHistory`, `createContractor`, `updateContractor`, `promoteContractor`, `deleteContractor` |
+| Rolodex | `userContractors`, `createUserContractor`, `deleteUserContractor` |
+| Job contractors | `jobContractors`, `assignContractor`, `updateJobContractor`, `removeJobContractor` |
+| Quotes | `quotes`, `createQuote`, `updateQuote`, `deleteQuote` |
+| Communications | `communications`, `communication`, `updateCommunication` |
+| Images | `jobImages`, `requestUploadUrl`, `confirmUpload`, `deleteImage` |
+| AI | `aiGenerations`, `createAiGeneration`, `startDiagnose`, `diagnoseJob`, `draftEmail` |
+| Integrations | `integrations`, `googleAuthUrl`, `microsoftAuthUrl`, `saveAiIntegration`, `disconnectIntegration`, `sendEmail` |
+| Audit | `auditLog` (admin only) |
+
+A `job` carries its contractors, quotes, communications, images and AI generations as fields, so one query fetches the whole detail view.
+
+Every operation requires `Authorization: Bearer <token>` except `login`, `register` and `refreshTokens`.
+
+Errors carry a machine-readable code:
+
+```json
+{
+  "data": null,
+  "errors": [{ "message": "Forbidden", "extensions": { "code": "FORBIDDEN" } }]
+}
+```
+
+Codes: `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `BAD_REQUEST`, `VALIDATION_ERROR`, `RATE_LIMITED`, `INTERNAL_ERROR`.
+
+Two routes are not GraphQL: `GET /health`, and the OAuth callbacks at
+`/api/v1/integrations/email/{google,microsoft}/callback`, which the providers redirect a browser to.
 
 ## Key Design Decisions
 

@@ -1,0 +1,21 @@
+mutation CreateQuote(
+  $jobId: ID!
+  $contractorId: ID!
+  $amount: Float!
+  $description: String
+  $status: QuoteStatus
+  $sourceCommunicationId: ID
+) {
+  createQuote(
+    jobId: $jobId
+    contractorId: $contractorId
+    amount: $amount
+    description: $description
+    status: $status
+    sourceCommunicationId: $sourceCommunicationId
+  ) {
+    quote {
+      id
+    }
+  }
+}

@@ -1,0 +1,19 @@
+mutation CreateAiGeneration(
+  $jobId: ID!
+  $sourceImageId: ID!
+  $prompt: String!
+  $provider: String
+  $metadata: JSONString
+) {
+  createAiGeneration(
+    jobId: $jobId
+    sourceImageId: $sourceImageId
+    prompt: $prompt
+    provider: $provider
+    metadata: $metadata
+  ) {
+    aiGeneration {
+      id
+    }
+  }
+}

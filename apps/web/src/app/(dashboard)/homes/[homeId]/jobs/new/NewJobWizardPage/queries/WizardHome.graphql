@@ -1,0 +1,6 @@
+query WizardHome($homeId: ID!) {
+  home(homeId: $homeId) {
+    id
+    zipCode
+  }
+}

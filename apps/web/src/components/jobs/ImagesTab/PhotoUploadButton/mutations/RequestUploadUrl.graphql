@@ -1,0 +1,8 @@
+mutation RequestUploadUrl($jobId: ID!, $fileName: String!, $contentType: String!, $kind: String!) {
+  requestUploadUrl(jobId: $jobId, fileName: $fileName, contentType: $contentType, kind: $kind) {
+    upload {
+      uploadUrl
+      key
+    }
+  }
+}

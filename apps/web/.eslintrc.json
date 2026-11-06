@@ -1,0 +1,28 @@
+{
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": ["**/__generated__/**", "src/graphql/types.generated.ts"],
+  "rules": {
+    "react/forbid-elements": [
+      "error",
+      {
+        "forbid": [
+          { "element": "button", "message": "use <Button> from @/components/ui/Button" },
+          { "element": "input", "message": "use <Input> from @/components/ui/Input" },
+          { "element": "label", "message": "use <Field label=...> from @/components/ui/Field" },
+          { "element": "select", "message": "use <Select> (or <Selector>) from @/components/ui" },
+          { "element": "textarea", "message": "use <Textarea> from @/components/ui/Textarea" }
+        ]
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      { "paths": [{ "name": "next/link", "message": "use Link from @/components/ui/Link" }] }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/components/ui/**", "src/__tests__/**"],
+      "rules": { "react/forbid-elements": "off", "no-restricted-imports": "off" }
+    }
+  ]
+}

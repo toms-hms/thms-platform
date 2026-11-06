@@ -57,8 +57,12 @@ Thumbs.db
 # Docker volumes (if stored locally)
 docker/volumes/
 
-# Prisma
-apps/api/prisma/migrations/
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
 
 # MinIO local data
 minio-data/

@@ -1,78 +1,96 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import { useMutation } from '@apollo/client/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { updateJob } from './mutations';
+import SubmitButton from '@/components/ui/SubmitButton';
+import Textarea from '@/components/ui/Textarea';
+import { JobStatus, TradeCategory } from '@/graphql/types.generated';
+import { clearableText, requiredText } from '@/lib/formFields';
+import { JOB_STATUSES, jobStatusLabel } from '@/lib/jobStatuses';
+import { TRADE_CATEGORY_OPTIONS } from '@/lib/tradeCategories';
+import { UpdateJobDocument } from './mutations/__generated__/UpdateJob.generated';
+import type { JobDetail } from './types';
 
-const JOB_STATUSES = [
-  'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
-  'SCHEDULED', 'IN_PROGRESS', 'AWAITING_PAYMENT', 'COMPLETED',
-];
+const schema = z.object({
+  category: z.enum(TradeCategory, 'Choose a category'),
+  description: clearableText,
+  notes: clearableText,
+  status: z.enum(JobStatus),
+  title: requiredText('Give the job a title'),
+});
 
-interface Props {
-  job: any;
-  onUpdated: (job: any) => void;
-}
-
-export default function JobOverview({ job, onUpdated }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    title: job.title,
-    category: job.category,
+function formFrom(job: JobDetail): z.input<typeof schema> {
+  return {
+    category: job.category as TradeCategory,
     description: job.description || '',
     notes: job.notes || '',
-    status: job.status,
-  });
+    status: job.status as JobStatus,
+    title: job.title,
+  };
+}
 
-  function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+interface Props {
+  job: JobDetail;
+}
+
+/** The job's summary, with an inline form to edit its title, category, status, description and notes. */
+export default function JobOverview({ job }: Props) {
+  const [updateJob] = useMutation(UpdateJobDocument);
+  const [editing, setEditing] = useState(false);
+  const form = useForm({ defaultValues: formFrom(job), resolver: zodResolver(schema) });
+
+  function startEditing() {
+    form.reset(formFrom(job));
+    setEditing(true);
   }
 
-  async function handleSave(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await updateJob(job.id, form);
-      onUpdated(res.data);
-      setEditing(false);
-    } catch {}
-    setSaving(false);
+  async function handleSave(values: z.output<typeof schema>) {
+    await updateJob({ variables: { jobId: job.id, ...values } });
+    setEditing(false);
   }
 
   if (editing) {
     return (
-      <form onSubmit={handleSave} className="space-y-4">
+      <Form form={form} onSubmit={handleSave}>
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">Title</label>
-            <input className="input" value={form.title} onChange={(e) => update('title', e.target.value)} required />
-          </div>
-          <div>
-            <label className="label">Category</label>
-            <input className="input" value={form.category} onChange={(e) => update('category', e.target.value)} required />
-          </div>
+          <Field label="Title" name="title">
+            <Input {...form.register('title')} />
+          </Field>
+          <Field label="Category" name="category">
+            <Select {...form.register('category')}>
+              {TRADE_CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Select>
+          </Field>
         </div>
-        <div>
-          <label className="label">Status</label>
-          <select className="input" value={form.status} onChange={(e) => update('status', e.target.value)}>
-            {JOB_STATUSES.map((s) => (
-              <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+        <Field label="Status" name="status">
+          <Select {...form.register('status')}>
+            {JOB_STATUSES.map((status) => (
+              <option key={status} value={status}>{jobStatusLabel(status)}</option>
             ))}
-          </select>
-        </div>
-        <div>
-          <label className="label">Description</label>
-          <textarea className="input" rows={4} value={form.description} onChange={(e) => update('description', e.target.value)} />
-        </div>
-        <div>
-          <label className="label">Notes</label>
-          <textarea className="input" rows={3} value={form.notes} onChange={(e) => update('notes', e.target.value)} />
-        </div>
-        <div className="flex gap-3">
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save'}</button>
-          <button type="button" onClick={() => setEditing(false)} className="btn-secondary">Cancel</button>
-        </div>
-      </form>
+          </Select>
+        </Field>
+        <Field label="Description" name="description">
+          <Textarea rows={4} {...form.register('description')} />
+        </Field>
+        <Field label="Notes" name="notes">
+          <Textarea rows={3} {...form.register('notes')} />
+        </Field>
+        <FormActions className="justify-start">
+          <SubmitButton submittingText="Saving...">Save</SubmitButton>
+          <Button onClick={() => setEditing(false)} variant="secondary">Cancel</Button>
+        </FormActions>
+      </Form>
     );
   }
 
@@ -86,7 +104,7 @@ export default function JobOverview({ job, onUpdated }: Props) {
           </div>
           <p className="text-sm text-gray-500 mt-0.5">Category: {job.category}</p>
         </div>
-        <button onClick={() => setEditing(true)} className="btn-secondary text-xs">Edit</button>
+        <Button variant="secondary" onClick={startEditing} className="text-xs">Edit</Button>
       </div>
 
       {job.description && (
@@ -105,11 +123,11 @@ export default function JobOverview({ job, onUpdated }: Props) {
 
       <div className="pt-2 border-t border-gray-100">
         <h4 className="text-sm font-semibold text-gray-700 mb-2">Contractor Summary</h4>
-        {job.contractors?.length === 0 ? (
+        {job.contractors.length === 0 ? (
           <p className="text-sm text-gray-400">No contractors attached yet.</p>
         ) : (
           <div className="space-y-2">
-            {job.contractors?.map((jc: any) => (
+            {job.contractors.map((jc) => (
               <div key={jc.id} className="flex items-center justify-between text-sm">
                 <span className="text-gray-700">{jc.contractor.name}</span>
                 <StatusBadge status={jc.status} type="contractor" />

@@ -1,79 +1,155 @@
 # THMS Rules
 
+The backend is Python (Django + Graphene); the frontend is TypeScript (Next.js). Where a rule is language-specific it says so.
+
 ## Function signatures
-Destructure options-bag parameters at the function signature, not in the body. The exception: when a destructured name would shadow a function or import in scope (e.g. a `search` field colliding with a `search` helper), introduce a namespace import to disambiguate rather than renaming the destructure.
 
-```typescript
-// good
-async filter({ zipCode, category, search }: FilterOpts = {}) { /* ... */ }
+**Python.** Keyword-only arguments for anything with more than one parameter of the same type, for every filter, and for **every** service and client method (`def update(self, *, quote_id, ...)`). Callers name what they pass.
 
-// bad — needless indirection
-async filter(opts: FilterOpts = {}) { const { zipCode, category, search } = opts; /* ... */ }
+```python
+# good
+def filter_contractors(self, *, search=None, trade_categories=None, zip_codes=None): ...
+
+# bad — positional soup at the call site
+def filter_contractors(self, zip_codes=None, trade_categories=None, search=None): ...
 ```
+
+### Parameter order
+
+Keyword-only parameters come in four groups, each alphabetical:
+
+1. required ids, 2. required values, 3. optional ids, 4. optional values.
+
+An **id** is a parameter that identifies rows: a name ending in `_id` / `_ids`, the name `ids`,
+or a parameter typed as a model (`user: User`). Everything else is a value.
+
+```python
+def create(
+    self,
+    *,
+    contractor_id: str,                           # required ids
+    job_id: str,
+    amount: Decimal | float,                      # required values
+    source_communication_id: str | None = None,   # optional ids
+    description: str | None = None,               # optional values
+    status: str | None = None,
+) -> Quote: ...
+```
+
+`core/tests/test_conventions.py` enforces this for every function in `apps/api`. The same order
+applies, by review, to:
+
+- **Call sites:** keyword arguments follow the callee's parameter order. Where the callee takes
+  `**fields` (Django's `create`, `filter`, `apply_updates`, factories), ids and model instances
+  come first, then values, each alphabetical: `JobFactory(created_by=user, home=home)`.
+- **Constructors:** injected dependencies are all optional, so plain alphabetical, and the
+  `self._x = ...` assignments match.
+- **Queryset chains:** filter-style calls (`filter_*`, `filter`, `search`, `select_related`,
+  `prefetch_related`, `visible_to`, `owned_by`) are alphabetical. Calls that change the shape or end
+  the chain (`values` / `values_list`, `order_by`, slicing, `first`, `exists`, `delete`) stay last.
+- **GraphQL `Arguments` classes:** required first, `ID`s before values within each group,
+  alphabetical. Graphene sorts arguments in the exported schema regardless, so this is for readers.
+
+Positional parameters keep their order (`can(user, permission, home_id)`, `apply_updates(instance,
+**fields)`), as do framework-fixed signatures (`resolve_x(self, info, ...)`, `mutate(self, info, ...)`).
+
+**TypeScript.** Destructure options-bag parameters at the signature, not in the body. The exception: when a destructured name would shadow something in scope, use a namespace import to disambiguate rather than renaming the destructure.
 
 ## Imports
-- Use `@/` for any import that crosses a directory boundary. Use `./` only for same-directory imports.
-- Cross-app shared types: `@thms/shared` only. Never import from one app into the other.
+
+- **Python.** Absolute imports from the app root (`from jobs.models import Job`). Import inside a function only to break a genuine cycle — managers and services do this deliberately.
+- **TypeScript.** `@/` for any import that crosses a directory boundary; `./` only for same-directory imports.
 
 ## API responses
-Always `{ data: {} }` or `{ error: { code, message } }`. No other shape.
+
+The API is GraphQL. Errors carry a stable `extensions.code` — `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `BAD_REQUEST`, `VALIDATION_ERROR`, `RATE_LIMITED`, `INTERNAL_ERROR`. Raise the matching error from `core.errors`; never invent a code, and never return a database message, stack trace or provider response to a client.
 
 ## API and client contracts
-Use explicit domain names and plural arrays for list filters whenever a field can
-hold multiple values. Do not add singular aliases for convenience. A client that
-filters contractors by one category still sends `tradeCategories=[value]`, not
-`category=value`; one ZIP still uses `zipCodes=[value]`, not `zipCode=value`.
-Prefer `tradeCategories` over generic `categories` at API/client boundaries.
+
+Every argument to a list query is a plural array: ids (`homeIds`, `jobIds`, including a required parent like `quotes(jobIds)`), enums (`statuses`, `directions`) and values. Do not add singular aliases for convenience. Backend `list` / `filter` methods take the same plural lists (`filter_job_ids(job_ids)`). Single-object reads (`job(jobId)`) and mutations stay singular, because they act on exactly one row. A client filtering contractors by one category still sends `tradeCategories: [value]`, not `category: value`; one ZIP still uses `zipCodes: [value]`. Prefer `tradeCategories` over generic `categories` at API and client boundaries.
 
 ## Enums and model constants
-Always use the defined enum or constant instead of a raw string for model values.
-- `JobIntent.ISSUE` not `'ISSUE'`
-- `TradeCategory.HVAC` not `'HVAC'`
-- `JobStatus.DRAFT` not `'DRAFT'`
-- `UserRole.ADMIN` not `'ADMIN'`
 
-Use them as `Record` keys too: `Record<JobIntent, string>` not `Record<string, string>`.
-All enums are exported from `@thms/shared`.
+Always use the defined enum member instead of a raw string.
+
+- Python: `JobIntent.ISSUE`, `TradeCategory.HVAC`, `JobStatus.DRAFT`, `UserRole.ADMIN` — defined as `TextChoices` in the owning app's `models.py`, exposed to GraphQL through `core/enums.py`.
+- TypeScript: the same names from `@/graphql/types.generated` (generated from the schema).
 
 ## State transitions
+
 Never auto-transition job or contractor status. The user controls all state.
 
+## Models
+
+Django owns the schema. No `db_table` / `db_column` overrides. Every model extends `core.models.BaseModel`, which supplies the UUID `id`, `created_at` and `updated_at`; models never redeclare them. Choices are `CharField(choices=...)`. Timestamps are timezone-aware `DateTimeField`s. Every foreign key names its `on_delete` deliberately, never `DO_NOTHING`. See `.ai/recipes/api/model.md`.
+
+## QuerySets and managers
+
+- Each model lives in `<app>/models/<model_name>/` with `model.py`, `queryset.py` and `manager.py`. The package `models/__init__.py` re-exports it. Import models as `from <app>.models import X`.
+- **`queryset.py`** holds chainable one-clause filters. A filter takes `list[...] | None` and starts with `if x is None: return self`, never `if not x`. `[]` must match nothing.
+- **`manager.py`** is built with `BaseManager.from_queryset(...)`. It holds compositions of those filters, generic writes (`upsert`, `apply_updates`), and methods that return values.
+- Neither holds business rules nor makes access decisions.
+
+See `.ai/recipes/api/queryset.md` and `.ai/recipes/api/manager.md`.
+
+## Services, clients and utils
+
+- **Business logic lives in services:** classes in `<app>/services/<domain>_service.py`. Every mutation calls one; queries read through managers and querysets directly.
+- **Every vendor SDK is wrapped in a client:** a class in `<app>/clients/<vendor>_client.py`. Only that file imports the SDK, and only services use clients.
+- Services take their managers, clients and other services as keyword-only `__init__` arguments that default to the real ones (`self._job_manager = job_manager or Job.objects`). A service method never names `Model.objects` and never calls a method on a model instance; deletes are `self._job_manager.delete(job)`. Tests pass fakes there instead of patching module paths.
+- **Models extend `core.models.BaseModel` and declare fields, `Meta` and choices only.** `BaseModel.__str__` is `"<Model> - <id>"`; never override it, because the audit log stores it and it must carry no personal data. No properties or methods of our own: related-row reads go in the manager, display formatting in a util, role checks in `PermissionService`.
+- **Services make one named manager call per lookup or write** (`find`, `create`, `upsert`, `apply_updates`, …). Any chain of queryset calls is a manager method. A missing row is `find(...)` returning `None`, and the service raises `NotFoundError`; the repo layer has no `get_or_404`.
+- **Instance attributes are private** (`self._sdk`, `self._openai`) in services, clients and other plain classes. If a caller needs a value, add a method. This doesn't apply to model fields, Graphene types or test-case fixtures.
+- **Updates use `UNSET`:** optional fields default to `UNSET`, the method ends with `self._<model>_manager.apply_updates(...)`, and `None` means "clear". Never use a `setattr` loop over a dict.
+- **Pure helpers are functions** in `<app>/utils/<topic>_utils.py`: no database, no network.
+- The role is in every file name: `model.py`, `queryset.py`, `manager.py`, `*_service.py`, `*_client.py`, `*_utils.py`, `*_factory.py`.
+
+See `.ai/recipes/api/file-structure.md` for who may call what, plus `service.md`, `client.md` and `utils.md`.
+
+## Access control
+
+Declared on the resolver, decided in one place (`PermissionService.can` in `core/services/permission_service.py`):
+
+- `@authorize(Permission.X, resource=Model, arg="model_id")` for home-scoped rows
+- `@owner_required(resource=Model, arg="model_id")` for user-owned rows
+- `@login_required` / `@admin_required` for everything else
+- Collections are `@login_required` and start from `Model.objects.visible_to(user, Permission.X)` or `owned_by(user)`, never from `.all()` and never behind `@authorize`. An id the caller cannot see drops out of the result; it is not FORBIDDEN.
+
+No role or membership checks in managers, querysets or services. See `.ai/recipes/api/permissioning.md`.
+
+## Queries
+
+Filter in the database, never in Python or JavaScript. No N+1: use `select_related` / `prefetch_related`, or one `__in` query for related rows. A multi-table write is wrapped in `@transaction.atomic`.
+
 ## Auth
-JWT Bearer token required on all routes except `/auth/register` and `/auth/login`.
 
-## Managers
-Every permissioned manager implements:
-- `hasPermission(userId, resourceId)` — pure data check, no role logic
-- `models/ModelNameManager.where.ts` exports `filterUser(userId)` — SQL visibility predicate for list routes
-
-Routes use `permit()` middleware for individual object access.
+Every query and mutation requires a bearer token except `login`, `register` and `refreshTokens`.
 
 ## Comments
-Every exported function must have a one-line JSDoc comment describing what it does, its key parameter assumptions, and what it returns. No commenting the obvious.
-```ts
-/** Returns contractors whose email matches any of the given addresses (case-insensitive). */
-export function filterEmails(emails?: string[]): SQL | undefined
+
+Every public function, method, class and module has a docstring (Python) or one-line JSDoc (TypeScript) describing what it does, its key assumptions, and what it returns. No commenting the obvious.
+
+```python
+def filter_existing(self, user_id: str, contractor_id: str):
+    """Returns the user's existing entry for this contractor, or None."""
 ```
 
-## Manager methods
-See `.ai/recipes/manager.md` for naming conventions and principles before writing any manager method.
-
 ## Migrations
-Never write migration SQL by hand for schema changes. Run `npm run db:generate` in `apps/api/` to generate from the Drizzle model. See `.ai/recipes/migrations.md` for when custom SQL is acceptable.
+
+Never hand-write a migration for a schema change — edit the model and run `make migrate`. Hand-written migrations are for data only (`RunPython`). See `.ai/recipes/api/migrations.md`.
 
 ## Tests
-Each module has `factories/` (one per model) and `__tests__/` (Manager, service, route).
-Shared test infra in `src/test/`. See `.ai/recipes/testing.md` for the full pattern.
 
-## Permissions
-See `.ai/recipes/permissioning.md` for the full pattern before touching any route or manager.
+Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one module per model in the app's `factories/` package. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py` as it needs them. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
 
 ## Branching
+
 Never push directly to `main` or any default branch. Always create a feature branch and push there. Direct pushes to `main` are only permitted when the user explicitly instructs it.
 
 ## App boundaries
-Code inside `apps/web` may only import from `apps/web` (via `@/`) and node_modules. Code inside `apps/api` may only import from `apps/api` (via `@/`) and node_modules.
 
-**No imports from `@thms/shared`.** No imports from one app into another. The web and api are deployed to separate servers — they cannot share runtime code. Types that need to cross the boundary must come from the generated API client in `apps/web/src/types/api.gen.ts` (see the type generation workflow in `.ai/recipes/api-client.md`).
+Code inside `apps/web` may only import from `apps/web` (via `@/`) and node_modules. Code inside `apps/api` may only import from `apps/api`.
+
+The web and api deploy to separate servers — they cannot share runtime code. The contract between them is the GraphQL schema: the API exports it to `apps/api/schema.graphql` (a test fails when it is stale), and the web generates its types from that file (`make graphql-schema`). A schema file is data, not runtime code, so reading it across the boundary at build time is allowed.
 
 This is a hard rule. Cross-app imports break independent deployment.

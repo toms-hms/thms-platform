@@ -1,0 +1,11 @@
+mutation UpdateJobContractor($jobContractorId: ID!, $status: JobContractorStatus!, $notes: String) {
+  updateJobContractor(jobContractorId: $jobContractorId, status: $status, notes: $notes) {
+    jobContractor {
+      id
+      status
+      notes
+      lastContactedAt
+      lastResponseAt
+    }
+  }
+}

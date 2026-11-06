@@ -9,7 +9,8 @@ services:
     ports:
       - '3001:3001'
     environment:
-      NODE_ENV: development
+      DJANGO_ENV: development
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-insecure-django-secret-key-change-me}
       DATABASE_URL: postgresql://${POSTGRES_USER:-thms}:${POSTGRES_PASSWORD:-thms_password}@postgres:5432/${POSTGRES_DB:-thms_db}
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio
@@ -31,11 +32,11 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-common}
       MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-http://localhost:3001/api/v1/integrations/email/microsoft/callback}
-      PORT: 3001
       CORS_ORIGIN: http://localhost:3000
+      GRAPHIQL_ENABLED: 'true'
     volumes:
-      - ./apps/api/src:/app/apps/api/src
-      - ./packages/shared/src:/app/packages/shared/src
+      # Source only — dependencies live outside /app so the mount cannot shadow them.
+      - ./apps/api:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +58,5 @@ services:
       NEXT_PUBLIC_APP_NAME: THMS Platform
     volumes:
       - ./apps/web/src:/app/apps/web/src
-      - ./packages/shared/src:/app/packages/shared/src
     depends_on:
       - api

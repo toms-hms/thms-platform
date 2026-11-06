@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { auth } from '@/lib/api';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import { LogoutDocument } from './mutations/__generated__/Logout.generated';
 import { clearTokens, getStoredUser } from '@/lib/auth';
 import { useState, useEffect } from 'react';
 
@@ -17,6 +18,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [logout] = useMutation(LogoutDocument);
+  const client = useApolloClient();
 
   useEffect(() => {
     setUser(getStoredUser());
@@ -25,9 +28,10 @@ export default function Navbar() {
   async function handleLogout() {
     setLoggingOut(true);
     try {
-      await auth.logout();
+      await logout();
     } catch {}
     clearTokens();
+    await client.clearStore();
     router.push('/login');
   }
 

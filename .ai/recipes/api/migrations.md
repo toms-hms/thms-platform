@@ -1,55 +1,39 @@
 ---
 name: api-migrations
-description: Guide for generating and applying Drizzle migrations — when to generate vs hand-write, and workflow steps.
+description: Guide for schema changes — generating migrations with makemigrations, checking for missing migrations, and when hand-written data migrations are allowed.
 ---
 
-# API Migrations
-
-## Always generate schema migrations with drizzle-kit
-
-When adding, removing, or renaming a column or table, never write the SQL by hand. Run:
+# Migrations
 
 ```bash
-cd apps/api
-npm run db:generate
+make migrate         # makemigrations + migrate inside the container
+make migrate-deploy  # apply only — what runs in a deployed environment
+make reset-db        # drop the local database volume; follow with make migrate && make seed
 ```
 
-This diffs `src/db/schema.ts` against the last snapshot in `drizzle/` and produces a timestamped SQL file. Commit that file alongside the schema change.
+Django owns the schema. Every table, column, constraint and index comes from a
+model, and every migration comes from `makemigrations`.
 
-## When to write a custom migration instead
+## Changing the schema
 
-Only write raw SQL when the change cannot be expressed as a schema diff:
+1. Edit the model (see `model.md`).
+2. Run `make migrate`. Commit the generated file in the app's `migrations/` alongside the model change.
+3. Never edit a generated migration by hand. If the generated file is wrong, fix the model and regenerate.
 
-- Data backfills (populating a new column from existing rows)
-- Multi-step renames that need to preserve data mid-flight
-- Index creation with non-default options
-- Triggers, functions, or other DB objects Drizzle doesn't model
+Choices are plain `CharField(choices=...)`, so adding or removing a `TextChoices`
+member needs a migration only because Django records `choices`. The column
+type does not change, and there is no database enum type to alter.
 
-Custom migrations still go in `drizzle/` with a sequential prefix so they run in order.
+## Hand-written migrations are for data, not structure
 
-## Workflow
+A data migration (backfilling a column, repairing rows) is legitimately hand-written
+with `RunPython`. Give it a reverse function, or `migrations.RunPython.noop` when
+there is nothing to undo. A structural change is never hand-written.
 
-1. Edit the Drizzle model in `src/{module}/models/<Model>.ts`
-2. Add the table export to `src/db/schema.ts` if it's a new table
-3. Run `npm run db:generate` — review the generated SQL before committing
-4. Commit both the model change and the generated migration file together
-5. To apply: `npm run db:migrate` (or `make migrate` from project root)
+## Checking before you commit
 
-## Example: adding a nullable column
-
-```typescript
-// 1. Edit the model
-export const contractors = pgTable('Contractor', {
-  // ... existing fields
-  website: text('website'),   // new nullable column
-});
-
-// 2. Generate
-// cd apps/api && npm run db:generate
-// → drizzle/0012_add_contractor_website.sql
-
-// 3. Review the generated SQL — should look like:
-// ALTER TABLE "Contractor" ADD COLUMN "website" text;
+```bash
+DJANGO_ENV=test uv run python manage.py makemigrations --check --dry-run
 ```
 
-Never add `.notNull()` to a new column without a migration-time default — Postgres will reject the migration on a populated table.
+This fails when a model change has no migration, which is exactly what CI should catch.

@@ -1,5 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useId } from 'react';
+import { cn } from '@/lib/cn';
+import { CONTROL_CLASSES } from './Input';
 
 export interface SelectorOption {
   value: string;
@@ -69,7 +71,7 @@ export default function Selector({ options, value, onChange, placeholder = 'Sele
         onKeyDown={handleKeyDown}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="input flex items-center justify-between text-left cursor-default"
+        className={cn(CONTROL_CLASSES, 'flex items-center justify-between text-left cursor-default')}
       >
         <span className={selected ? 'text-gray-900' : 'text-gray-400'}>{selected?.label ?? placeholder}</span>
         <svg className="w-4 h-4 text-gray-400 ml-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +85,7 @@ export default function Selector({ options, value, onChange, placeholder = 'Sele
             <input
               ref={inputRef}
               type="text"
-              className="input py-1.5 text-sm"
+              className={cn(CONTROL_CLASSES, 'py-1.5 text-sm')}
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setFocused(-1); }}

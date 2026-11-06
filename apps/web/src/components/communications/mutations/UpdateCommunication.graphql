@@ -1,0 +1,12 @@
+mutation UpdateCommunication($communicationId: ID!, $needsReview: Boolean, $parsedSummary: String) {
+  updateCommunication(
+    communicationId: $communicationId
+    needsReview: $needsReview
+    parsedSummary: $parsedSummary
+  ) {
+    communication {
+      id
+      needsReview
+    }
+  }
+}

@@ -1,0 +1,85 @@
+"""GraphQL types for jobs and contractor assignments.
+
+A job exposes its related images, quotes, communications and generations as
+nested fields — the composite payload the REST endpoint used to assemble by hand.
+"""
+
+import graphene
+from graphene_django import DjangoObjectType
+
+from jobs.models import Job, JobContractor
+
+
+class JobContractorType(DjangoObjectType):
+    """A contractor's involvement in a job."""
+
+    class Meta:
+        model = JobContractor
+        fields = (
+            "id",
+            "job",
+            "contractor",
+            "status",
+            "last_contacted_at",
+            "last_response_at",
+            "notes",
+            "created_at",
+            "updated_at",
+        )
+        convert_choices_to_enum = False
+
+
+class JobType(DjangoObjectType):
+    """A piece of work on a home, with everything hanging off it."""
+
+    ai_session = graphene.JSONString()
+    contractors = graphene.List(graphene.NonNull(JobContractorType), required=True)
+    images = graphene.List(graphene.NonNull("ai.types.JobImageType"), required=True)
+    quotes = graphene.List(graphene.NonNull("quotes.types.QuoteType"), required=True)
+    communications = graphene.List(graphene.NonNull("communications.types.CommunicationType"), required=True)
+    ai_generations = graphene.List(graphene.NonNull("ai.types.AIGenerationType"), required=True)
+
+    class Meta:
+        model = Job
+        fields = (
+            "id",
+            "home",
+            "title",
+            "intent",
+            "category",
+            "description",
+            "notes",
+            "status",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+        convert_choices_to_enum = False
+
+    def resolve_contractors(self, info):
+        """Returns the contractors assigned to this job."""
+        return JobContractor.objects.filter_job_ids([self.pk]).select_related("contractor")
+
+    def resolve_images(self, info):
+        """Returns the images attached to this job."""
+        from ai.models import JobImage
+
+        return JobImage.objects.filter_job_ids([self.pk])
+
+    def resolve_quotes(self, info):
+        """Returns the quotes recorded against this job."""
+        from quotes.models import Quote
+
+        return Quote.objects.filter_job_ids([self.pk]).select_related("contractor")
+
+    def resolve_communications(self, info):
+        """Returns the messages exchanged about this job."""
+        from communications.models import Communication
+
+        return Communication.objects.filter_communications(job_ids=[self.pk]).select_related("contractor")
+
+    def resolve_ai_generations(self, info):
+        """Returns the AI generations recorded against this job."""
+        from ai.models import AIGeneration
+
+        return AIGeneration.objects.filter_job_ids([self.pk])

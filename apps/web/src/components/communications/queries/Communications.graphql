@@ -1,0 +1,28 @@
+query Communications(
+  $jobIds: [ID!]!
+  $contractorIds: [ID!]
+  $needsReview: Boolean
+  $directions: [CommunicationDirection!]
+) {
+  communications(
+    jobIds: $jobIds
+    contractorIds: $contractorIds
+    needsReview: $needsReview
+    directions: $directions
+  ) {
+    id
+    direction
+    subject
+    bodyText
+    bodyHtml
+    sentAt
+    receivedAt
+    parsedSummary
+    needsReview
+    createdAt
+    contractor {
+      id
+      name
+    }
+  }
+}

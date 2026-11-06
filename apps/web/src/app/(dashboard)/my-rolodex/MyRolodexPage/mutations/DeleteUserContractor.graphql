@@ -1,0 +1,5 @@
+mutation DeleteUserContractor($userContractorId: ID!) {
+  deleteUserContractor(userContractorId: $userContractorId) {
+    success
+  }
+}

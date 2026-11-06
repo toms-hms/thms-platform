@@ -56,39 +56,10 @@ export default function SettingsPage() {
 
 Note: `(dashboard)/layout.tsx` already handles the auth redirect for all dashboard pages. Only add `useRequireAuth` to pages outside that layout.
 
-## Pattern — data-fetching hook
+## Data fetching is not a custom hook
 
-When the same fetch-and-state pattern repeats across multiple pages, extract it:
+Load data with Apollo's `useQuery` and a typed document directly in the component (see
+`api-client.md`). It already handles loading state, errors, refetching on variable changes
+and caching, so do not wrap it in a `useX` hook or hand-roll a `useEffect` fetch.
 
-```typescript
-// src/hooks/useContractors.ts
-'use client';
-import { useState, useEffect } from 'react';
-import { listContractors } from '@/app/(dashboard)/contractors/queries';
-
-interface UseContractorsOpts {
-  search?: string;
-  tradeCategories?: string[];
-  zipCodes?: string[];
-}
-
-/** Fetches the contractor list and re-runs when filter values change. */
-export function useContractors({ search, tradeCategories, zipCodes }: UseContractorsOpts = {}) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    listContractors({ search, tradeCategories, zipCodes })
-      .then((res) => { if (!cancelled) { setData(res.data); setLoading(false); } })
-      .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false); } });
-    return () => { cancelled = true; };
-  }, [search, JSON.stringify(tradeCategories), JSON.stringify(zipCodes)]);
-
-  return { data, loading, error };
-}
-```
-
-Only extract a hook when the logic is genuinely reused. A single page's `useEffect` fetch does not need to become a hook.
+Only extract a hook for genuinely reused UI or derived logic, not for an API call.

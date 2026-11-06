@@ -64,7 +64,9 @@ services:
     ports:
       - '3001:3001'
     environment:
-      NODE_ENV: production
+      DJANGO_ENV: production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
       DATABASE_URL: postgresql://${POSTGRES_USER:-thms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-thms_db}
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio
@@ -84,7 +86,6 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-common}
       MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-}
-      PORT: 3001
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     depends_on:
       postgres:

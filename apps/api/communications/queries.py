@@ -1,0 +1,48 @@
+"""GraphQL reads for communications."""
+
+import graphene
+
+from communications.models import Communication
+from communications.types import CommunicationType
+from core.enums import CommunicationDirectionEnum
+from core.errors import NotFoundError
+from core.graphql import authorize, current_user, login_required
+from core.services.permission_service import Permission
+
+
+class CommunicationsQuery(graphene.ObjectType):
+    """Communication reads."""
+
+    communications = graphene.List(
+        graphene.NonNull(CommunicationType),
+        job_ids=graphene.List(graphene.NonNull(graphene.ID), required=True),
+        contractor_ids=graphene.List(graphene.NonNull(graphene.ID)),
+        needs_review=graphene.Boolean(),
+        directions=graphene.List(graphene.NonNull(CommunicationDirectionEnum)),
+        required=True,
+    )
+    communication = graphene.Field(CommunicationType, communication_id=graphene.ID(required=True))
+
+    @login_required
+    def resolve_communications(
+        self, info, job_ids: list[str], contractor_ids=None, needs_review=None, directions=None
+    ):
+        """Returns the messages on the jobs the caller can see, narrowed by the given filters."""
+        return (
+            Communication.objects.filter_communications(
+                contractor_ids=contractor_ids,
+                job_ids=job_ids,
+                directions=directions,
+                needs_review=needs_review,
+            )
+            .select_related("contractor")
+            .visible_to(current_user(info), Permission.COMMUNICATIONS_VIEW)
+        )
+
+    @authorize(Permission.COMMUNICATIONS_VIEW, arg="communication_id", resource=Communication)
+    def resolve_communication(self, info, communication_id: str):
+        """Returns one message."""
+        communication = Communication.objects.find(pk=communication_id)
+        if communication is None:
+            raise NotFoundError("Communication")
+        return communication

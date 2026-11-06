@@ -1,161 +1,114 @@
 ---
 name: web-form
-description: Guide for form handling in pages — Modal + useState pattern, FormEvent, error display, and controlled inputs.
+description: Guide for forms — react-hook-form + zod schemas, the Form / Field / SubmitButton components, validation messages, submit errors, create vs edit blanks, and modal forms.
 ---
 
 # Web Form Handling
 
-Forms live inside `<Modal>` components for create/edit actions, or inline in the page for simple one-field filters. All form state is managed with `useState`.
+Every form uses **react-hook-form** for state and **zod** for validation, through the
+components in `src/components/ui/`. A form has no `useState` for its fields, no `saving` flag,
+no `error` string and no `try`/`catch`: `Form`, `Field` and `SubmitButton` handle those.
 
-## Modal + form pattern
-
-The canonical pattern: a boolean `show*` state controls the modal; a `form` state object holds all field values; `handleSubmit` calls a mutation, then refreshes the list.
-
-```typescript
-// State at the top of the page component
-const [showCreate, setShowCreate] = useState(false);
-const [saving, setSaving] = useState(false);
-const [error, setError] = useState('');
-const [form, setForm] = useState({
-  name: '',
-  companyName: '',
-  email: '',
-  phone: '',
-  category: '' as TradeCategory | '',
-  zipCodes: '',
-  notes: '',
-});
-
-// Generic field updater — avoids one setter per field
-function update(field: string, value: string) {
-  setForm((f) => ({ ...f, [field]: value }));
-}
-
-// Submit handler
-async function handleCreate(e: FormEvent) {
-  e.preventDefault();        // prevent page reload
-  setSaving(true);
-  setError('');
-  try {
-    await createContractor({
-      name: form.name,
-      companyName: form.companyName || undefined,
-      email: form.email || undefined,
-      categories: form.category ? [form.category] : [],
-      // Split comma-separated zip codes entered in a single text field
-      zipCodes: form.zipCodes ? form.zipCodes.split(',').map((z) => z.trim()).filter(Boolean) : [],
-      notes: form.notes || undefined,
-    });
-    setShowCreate(false);
-    load();   // re-fetch the list
-  } catch (err: any) {
-    setError(err.message ?? 'Failed to save');
-  } finally {
-    setSaving(false);
-  }
-}
-```
+## The pattern
 
 ```tsx
-// JSX
-<button className="btn-primary" onClick={() => {
-  setForm({ name: '', companyName: '', email: '', phone: '', category: '', zipCodes: '', notes: '' });
-  setError('');
-  setShowCreate(true);
-}}>
-  Add Contractor
-</button>
+'use client';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
+import Input from '@/components/ui/Input';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { optionalText, requiredText, stateCode, zipCode } from '@/lib/formFields';
 
-<Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add Contractor">
-  <form onSubmit={handleCreate} className="space-y-4">
-    {error && <p className="text-red-500 text-sm">{error}</p>}
+const schema = z.object({
+  address1: requiredText('Enter the street address'),
+  name: requiredText('Give the home a name'),
+  notes: optionalText,
+  state: stateCode,
+  zipCode,
+});
 
-    <div>
-      <label className="block text-sm font-medium mb-1">Name *</label>
-      <input
-        className="input w-full"
-        value={form.name}
-        onChange={(e) => update('name', e.target.value)}
-        required
-      />
-    </div>
+const EMPTY_HOME = { address1: '', name: '', notes: '', state: '', zipCode: '' };
 
-    <div>
-      <label className="block text-sm font-medium mb-1">Trade Category</label>
-      <select
-        className="input w-full"
-        value={form.category}
-        onChange={(e) => update('category', e.target.value)}
-      >
-        <option value="">Select category</option>
-        {Object.values(TradeCategory).map((c) => (
-          <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
-        ))}
-      </select>
-    </div>
+export default function HomesPage() {
+  const [createHome] = useMutation(CreateHomeDocument);
+  const form = useForm({ defaultValues: EMPTY_HOME, resolver: zodResolver(schema) });
 
-    <div>
-      <label className="block text-sm font-medium mb-1">ZIP Codes (comma-separated)</label>
-      <input
-        className="input w-full"
-        placeholder="78701, 78702"
-        value={form.zipCodes}
-        onChange={(e) => update('zipCodes', e.target.value)}
-      />
-    </div>
+  async function handleCreate(values: z.output<typeof schema>) {
+    await createHome({ variables: values });   // a throw is shown above the fields
+    setShowCreate(false);
+  }
 
-    <button type="submit" className="btn-primary w-full" disabled={saving}>
-      {saving ? 'Saving…' : 'Save'}
-    </button>
-  </form>
-</Modal>
+  return (
+    <Form form={form} onSubmit={handleCreate}>
+      <Field label="Home Name" name="name">
+        <Input placeholder="Primary Residence" {...form.register('name')} />
+      </Field>
+      …
+      <FormActions>
+        <Button onClick={() => setShowCreate(false)} variant="secondary">Cancel</Button>
+        <SubmitButton submittingText="Saving...">Create Home</SubmitButton>
+      </FormActions>
+    </Form>
+  );
+}
 ```
 
-## Edit form
+## The pieces
 
-Edit reuses the same modal. Open it with the existing values pre-filled:
+| Piece | Does |
+|---|---|
+| `useForm({ defaultValues, resolver: zodResolver(schema) })` | Field state, validation, submitting state. Always pass `defaultValues`: every field starts as a string (or array). |
+| `Form` | Wraps `<form noValidate>` and the react-hook-form provider. Validates, then runs `onSubmit` with the **schema's output** (trimmed, transformed). Anything `onSubmit` throws (an API error) shows in an `Alert` above the fields. |
+| `Field name="x"` | Label linked to the control, plus that field's validation message under it. |
+| `form.register('x')` | Spread onto an `Input`, `Textarea` or `Select`. |
+| `FormSelector name="x"` | A searchable `Selector` bound to a field. Any other custom control uses react-hook-form's `Controller` (see the category chips in `ContractorEditModal`). |
+| `SubmitButton` | `type="submit"`; disabled and shows `submittingText` while submitting. |
+| `FormActions` | The button row, right-aligned (`className="justify-between"` for a Back button). |
+| `Alert` | The one message box: `tone="error"` (what `Form` uses), `"warning"`, `"info"`. |
 
-```typescript
-const [editing, setEditing] = useState<Contractor | null>(null);
+## Schemas
 
-function openEdit(c: Contractor) {
-  setForm({
-    name:        c.name,
-    companyName: c.companyName ?? '',
-    email:       c.email ?? '',
-    phone:       c.phone ?? '',
-    category:    c.categories[0] ?? '',
-    zipCodes:    c.zipCodes.join(', '),
-    notes:       c.notes ?? '',
-  });
-  setEditing(c);
+- **Compose the helpers in `@/lib/formFields`** so rules and messages match across forms:
+  `requiredText(msg)`, `optionalText`, `clearableText`, `optionalEmail`, `clearableEmail`,
+  `stateCode`, `zipCode`, `zipCodeList`. Add a helper there before writing the same rule twice.
+- **Messages say what to do** ("Enter the city", "Use the 2-letter state code"), not what's wrong.
+- **Create vs edit blanks matter.** In a *create* form a blank optional field is `optionalText` →
+  `undefined`, so the API leaves it unset. In an *edit* form use `clearableText` → `null`, which
+  clears it; `undefined` would silently keep the old value.
+- Enum fields validate against the generated enum: `status: z.enum(QuoteStatus)`.
+- A numeric field is typed as text, then converted:
+  `z.string().trim().min(1, '…').transform(Number).pipe(z.number().positive('…'))`.
+- Type the submit handler with the schema's output: `values: z.output<typeof schema>`. An edit
+  form's prefill function returns `z.input<typeof schema>`.
+
+## Modal forms
+
+Reset the form when the modal opens, so it never shows the last attempt's values or errors:
+
+```tsx
+function openCreate() {
+  form.reset(EMPTY_HOME);
+  setShowCreate(true);
 }
 
-async function handleUpdate(e: FormEvent) {
-  e.preventDefault();
-  if (!editing) return;
-  setSaving(true);
-  setError('');
-  try {
-    await updateContractor(editing.id, {
-      name:        form.name,
-      categories:  form.category ? [form.category] : [],
-      zipCodes:    form.zipCodes.split(',').map((z) => z.trim()).filter(Boolean),
-    });
-    setEditing(null);
-    load();
-  } catch (err: any) {
-    setError(err.message ?? 'Failed to update');
-  } finally {
-    setSaving(false);
-  }
-}
+// or, when a parent opens the modal by prop:
+useEffect(() => {
+  if (open) form.reset(contractor ? formFrom(contractor) : EMPTY_FORM);
+}, [contractor, form, open]);
 ```
 
 ## Key rules
 
-- Always call `e.preventDefault()` in form submit handlers.
-- Reset `error` to `''` at the start of each submit attempt.
-- Empty optional string fields should be sent as `undefined`, not `''` — use `field || undefined`.
-- Use the `.input` class for all inputs; `.btn-primary`/`.btn-danger` for buttons.
-- Enum values come from `@thms/shared` — never hardcode string literals for category/status values.
+- No `useState` per field, no `saving` / `error` state, no `e.preventDefault()`: `Form` and
+  `SubmitButton` own them.
+- No `required` / `minLength` attributes: the schema is the one place a rule lives (`Form` sets
+  `noValidate`, so the browser's own bubbles never appear).
+- Never hand-write an error or warning box: use `Alert`.
+- Enum values come from `@/graphql/types.generated`, and display lists in lifecycle order come from
+  `@/lib/jobStatuses` / `@/lib/tradeCategories`, never hardcoded string arrays.
+- A multi-step flow (the new-job wizard) is not one form: its step-to-step state stays in the page,
+  and each step's errors use `Alert`.

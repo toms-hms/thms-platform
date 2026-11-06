@@ -1,73 +1,88 @@
 'use client';
-import { useState, FormEvent } from 'react';
-import { QuoteStatus } from '@thms/shared';
-import { createQuote, updateQuote, deleteQuote } from './mutations';
+import { useState } from 'react';
+import { useMutation } from '@apollo/client/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { QuoteStatus } from '@/graphql/types.generated';
+import { CreateQuoteDocument } from './mutations/__generated__/CreateQuote.generated';
+import { UpdateQuoteDocument } from './mutations/__generated__/UpdateQuote.generated';
+import { DeleteQuoteDocument } from './mutations/__generated__/DeleteQuote.generated';
+import { JobDetailDocument } from './queries/__generated__/JobDetail.generated';
+import type { JobDetail } from './types';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { optionalText } from '@/lib/formFields';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Card from '@/components/ui/Card';
+
+const schema = z.object({
+  amount: z
+    .string()
+    .trim()
+    .min(1, 'Enter the amount')
+    .transform(Number)
+    .pipe(z.number().positive('The amount must be more than 0')),
+  contractorId: z.string().min(1, 'Choose a contractor'),
+  description: optionalText,
+  status: z.enum(QuoteStatus),
+});
+
+const EMPTY_QUOTE = { amount: '', contractorId: '', description: '', status: QuoteStatus.DRAFT };
 
 interface Props {
-  job: any;
+  job: JobDetail;
 }
 
 export default function QuotesTab({ job }: Props) {
-  const [quotesList, setQuotesList] = useState<any[]>(job.quotes || []);
+  const quotesList = job.quotes;
+  const refetchQueries = [JobDetailDocument];
+  const [createQuote] = useMutation(CreateQuoteDocument, { refetchQueries });
+  const [updateQuote] = useMutation(UpdateQuoteDocument);
+  const [deleteQuote] = useMutation(DeleteQuoteDocument, { refetchQueries });
   const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    contractorId: '',
-    amount: '',
-    description: '',
-    status: 'DRAFT',
-  });
+  const form = useForm({ defaultValues: EMPTY_QUOTE, resolver: zodResolver(schema) });
 
-  function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function openAdd() {
+    form.reset(EMPTY_QUOTE);
+    setShowAdd(true);
   }
 
-  async function handleAdd(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await createQuote({
-        jobId:        job.id,
-        contractorId: form.contractorId,
-        amount:       parseFloat(form.amount),
-        description:  form.description,
-        status:       form.status as QuoteStatus,
-      });
-      setQuotesList((prev) => [res.data, ...prev]);
-      setShowAdd(false);
-      setForm({ contractorId: '', amount: '', description: '', status: 'DRAFT' });
-    } catch {}
-    setSaving(false);
+  async function handleAdd(values: z.output<typeof schema>) {
+    await createQuote({ variables: { jobId: job.id, ...values } });
+    setShowAdd(false);
   }
 
-  async function handleConfirm(quote: any) {
+  async function handleConfirm(quote: JobDetail['quotes'][number]) {
     try {
-      const res = await updateQuote(quote.id, { status: QuoteStatus.CONFIRMED });
-      setQuotesList((prev) => prev.map((q) => (q.id === quote.id ? res.data : q)));
+      await updateQuote({ variables: { quoteId: quote.id, status: QuoteStatus.CONFIRMED } });
     } catch {}
   }
 
   async function handleDelete(quoteId: string) {
     if (!confirm('Delete this quote?')) return;
     try {
-      await deleteQuote(quoteId);
-      setQuotesList((prev) => prev.filter((q) => q.id !== quoteId));
+      await deleteQuote({ variables: { quoteId } });
     } catch {}
   }
 
   const confirmed = quotesList.filter((q) => q.status === 'CONFIRMED');
   const drafts = quotesList.filter((q) => q.status === 'DRAFT');
-  const contractors = job.contractors || [];
+  const contractors = job.contractors;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-gray-800">Quotes</h3>
-        <button onClick={() => setShowAdd(true)} className="btn-primary text-sm">
+        <Button variant="primary" onClick={openAdd} className="text-sm">
           + Add Quote
-        </button>
+        </Button>
       </div>
 
       {quotesList.length === 0 ? (
@@ -82,7 +97,7 @@ export default function QuotesTab({ job }: Props) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Confirmed Quotes</h4>
               <div className="space-y-2">
                 {confirmed.map((q) => (
-                  <div key={q.id} className="card p-4 flex items-start justify-between">
+                  <Card key={q.id} className="p-4 flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-gray-900">
                         ${q.amount.toLocaleString()}
@@ -92,10 +107,10 @@ export default function QuotesTab({ job }: Props) {
                         <p className="text-xs text-gray-400 mt-1">{q.description}</p>
                       )}
                     </div>
-                    <button onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
+                    <Button variant="bare" onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
                       ✕
-                    </button>
-                  </div>
+                    </Button>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -106,7 +121,7 @@ export default function QuotesTab({ job }: Props) {
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Draft Quotes</h4>
               <div className="space-y-2">
                 {drafts.map((q) => (
-                  <div key={q.id} className="card p-4 border-dashed border-gray-300">
+                  <Card key={q.id} className="p-4 border-dashed border-gray-300">
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-semibold text-gray-900">${q.amount.toLocaleString()}</p>
@@ -116,15 +131,15 @@ export default function QuotesTab({ job }: Props) {
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => handleConfirm(q)} className="btn-primary text-xs py-1 px-2">
+                        <Button variant="primary" size="sm" onClick={() => handleConfirm(q)}>
                           Confirm
-                        </button>
-                        <button onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
+                        </Button>
+                        <Button variant="bare" onClick={() => handleDelete(q.id)} className="text-gray-300 hover:text-red-500 text-sm">
                           ✕
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -133,57 +148,34 @@ export default function QuotesTab({ job }: Props) {
       )}
 
       <Modal title="Add Quote" open={showAdd} onClose={() => setShowAdd(false)}>
-        <form onSubmit={handleAdd} className="space-y-4">
-          <div>
-            <label className="label">Contractor</label>
-            <select
-              className="input"
-              value={form.contractorId}
-              onChange={(e) => update('contractorId', e.target.value)}
-              required
-            >
+        <Form form={form} onSubmit={handleAdd}>
+          <Field label="Contractor" name="contractorId">
+            <Select {...form.register('contractorId')}>
               <option value="">-- Select contractor --</option>
-              {contractors.map((jc: any) => (
-                <option key={jc.contractorId} value={jc.contractorId}>
-                  {jc.contractor?.name}
+              {contractors.map((jc) => (
+                <option key={jc.contractor.id} value={jc.contractor.id}>
+                  {jc.contractor.name}
                 </option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Amount ($)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              className="input"
-              value={form.amount}
-              onChange={(e) => update('amount', e.target.value)}
-              placeholder="12000"
-              required
-            />
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <input
-              className="input"
-              value={form.description}
-              onChange={(e) => update('description', e.target.value)}
-              placeholder="Cedar deck estimate"
-            />
-          </div>
-          <div>
-            <label className="label">Status</label>
-            <select className="input" value={form.status} onChange={(e) => update('status', e.target.value)}>
-              <option value="DRAFT">Draft</option>
-              <option value="CONFIRMED">Confirmed</option>
-            </select>
-          </div>
-          <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Add Quote'}</button>
-          </div>
-        </form>
+            </Select>
+          </Field>
+          <Field label="Amount ($)" name="amount">
+            <Input min="0" placeholder="12000" step="0.01" type="number" {...form.register('amount')} />
+          </Field>
+          <Field label="Description" name="description">
+            <Input placeholder="Cedar deck estimate" {...form.register('description')} />
+          </Field>
+          <Field label="Status" name="status">
+            <Select {...form.register('status')}>
+              <option value={QuoteStatus.DRAFT}>Draft</option>
+              <option value={QuoteStatus.CONFIRMED}>Confirmed</option>
+            </Select>
+          </Field>
+          <FormActions>
+            <Button onClick={() => setShowAdd(false)} variant="secondary">Cancel</Button>
+            <SubmitButton submittingText="Saving...">Add Quote</SubmitButton>
+          </FormActions>
+        </Form>
       </Modal>
     </div>
   );

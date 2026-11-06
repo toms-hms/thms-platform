@@ -54,6 +54,7 @@ Detailed how-to guides for common task types. Load only what the task requires.
 - Custom hook: `.ai/recipes/web/hook.md`
 - Form handling: `.ai/recipes/web/form.md`
 - GraphQL client (queries & mutations): `.ai/recipes/web/api-client.md`
+- Testing (what earns a frontend test): `.ai/recipes/web/testing.md`
 
 ## Memory
 Consult `.claude/memory/MEMORY.md` for the index of what has been built. Load individual files only when relevant.

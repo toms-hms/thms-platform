@@ -3,13 +3,12 @@ import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
+import Table, { type Column } from '@/components/ui/Table';
 import type { TradeCategory } from '@/graphql/types.generated';
 import { tradeCategoryLabel } from '@/lib/tradeCategories';
 import type { Contractor } from '../types';
 import { AddContractorToRolodexDocument } from './mutations/__generated__/AddContractorToRolodex.generated';
 import { DeleteContractorDocument } from './mutations/__generated__/DeleteContractor.generated';
-
-const HEADER_CELL = 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
 
 interface ContractorTableProps {
   contractors: Contractor[];
@@ -54,68 +53,78 @@ export default function ContractorTable({ contractors, isAdmin, onDeleted, onEdi
     } catch {}
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className={HEADER_CELL}>Name</th>
-            <th className={HEADER_CELL}>Categories</th>
-            <th className={HEADER_CELL}>ZIP codes</th>
-            <th className={HEADER_CELL}>Contact</th>
-            <th className={HEADER_CELL}></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {contractors.map((contractor) => (
-            <tr
-              className="group hover:bg-gray-50 cursor-pointer"
-              key={contractor.id}
-              onClick={() => router.push(`/contractors/${contractor.id}`)}
-            >
-              <td className="px-4 py-3 text-gray-700">
-                <div>
-                  <span className="font-medium text-gray-900">{contractor.name}</span>
-                  {contractor.companyName && <span className="ml-2 text-gray-400 text-xs">- {contractor.companyName}</span>}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-gray-700">
-                <div className="flex flex-wrap gap-1">
-                  {contractor.categories.map((value) => (
-                    <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs" key={value}>
-                      {tradeCategoryLabel(value)}
-                    </span>
-                  ))}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-gray-700">{contractor.zipCodes.length ? contractor.zipCodes.join(', ') : '-'}</td>
-              <td className="px-4 py-3 text-gray-700">
-                <div>{contractor.email || '-'}</div>
-                {contractor.phone && <div className="text-xs text-gray-400">{contractor.phone}</div>}
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                  <Button
-                    aria-label="Add to my vendors"
-                    disabled={addingId === contractor.id}
-                    onClick={(e) => { e.stopPropagation(); handleAddToRolodex(contractor); }}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {addingId === contractor.id ? 'Adding...' : '☆ Add to my vendors'}
-                  </Button>
-                  {isAdmin && (
-                    <>
-                      <Button onClick={(e) => { e.stopPropagation(); onEdit(contractor); }} size="sm" variant="secondary">Edit</Button>
-                      <Button onClick={(e) => { e.stopPropagation(); handleDelete(contractor); }} size="sm" variant="danger">Delete</Button>
-                    </>
-                  )}
-                </div>
-              </td>
-            </tr>
+  const columns: Column<Contractor>[] = [
+    {
+      header: 'Name',
+      key: 'name',
+      render: (contractor) => (
+        <div>
+          <span className="font-medium text-gray-900">{contractor.name}</span>
+          {contractor.companyName && <span className="ml-2 text-gray-400 text-xs">- {contractor.companyName}</span>}
+        </div>
+      ),
+    },
+    {
+      header: 'Categories',
+      key: 'categories',
+      render: (contractor) => (
+        <div className="flex flex-wrap gap-1">
+          {contractor.categories.map((value) => (
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs" key={value}>
+              {tradeCategoryLabel(value)}
+            </span>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      ),
+    },
+    {
+      header: 'ZIP codes',
+      key: 'zipCodes',
+      render: (contractor) => (contractor.zipCodes.length ? contractor.zipCodes.join(', ') : '-'),
+    },
+    {
+      header: 'Contact',
+      key: 'contact',
+      render: (contractor) => (
+        <>
+          <div>{contractor.email || '-'}</div>
+          {contractor.phone && <div className="text-xs text-gray-400">{contractor.phone}</div>}
+        </>
+      ),
+    },
+    {
+      className: 'text-right',
+      header: '',
+      key: 'actions',
+      render: (contractor) => (
+        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <Button
+            aria-label="Add to my vendors"
+            disabled={addingId === contractor.id}
+            onClick={(e) => { e.stopPropagation(); handleAddToRolodex(contractor); }}
+            size="sm"
+            variant="secondary"
+          >
+            {addingId === contractor.id ? 'Adding...' : '☆ Add to my vendors'}
+          </Button>
+          {isAdmin && (
+            <>
+              <Button onClick={(e) => { e.stopPropagation(); onEdit(contractor); }} size="sm" variant="secondary">Edit</Button>
+              <Button onClick={(e) => { e.stopPropagation(); handleDelete(contractor); }} size="sm" variant="danger">Delete</Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      getKey={(contractor) => contractor.id}
+      onRowClick={(contractor) => router.push(`/contractors/${contractor.id}`)}
+      pageSize={25}
+      rows={contractors}
+    />
   );
 }

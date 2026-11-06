@@ -142,6 +142,8 @@ Never hand-write a migration for a schema change — edit the model and run `mak
 
 Django's built-in test runner and `TestCase`; factories are `factory_boy` `DjangoModelFactory`, one module per model in the app's `factories/` package. Each app has `tests/test_querysets.py`, `tests/test_managers.py`, `tests/test_services.py` and `tests/test_schema.py` as it needs them. Third parties are always mocked. See `.ai/recipes/api/testing.md`.
 
+Frontend tests are few and test logic black-box: pure functions and user-visible behaviour, never "it renders", class names, snapshots or pages. Move a component's logic into a pure function to test it. See `.ai/recipes/web/testing.md`.
+
 ## Branching
 
 Never push directly to `main` or any default branch. Always create a feature branch and push there. Direct pushes to `main` are only permitted when the user explicitly instructs it.

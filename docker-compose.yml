@@ -32,8 +32,9 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    image: cgr.dev/chainguard/minio:latest
     container_name: thms-minio
+    user: root  # dev only: the image runs as nonroot, but the data volume is root-owned
     restart: unless-stopped
     command: server /data --console-address ':9001'
     environment:
@@ -51,7 +52,7 @@ services:
       retries: 5
 
   minio-init:
-    image: minio/mc:latest
+    image: cgr.dev/chainguard/minio:latest
     container_name: thms-minio-init
     depends_on:
       minio:

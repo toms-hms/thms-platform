@@ -3,6 +3,7 @@ import { JobIntent, TradeCategory } from '@/graphql/types.generated';
 import { WizardContractorsDocument } from './queries/__generated__/WizardContractors.generated';
 import { CATEGORY_CONFIG } from '../categoryConfig';
 import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
 
 interface Props {
   categories: TradeCategory[];
@@ -99,7 +100,7 @@ export default function Step5Contractors({
       )}
 
       {error && (
-        <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>
+        <Alert className="mt-4" tone="error">{error}</Alert>
       )}
 
       <div className="flex items-center justify-between mt-8">

@@ -28,6 +28,7 @@ or component that uses it, selecting only what that file renders. Codegen writes
 - A failed operation throws an Apollo error whose message is the server's; `errorCode(err)` gives `FORBIDDEN`, `NOT_FOUND`, …; `UNAUTHORIZED` clears the session and redirects to `/login`
 - `JSONString` fields (`aiSession`, `metadata`) are strings on the wire — parse in, stringify out
 - No imports from `apps/api`: types are generated from the checked-in `apps/api/schema.graphql` (`make graphql-schema`)
+- Forms are react-hook-form + zod through `Form` / `Field name` / `SubmitButton`, with shared field rules in `src/lib/formFields.ts`; no per-field `useState`, saving flags or try/catch (see `.ai/recipes/web/form.md`)
 - UI is built from `src/components/ui/` (`Button`, `Link`, `Field`, `Input`, `Select`, `Textarea`, `Card`, `Badge`, `PageHeader`, …) with variants via `class-variance-authority` and overrides merged by `cn()`. `next lint` (also run by `next build`) rejects raw `<button>` / `<input>` / `<label>` / `<select>` / `<textarea>` and `next/link` imports outside `components/ui/`. See `.ai/recipes/web/component.md`
 - Token stored in `localStorage` — no auto-refresh on 401 yet
 - Image uploads: get pre-signed URL → PUT to MinIO → confirm with API

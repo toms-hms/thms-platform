@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
+import Alert from '@/components/ui/Alert';
 
 interface Props {
   intent: JobIntent;
@@ -132,9 +133,7 @@ export default function Step3Describe({
         </Field>
 
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-            {error}
-          </div>
+          <Alert tone="error">{error}</Alert>
         )}
 
         <div className="flex items-center justify-between pt-2">

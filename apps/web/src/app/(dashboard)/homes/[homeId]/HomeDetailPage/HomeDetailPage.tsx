@@ -9,11 +9,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import Select from '@/components/ui/Select';
 import PageHeader from '@/components/ui/PageHeader';
-
-const JOB_STATUSES = [
-  'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
-  'SCHEDULED', 'IN_PROGRESS', 'AWAITING_PAYMENT', 'COMPLETED',
-];
+import { JOB_STATUSES, jobStatusLabel } from '@/lib/jobStatuses';
 
 const INTENT_LABELS: Record<string, string> = {
   ISSUE: 'Fix',
@@ -51,7 +47,7 @@ export default function HomeDetailPage() {
           >
             <option value="">All statuses</option>
             {JOB_STATUSES.map((s) => (
-              <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+              <option key={s} value={s}>{jobStatusLabel(s)}</option>
             ))}
           </Select>
         </div>

@@ -1,87 +1,96 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
-import StatusBadge from '@/components/ui/StatusBadge';
-import type { JobStatus, TradeCategory } from '@/graphql/types.generated';
-import { UpdateJobDocument } from './mutations/__generated__/UpdateJob.generated';
-import type { JobDetail } from './types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import StatusBadge from '@/components/ui/StatusBadge';
+import SubmitButton from '@/components/ui/SubmitButton';
 import Textarea from '@/components/ui/Textarea';
+import { JobStatus, TradeCategory } from '@/graphql/types.generated';
+import { clearableText, requiredText } from '@/lib/formFields';
+import { JOB_STATUSES, jobStatusLabel } from '@/lib/jobStatuses';
+import { TRADE_CATEGORY_OPTIONS } from '@/lib/tradeCategories';
+import { UpdateJobDocument } from './mutations/__generated__/UpdateJob.generated';
+import type { JobDetail } from './types';
 
-const JOB_STATUSES = [
-  'DRAFT', 'PLANNING', 'REACHING_OUT', 'COMPARING_QUOTES',
-  'SCHEDULED', 'IN_PROGRESS', 'AWAITING_PAYMENT', 'COMPLETED',
-];
+const schema = z.object({
+  category: z.enum(TradeCategory, 'Choose a category'),
+  description: clearableText,
+  notes: clearableText,
+  status: z.enum(JobStatus),
+  title: requiredText('Give the job a title'),
+});
+
+function formFrom(job: JobDetail): z.input<typeof schema> {
+  return {
+    category: job.category as TradeCategory,
+    description: job.description || '',
+    notes: job.notes || '',
+    status: job.status as JobStatus,
+    title: job.title,
+  };
+}
 
 interface Props {
   job: JobDetail;
 }
 
+/** The job's summary, with an inline form to edit its title, category, status, description and notes. */
 export default function JobOverview({ job }: Props) {
   const [updateJob] = useMutation(UpdateJobDocument);
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    title: job.title,
-    category: job.category,
-    description: job.description || '',
-    notes: job.notes || '',
-    status: job.status,
-  });
+  const form = useForm({ defaultValues: formFrom(job), resolver: zodResolver(schema) });
 
-  function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function startEditing() {
+    form.reset(formFrom(job));
+    setEditing(true);
   }
 
-  async function handleSave(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await updateJob({
-        variables: {
-          jobId: job.id,
-          ...form,
-          category: form.category as TradeCategory,
-          status: form.status as JobStatus,
-        },
-      });
-      setEditing(false);
-    } catch {}
-    setSaving(false);
+  async function handleSave(values: z.output<typeof schema>) {
+    await updateJob({ variables: { jobId: job.id, ...values } });
+    setEditing(false);
   }
 
   if (editing) {
     return (
-      <form onSubmit={handleSave} className="space-y-4">
+      <Form form={form} onSubmit={handleSave}>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Title">
-            <Input value={form.title} onChange={(e) => update('title', e.target.value)} required />
+          <Field label="Title" name="title">
+            <Input {...form.register('title')} />
           </Field>
-          <Field label="Category">
-            <Input value={form.category} onChange={(e) => update('category', e.target.value)} required />
+          <Field label="Category" name="category">
+            <Select {...form.register('category')}>
+              {TRADE_CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Select>
           </Field>
         </div>
-        <Field label="Status">
-          <Select value={form.status} onChange={(e) => update('status', e.target.value)}>
-            {JOB_STATUSES.map((s) => (
-              <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+        <Field label="Status" name="status">
+          <Select {...form.register('status')}>
+            {JOB_STATUSES.map((status) => (
+              <option key={status} value={status}>{jobStatusLabel(status)}</option>
             ))}
           </Select>
         </Field>
-        <Field label="Description">
-          <Textarea rows={4} value={form.description} onChange={(e) => update('description', e.target.value)} />
+        <Field label="Description" name="description">
+          <Textarea rows={4} {...form.register('description')} />
         </Field>
-        <Field label="Notes">
-          <Textarea rows={3} value={form.notes} onChange={(e) => update('notes', e.target.value)} />
+        <Field label="Notes" name="notes">
+          <Textarea rows={3} {...form.register('notes')} />
         </Field>
-        <div className="flex gap-3">
-          <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-          <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
-        </div>
-      </form>
+        <FormActions className="justify-start">
+          <SubmitButton submittingText="Saving...">Save</SubmitButton>
+          <Button onClick={() => setEditing(false)} variant="secondary">Cancel</Button>
+        </FormActions>
+      </Form>
     );
   }
 
@@ -95,7 +104,7 @@ export default function JobOverview({ job }: Props) {
           </div>
           <p className="text-sm text-gray-500 mt-0.5">Category: {job.category}</p>
         </div>
-        <Button variant="secondary" onClick={() => setEditing(true)} className="text-xs">Edit</Button>
+        <Button variant="secondary" onClick={startEditing} className="text-xs">Edit</Button>
       </div>
 
       {job.description && (

@@ -7,6 +7,7 @@ import GenerateConceptModal from './GenerateConceptModal';
 import ImageGallery from './ImageGallery';
 import PhotoUploadButton from './PhotoUploadButton';
 import { JobImagesDocument } from './queries/__generated__/JobImages.generated';
+import Alert from '@/components/ui/Alert';
 
 /** The job's photos and AI concepts: upload photos, then generate concepts from them. */
 export default function ImagesTab({ jobId }: { jobId: string }) {
@@ -34,9 +35,9 @@ export default function ImagesTab({ jobId }: { jobId: string }) {
         </div>
       </div>
 
-      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+      <Alert className="mb-4 text-xs" tone="warning">
         AI-generated images are conceptual only and not construction-accurate.
-      </p>
+      </Alert>
 
       {loading && !data ? (
         <div className="text-center py-8 text-gray-500">Loading...</div>

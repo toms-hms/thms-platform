@@ -130,7 +130,9 @@ copied Tailwind strings. ESLint enforces it (`.eslintrc.json`): a raw `<button>`
 |---|---|---|
 | `Button` | every button | `variant`: `primary` (default) · `secondary` · `danger` · `muted` (text-only) · `bare` (bespoke UI styled by `className`); `size`: `md` · `sm`; `loading`, `loadingText`. Defaults to `type="button"`. |
 | `Link` | every internal link | `variant`: `plain` (default) · `brand` · `muted` · `subtle` · `card` (a whole card that links) · `primary` / `secondary` (button-styled) |
-| `Field` | a labelled control | `label` (text or JSX), `hint`, `error`; links the label to its single child control |
+| `Field` | a labelled control | `label` (text or JSX), `hint`, `error`, `name` (inside a `Form`, shows that field's validation message); links the label to its single child control |
+| `Form`, `SubmitButton`, `FormActions`, `FormSelector` | every form | react-hook-form + zod; see `form.md` |
+| `Alert` | an error, warning or note box | `tone`: `error` (default) · `warning` · `info` |
 | `Input`, `Textarea`, `Select` | form controls | the native props; style overrides via `className` |
 | `Selector` | a searchable select | `options`, `value`, `onChange` |
 | `Card` | a white bordered surface | add padding and layout with `className` |

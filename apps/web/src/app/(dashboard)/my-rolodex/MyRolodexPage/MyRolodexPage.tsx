@@ -1,15 +1,22 @@
 'use client';
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import Link from '@/components/ui/Link';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { TradeCategory } from '@/graphql/types.generated';
-import { TRADE_CATEGORY_LABELS, tradeCategoryLabel } from '@/lib/tradeCategories';
+import { TRADE_CATEGORY_OPTIONS, tradeCategoryLabel } from '@/lib/tradeCategories';
+import { optionalEmail, optionalText, requiredText, zipCode } from '@/lib/formFields';
 import { UserContractorsDocument } from './queries/__generated__/UserContractors.generated';
 import { CreateUserContractorDocument } from './mutations/__generated__/CreateUserContractor.generated';
 import { DeleteUserContractorDocument } from './mutations/__generated__/DeleteUserContractor.generated';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
-import Selector from '@/components/ui/Selector';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
+import FormSelector from '@/components/ui/FormSelector';
+import SubmitButton from '@/components/ui/SubmitButton';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import Input from '@/components/ui/Input';
@@ -18,6 +25,19 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import PageHeader from '@/components/ui/PageHeader';
 
+const schema = z.object({
+  category: z.string(),
+  companyName: optionalText,
+  email: optionalEmail,
+  name: requiredText('Enter a name'),
+  note: optionalText,
+  notes: optionalText,
+  phone: optionalText,
+  zipCode: z.union([z.literal(''), zipCode]),
+});
+
+const EMPTY_CONTRACTOR = { category: '', companyName: '', email: '', name: '', note: '', notes: '', phone: '', zipCode: '' };
+
 export default function MyRolodexPage() {
   const { data, loading: fetching, refetch } = useQuery(UserContractorsDocument);
   const entries = data?.userContractors ?? [];
@@ -25,45 +45,23 @@ export default function MyRolodexPage() {
   const [createUserContractor] = useMutation(CreateUserContractorDocument);
   const [deleteUserContractor] = useMutation(DeleteUserContractorDocument);
   const [showCreate, setShowCreate] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    name: '', companyName: '', email: '', phone: '',
-    category: '', zipCode: '', notes: '', note: '',
-  });
-
-  function update(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
+  const form = useForm({ defaultValues: EMPTY_CONTRACTOR, resolver: zodResolver(schema) });
 
   function openCreate() {
-    setForm({ name: '', companyName: '', email: '', phone: '', category: '', zipCode: '', notes: '', note: '' });
-    setError('');
+    form.reset(EMPTY_CONTRACTOR);
     setShowCreate(true);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      await createUserContractor({ variables: {
-        name:        form.name || undefined,
-        companyName: form.companyName || undefined,
-        email:       form.email || undefined,
-        phone:       form.phone || undefined,
-        categories:  form.category ? [form.category as TradeCategory] : undefined,
-        zipCodes:    form.zipCode ? [form.zipCode] : undefined,
-        notes:       form.notes || undefined,
-        note:        form.note || undefined,
-      } });
-      await refetch();
-      setShowCreate(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to add contractor');
-    } finally {
-      setSaving(false);
-    }
+  async function handleSubmit({ category, zipCode: zip, ...fields }: z.output<typeof schema>) {
+    await createUserContractor({
+      variables: {
+        ...fields,
+        categories: category ? [category as TradeCategory] : undefined,
+        zipCodes: zip ? [zip] : undefined,
+      },
+    });
+    await refetch();
+    setShowCreate(false);
   }
 
   async function handleDelete(id: string, name: string) {
@@ -137,48 +135,40 @@ export default function MyRolodexPage() {
       )}
 
       <Modal title="Add Contractor" open={showCreate} onClose={() => setShowCreate(false)}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>
-          )}
+        <Form form={form} onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Name">
-              <Input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="John Smith" required />
+            <Field label="Name" name="name">
+              <Input placeholder="John Smith" {...form.register('name')} />
             </Field>
-            <Field label="Company">
-              <Input value={form.companyName} onChange={(e) => update('companyName', e.target.value)} placeholder="Smith Plumbing" />
+            <Field label="Company" name="companyName">
+              <Input placeholder="Smith Plumbing" {...form.register('companyName')} />
             </Field>
           </div>
-          <Field label="Category">
-            <Selector
-              options={Object.values(TradeCategory).map((value) => ({ value, label: TRADE_CATEGORY_LABELS[value] }))}
-              value={form.category}
-              onChange={(value) => update('category', value)}
-              placeholder="Select a category"
-            />
+          <Field label="Category" name="category">
+            <FormSelector name="category" options={TRADE_CATEGORY_OPTIONS} placeholder="Select a category" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Email">
-              <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} placeholder="john@company.com" />
+            <Field label="Email" name="email">
+              <Input placeholder="john@company.com" type="email" {...form.register('email')} />
             </Field>
-            <Field label="Phone">
-              <Input value={form.phone} onChange={(e) => update('phone', e.target.value)} placeholder="5125551212" />
+            <Field label="Phone" name="phone">
+              <Input placeholder="5125551212" {...form.register('phone')} />
             </Field>
           </div>
-          <Field label="ZIP Code">
-            <Input value={form.zipCode} onChange={(e) => update('zipCode', e.target.value)} placeholder="78701" />
+          <Field label="ZIP Code" name="zipCode">
+            <Input placeholder="78701" {...form.register('zipCode')} />
           </Field>
-          <Field label="Contractor notes">
-            <Textarea rows={2} value={form.notes} onChange={(e) => update('notes', e.target.value)} placeholder="Background info on this contractor..." />
+          <Field label="Contractor notes" name="notes">
+            <Textarea placeholder="Background info on this contractor..." rows={2} {...form.register('notes')} />
           </Field>
-          <Field label="Your personal note">
-            <Textarea rows={2} value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Met at the trade show, great for HVAC..." />
+          <Field label="Your personal note" name="note">
+            <Textarea placeholder="Met at the trade show, great for HVAC..." rows={2} {...form.register('note')} />
           </Field>
-          <div className="flex gap-3 justify-end">
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Add Contractor'}</Button>
-          </div>
-        </form>
+          <FormActions>
+            <Button onClick={() => setShowCreate(false)} variant="secondary">Cancel</Button>
+            <SubmitButton submittingText="Saving...">Add Contractor</SubmitButton>
+          </FormActions>
+        </Form>
       </Modal>
     </div>
   );

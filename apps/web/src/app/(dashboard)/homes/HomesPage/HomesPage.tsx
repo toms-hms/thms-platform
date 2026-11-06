@@ -1,16 +1,35 @@
 'use client';
-import { useState, FormEvent } from 'react';
-import Link from '@/components/ui/Link';
+import { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import Link from '@/components/ui/Link';
 import { HomesDocument } from './queries/__generated__/Homes.generated';
 import { CreateHomeDocument } from './mutations/__generated__/CreateHome.generated';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
 import Input from '@/components/ui/Input';
+import SubmitButton from '@/components/ui/SubmitButton';
 import Textarea from '@/components/ui/Textarea';
 import PageHeader from '@/components/ui/PageHeader';
+import { optionalText, requiredText, stateCode, zipCode } from '@/lib/formFields';
+
+const schema = z.object({
+  address1: requiredText('Enter the street address'),
+  address2: optionalText,
+  city: requiredText('Enter the city'),
+  name: requiredText('Give the home a name'),
+  notes: optionalText,
+  state: stateCode,
+  zipCode,
+});
+
+const EMPTY_HOME = { address1: '', address2: '', city: '', name: '', notes: '', state: '', zipCode: '' };
 
 export default function HomesPage() {
   const { data, loading: fetching, refetch } = useQuery(HomesDocument);
@@ -18,43 +37,24 @@ export default function HomesPage() {
   const loading = fetching && !data;
   const [createHome] = useMutation(CreateHomeDocument);
   const [showCreate, setShowCreate] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    address1: '',
-    address2: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    notes: '',
-  });
+  const form = useForm({ defaultValues: EMPTY_HOME, resolver: zodResolver(schema) });
 
-  function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function openCreate() {
+    form.reset(EMPTY_HOME);
+    setShowCreate(true);
   }
 
-  async function handleCreate(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      await createHome({ variables: form });
-      await refetch();
-      setShowCreate(false);
-      setForm({ name: '', address1: '', address2: '', city: '', state: '', zipCode: '', notes: '' });
-    } catch (err: any) {
-      setError(err.message || 'Failed to create home');
-    } finally {
-      setSaving(false);
-    }
+  async function handleCreate(values: z.output<typeof schema>) {
+    await createHome({ variables: values });
+    await refetch();
+    setShowCreate(false);
   }
 
   return (
     <div>
       <PageHeader
         actions={
-          <Button onClick={() => setShowCreate(true)} variant="primary">
+          <Button onClick={() => openCreate()} variant="primary">
             + Add Home
           </Button>
         }
@@ -68,7 +68,7 @@ export default function HomesPage() {
           title="No homes yet"
           description="Add your first home to start managing projects."
           action={
-            <Button variant="primary" onClick={() => setShowCreate(true)}>
+            <Button variant="primary" onClick={() => openCreate()}>
               Add Home
             </Button>
           }
@@ -93,79 +93,37 @@ export default function HomesPage() {
       )}
 
       <Modal title="Add Home" open={showCreate} onClose={() => setShowCreate(false)}>
-        <form onSubmit={handleCreate} className="space-y-4">
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {error}
-            </div>
-          )}
-          <Field label="Home Name">
-            <Input
-              value={form.name}
-              onChange={(e) => update('name', e.target.value)}
-              placeholder="Primary Residence"
-              required
-            />
+        <Form form={form} onSubmit={handleCreate}>
+          <Field label="Home Name" name="name">
+            <Input placeholder="Primary Residence" {...form.register('name')} />
           </Field>
-          <Field label="Address Line 1">
-            <Input
-              value={form.address1}
-              onChange={(e) => update('address1', e.target.value)}
-              placeholder="123 Main St"
-              required
-            />
+          <Field label="Address Line 1" name="address1">
+            <Input placeholder="123 Main St" {...form.register('address1')} />
           </Field>
-          <Field label="Address Line 2">
-            <Input
-              value={form.address2}
-              onChange={(e) => update('address2', e.target.value)}
-              placeholder="Apt 2 (optional)"
-            />
+          <Field label="Address Line 2" name="address2">
+            <Input placeholder="Apt 2 (optional)" {...form.register('address2')} />
           </Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field className="col-span-1" label="City">
-              <Input
-                value={form.city}
-                onChange={(e) => update('city', e.target.value)}
-                placeholder="Austin"
-                required
-              />
+            <Field className="col-span-1" label="City" name="city">
+              <Input placeholder="Austin" {...form.register('city')} />
             </Field>
-            <Field label="State">
-              <Input
-                value={form.state}
-                onChange={(e) => update('state', e.target.value.toUpperCase())}
-                placeholder="TX"
-                maxLength={2}
-                required
-              />
+            <Field label="State" name="state">
+              <Input className="uppercase" maxLength={2} placeholder="TX" {...form.register('state')} />
             </Field>
-            <Field label="ZIP">
-              <Input
-                value={form.zipCode}
-                onChange={(e) => update('zipCode', e.target.value)}
-                placeholder="78745"
-                required
-              />
+            <Field label="ZIP" name="zipCode">
+              <Input placeholder="78745" {...form.register('zipCode')} />
             </Field>
           </div>
-          <Field label="Notes">
-            <Textarea
-              rows={3}
-              value={form.notes}
-              onChange={(e) => update('notes', e.target.value)}
-              placeholder="Any notes about this property..."
-            />
+          <Field label="Notes" name="notes">
+            <Textarea placeholder="Any notes about this property..." rows={3} {...form.register('notes')} />
           </Field>
-          <div className="flex gap-3 justify-end pt-2">
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>
+          <FormActions className="pt-2">
+            <Button onClick={() => setShowCreate(false)} variant="secondary">
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Create Home'}
-            </Button>
-          </div>
-        </form>
+            <SubmitButton submittingText="Saving...">Create Home</SubmitButton>
+          </FormActions>
+        </Form>
       </Modal>
     </div>
   );

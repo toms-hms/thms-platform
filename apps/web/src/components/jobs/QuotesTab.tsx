@@ -1,6 +1,9 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { QuoteStatus } from '@/graphql/types.generated';
 import { CreateQuoteDocument } from './mutations/__generated__/CreateQuote.generated';
 import { UpdateQuoteDocument } from './mutations/__generated__/UpdateQuote.generated';
@@ -11,9 +14,27 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { optionalText } from '@/lib/formFields';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Card from '@/components/ui/Card';
+
+const schema = z.object({
+  amount: z
+    .string()
+    .trim()
+    .min(1, 'Enter the amount')
+    .transform(Number)
+    .pipe(z.number().positive('The amount must be more than 0')),
+  contractorId: z.string().min(1, 'Choose a contractor'),
+  description: optionalText,
+  status: z.enum(QuoteStatus),
+});
+
+const EMPTY_QUOTE = { amount: '', contractorId: '', description: '', status: QuoteStatus.DRAFT };
 
 interface Props {
   job: JobDetail;
@@ -26,33 +47,16 @@ export default function QuotesTab({ job }: Props) {
   const [updateQuote] = useMutation(UpdateQuoteDocument);
   const [deleteQuote] = useMutation(DeleteQuoteDocument, { refetchQueries });
   const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    contractorId: '',
-    amount: '',
-    description: '',
-    status: 'DRAFT',
-  });
+  const form = useForm({ defaultValues: EMPTY_QUOTE, resolver: zodResolver(schema) });
 
-  function update(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function openAdd() {
+    form.reset(EMPTY_QUOTE);
+    setShowAdd(true);
   }
 
-  async function handleAdd(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await createQuote({ variables: {
-        jobId:        job.id,
-        contractorId: form.contractorId,
-        amount:       parseFloat(form.amount),
-        description:  form.description,
-        status:       form.status as QuoteStatus,
-      } });
-      setShowAdd(false);
-      setForm({ contractorId: '', amount: '', description: '', status: 'DRAFT' });
-    } catch {}
-    setSaving(false);
+  async function handleAdd(values: z.output<typeof schema>) {
+    await createQuote({ variables: { jobId: job.id, ...values } });
+    setShowAdd(false);
   }
 
   async function handleConfirm(quote: JobDetail['quotes'][number]) {
@@ -76,7 +80,7 @@ export default function QuotesTab({ job }: Props) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-gray-800">Quotes</h3>
-        <Button variant="primary" onClick={() => setShowAdd(true)} className="text-sm">
+        <Button variant="primary" onClick={openAdd} className="text-sm">
           + Add Quote
         </Button>
       </div>
@@ -144,50 +148,34 @@ export default function QuotesTab({ job }: Props) {
       )}
 
       <Modal title="Add Quote" open={showAdd} onClose={() => setShowAdd(false)}>
-        <form onSubmit={handleAdd} className="space-y-4">
-          <Field label="Contractor">
-            <Select
-              value={form.contractorId}
-              onChange={(e) => update('contractorId', e.target.value)}
-              required
-            >
+        <Form form={form} onSubmit={handleAdd}>
+          <Field label="Contractor" name="contractorId">
+            <Select {...form.register('contractorId')}>
               <option value="">-- Select contractor --</option>
               {contractors.map((jc) => (
                 <option key={jc.contractor.id} value={jc.contractor.id}>
-                  {jc.contractor?.name}
+                  {jc.contractor.name}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Amount ($)">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.amount}
-              onChange={(e) => update('amount', e.target.value)}
-              placeholder="12000"
-              required
-            />
+          <Field label="Amount ($)" name="amount">
+            <Input min="0" placeholder="12000" step="0.01" type="number" {...form.register('amount')} />
           </Field>
-          <Field label="Description">
-            <Input
-              value={form.description}
-              onChange={(e) => update('description', e.target.value)}
-              placeholder="Cedar deck estimate"
-            />
+          <Field label="Description" name="description">
+            <Input placeholder="Cedar deck estimate" {...form.register('description')} />
           </Field>
-          <Field label="Status">
-            <Select value={form.status} onChange={(e) => update('status', e.target.value)}>
-              <option value="DRAFT">Draft</option>
-              <option value="CONFIRMED">Confirmed</option>
+          <Field label="Status" name="status">
+            <Select {...form.register('status')}>
+              <option value={QuoteStatus.DRAFT}>Draft</option>
+              <option value={QuoteStatus.CONFIRMED}>Confirmed</option>
             </Select>
           </Field>
-          <div className="flex gap-3 justify-end">
-            <Button variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Add Quote'}</Button>
-          </div>
-        </form>
+          <FormActions>
+            <Button onClick={() => setShowAdd(false)} variant="secondary">Cancel</Button>
+            <SubmitButton submittingText="Saving...">Add Quote</SubmitButton>
+          </FormActions>
+        </Form>
       </Modal>
     </div>
   );

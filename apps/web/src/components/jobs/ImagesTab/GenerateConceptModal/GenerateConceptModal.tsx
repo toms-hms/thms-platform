@@ -1,13 +1,27 @@
 'use client';
-import { useState, type FormEvent } from 'react';
+import { useEffect } from 'react';
 import { useMutation } from '@apollo/client/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
+import SubmitButton from '@/components/ui/SubmitButton';
 import Textarea from '@/components/ui/Textarea';
+import { requiredText } from '@/lib/formFields';
 import type { JobImageRow } from '../types';
 import { CreateAiGenerationDocument } from './mutations/__generated__/CreateAiGeneration.generated';
+
+const schema = z.object({
+  prompt: requiredText('Describe the change you want to see'),
+  sourceImageId: z.string().min(1, 'Choose a source photo'),
+});
+
+const EMPTY = { prompt: '', sourceImageId: '' };
 
 interface GenerateConceptModalProps {
   jobId: string;
@@ -21,30 +35,24 @@ interface GenerateConceptModalProps {
 /** Starts an AI concept from one of the job's source photos and a prompt. */
 export default function GenerateConceptModal({ jobId, onClose, onStarted, open, sourceImages }: GenerateConceptModalProps) {
   const [createAiGeneration] = useMutation(CreateAiGenerationDocument);
-  const [form, setForm] = useState({ prompt: '', sourceImageId: '' });
-  const [generating, setGenerating] = useState(false);
+  const form = useForm({ defaultValues: EMPTY, resolver: zodResolver(schema) });
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setGenerating(true);
-    try {
-      await createAiGeneration({
-        variables: { jobId, sourceImageId: form.sourceImageId, prompt: form.prompt, provider: 'openai' },
-      });
-      alert('AI generation started! Refresh in a moment to see the result.');
-      onClose();
-      onStarted();
-    } catch (err: any) {
-      alert(err.message || 'Generation failed');
-    }
-    setGenerating(false);
+  useEffect(() => {
+    if (open) form.reset(EMPTY);
+  }, [form, open]);
+
+  async function handleSubmit(values: z.output<typeof schema>) {
+    await createAiGeneration({ variables: { jobId, ...values, provider: 'openai' } });
+    alert('AI generation started! Refresh in a moment to see the result.');
+    onClose();
+    onStarted();
   }
 
   return (
     <Modal onClose={onClose} open={open} title="Generate AI Concept">
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <Field label="Source Photo">
-          <Select onChange={(e) => setForm((f) => ({ ...f, sourceImageId: e.target.value }))} required value={form.sourceImageId}>
+      <Form form={form} onSubmit={handleSubmit}>
+        <Field label="Source Photo" name="sourceImageId">
+          <Select {...form.register('sourceImageId')}>
             <option value="">-- Select photo --</option>
             {sourceImages.map((image) => (
               <option key={image.id} value={image.id}>
@@ -53,23 +61,19 @@ export default function GenerateConceptModal({ jobId, onClose, onStarted, open, 
             ))}
           </Select>
         </Field>
-        <Field label="Prompt">
+        <Field label="Prompt" name="prompt">
           <Textarea
-            onChange={(e) => setForm((f) => ({ ...f, prompt: e.target.value }))}
             placeholder="Add a cedar deck in the back yard. Keep the house structure unchanged."
-            required
             rows={4}
-            value={form.prompt}
+            {...form.register('prompt')}
           />
         </Field>
         <p className="text-xs text-gray-400">Results are conceptual only. Generation may take 20–30 seconds.</p>
-        <div className="flex gap-3 justify-end">
+        <FormActions>
           <Button onClick={onClose} variant="secondary">Cancel</Button>
-          <Button disabled={generating} type="submit" variant="primary">
-            {generating ? 'Generating...' : 'Generate'}
-          </Button>
-        </div>
-      </form>
+          <SubmitButton submittingText="Generating...">Generate</SubmitButton>
+        </FormActions>
+      </Form>
     </Modal>
   );
 }

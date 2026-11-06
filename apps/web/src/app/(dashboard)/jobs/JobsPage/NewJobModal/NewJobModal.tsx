@@ -1,13 +1,28 @@
 'use client';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
+import FormActions from '@/components/ui/FormActions';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { requiredText, stateCode, zipCode } from '@/lib/formFields';
 import { JobsCreateHomeDocument } from './mutations/__generated__/JobsCreateHome.generated';
 import { JobsHomesDocument } from './queries/__generated__/JobsHomes.generated';
+
+const schema = z.object({
+  address1: requiredText('Enter the street address'),
+  city: requiredText('Enter the city'),
+  name: requiredText('Give the home a name'),
+  state: stateCode,
+  zipCode,
+});
 
 const EMPTY_HOME = { address1: '', city: '', name: '', state: '', zipCode: '' };
 
@@ -23,40 +38,24 @@ export default function NewJobModal({ onClose, open }: NewJobModalProps) {
   const homes = data?.homes ?? [];
   const [createHome] = useMutation(JobsCreateHomeDocument);
   const [step, setStep] = useState<'pick' | 'add'>('pick');
-  const [form, setForm] = useState(EMPTY_HOME);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const form = useForm({ defaultValues: EMPTY_HOME, resolver: zodResolver(schema) });
 
   useEffect(() => {
     if (!open) return;
     setStep('pick');
-    setForm(EMPTY_HOME);
-    setError('');
-  }, [open]);
+    form.reset(EMPTY_HOME);
+  }, [form, open]);
 
   function startJob(homeId: string) {
     onClose();
     router.push(`/homes/${homeId}/jobs/new`);
   }
 
-  async function handleCreateHome(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      const { data: created } = await createHome({ variables: { ...form, country: 'US' } });
-      const home = created?.createHome?.home;
-      if (!home) throw new Error('Failed to create home');
-      startJob(home.id);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create home');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function update(field: keyof typeof EMPTY_HOME, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  async function handleCreateHome(values: z.output<typeof schema>) {
+    const { data: created } = await createHome({ variables: { ...values, country: 'US' } });
+    const home = created?.createHome?.home;
+    if (!home) throw new Error('Failed to create home');
+    startJob(home.id);
   }
 
   return (
@@ -81,44 +80,39 @@ export default function NewJobModal({ onClose, open }: NewJobModalProps) {
           )}
           <Button
             className="w-full p-4 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-brand-400 hover:text-brand-700 transition-all text-center"
-            onClick={() => { setStep('add'); setError(''); }}
+            onClick={() => setStep('add')}
             variant="bare"
           >
             + Add a new home
           </Button>
         </div>
       ) : (
-        <form className="space-y-4" onSubmit={handleCreateHome}>
+        <Form form={form} onSubmit={handleCreateHome}>
           <p className="text-sm text-gray-500">Fill in the basics — you can add more detail later.</p>
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
-          )}
-          <Field label="Home name">
-            <Input onChange={(e) => update('name', e.target.value)} placeholder="Main Residence" required value={form.name} />
+          <Field label="Home name" name="name">
+            <Input placeholder="Main Residence" {...form.register('name')} />
           </Field>
-          <Field label="Street address">
-            <Input onChange={(e) => update('address1', e.target.value)} placeholder="123 Maple St" required value={form.address1} />
+          <Field label="Street address" name="address1">
+            <Input placeholder="123 Maple St" {...form.register('address1')} />
           </Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="City">
-              <Input onChange={(e) => update('city', e.target.value)} placeholder="Austin" required value={form.city} />
+            <Field label="City" name="city">
+              <Input placeholder="Austin" {...form.register('city')} />
             </Field>
-            <Field label="State">
-              <Input maxLength={2} onChange={(e) => update('state', e.target.value.toUpperCase())} placeholder="TX" required value={form.state} />
+            <Field label="State" name="state">
+              <Input className="uppercase" maxLength={2} placeholder="TX" {...form.register('state')} />
             </Field>
-            <Field label="ZIP">
-              <Input onChange={(e) => update('zipCode', e.target.value)} placeholder="78701" required value={form.zipCode} />
+            <Field label="ZIP" name="zipCode">
+              <Input placeholder="78701" {...form.register('zipCode')} />
             </Field>
           </div>
-          <div className="flex items-center gap-3 pt-2">
+          <FormActions className="justify-between pt-2">
             <Button onClick={() => setStep('pick')} variant="muted">
               ← Back
             </Button>
-            <Button className="ml-auto" disabled={saving} type="submit" variant="primary">
-              {saving ? 'Creating...' : 'Create & continue →'}
-            </Button>
-          </div>
-        </form>
+            <SubmitButton submittingText="Creating...">Create &amp; continue →</SubmitButton>
+          </FormActions>
+        </Form>
       )}
     </Modal>
   );

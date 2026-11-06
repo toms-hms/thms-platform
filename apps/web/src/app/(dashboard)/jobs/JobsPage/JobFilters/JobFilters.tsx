@@ -1,19 +1,7 @@
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { JobStatus } from '@/graphql/types.generated';
+import { JOB_STATUSES, jobStatusLabel } from '@/lib/jobStatuses';
 import type { JobFilterValues } from '../types';
-
-/** Statuses in lifecycle order, which is the order a user scans them in. */
-const JOB_STATUSES = [
-  JobStatus.DRAFT,
-  JobStatus.PLANNING,
-  JobStatus.REACHING_OUT,
-  JobStatus.COMPARING_QUOTES,
-  JobStatus.SCHEDULED,
-  JobStatus.IN_PROGRESS,
-  JobStatus.AWAITING_PAYMENT,
-  JobStatus.COMPLETED,
-];
 
 interface JobFiltersProps {
   onChange: (value: JobFilterValues) => void;
@@ -34,7 +22,7 @@ export default function JobFilters({ onChange, value }: JobFiltersProps) {
       <Select className="max-w-xs" onChange={(e) => onChange({ ...value, status: e.target.value })} value={value.status}>
         <option value="">All statuses</option>
         {JOB_STATUSES.map((status) => (
-          <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
+          <option key={status} value={status}>{jobStatusLabel(status)}</option>
         ))}
       </Select>
     </div>

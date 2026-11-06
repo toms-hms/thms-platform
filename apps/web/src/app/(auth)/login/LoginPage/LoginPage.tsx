@@ -1,39 +1,36 @@
 'use client';
-import { useState, FormEvent } from 'react';
-import Link from '@/components/ui/Link';
-import { useRouter } from 'next/navigation';
 import { useMutation } from '@apollo/client/react';
-import { saveTokens, saveUser } from '@/lib/auth';
-import { LoginDocument } from './mutations/__generated__/Login.generated';
-import Button from '@/components/ui/Button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import Card from '@/components/ui/Card';
 import Field from '@/components/ui/Field';
+import Form from '@/components/ui/Form';
 import Input from '@/components/ui/Input';
+import Link from '@/components/ui/Link';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { saveTokens, saveUser } from '@/lib/auth';
+import { LoginDocument } from './mutations/__generated__/Login.generated';
 
+const schema = z.object({
+  email: z.email('Enter a valid email address'),
+  password: z.string().min(1, 'Enter your password'),
+});
+
+/** Sign in with email and password. */
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [login] = useMutation(LoginDocument);
+  const form = useForm({ defaultValues: { email: '', password: '' }, resolver: zodResolver(schema) });
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const { data } = await login({ variables: { email, password } });
-      const auth = data?.login;
-      if (!auth?.tokens || !auth.user) throw new Error('Login failed');
-      saveTokens(auth.tokens.accessToken, auth.tokens.refreshToken);
-      saveUser(auth.user);
-      router.push('/homes');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
+  async function handleSubmit(values: z.infer<typeof schema>) {
+    const { data } = await login({ variables: values });
+    const auth = data?.login;
+    if (!auth?.tokens || !auth.user) throw new Error('Login failed');
+    saveTokens(auth.tokens.accessToken, auth.tokens.refreshToken);
+    saveUser(auth.user);
+    router.push('/homes');
   }
 
   return (
@@ -43,40 +40,21 @@ export default function LoginPage() {
         <p className="text-sm text-gray-500 mt-1">Manage your home projects</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        <Field label="Email">
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-          />
+      <Form form={form} onSubmit={handleSubmit}>
+        <Field label="Email" name="email">
+          <Input placeholder="you@example.com" type="email" {...form.register('email')} />
         </Field>
-        <Field label="Password">
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-          />
+        <Field label="Password" name="password">
+          <Input placeholder="••••••••" type="password" {...form.register('password')} />
         </Field>
-        <Button variant="primary" type="submit" disabled={loading} className="w-full">
-          {loading ? 'Signing in...' : 'Sign in'}
-        </Button>
-      </form>
+        <SubmitButton className="w-full" submittingText="Signing in...">
+          Sign in
+        </SubmitButton>
+      </Form>
 
       <p className="mt-4 text-center text-sm text-gray-600">
         Don&apos;t have an account?{' '}
-        <Link variant="brand" href="/register">
+        <Link href="/register" variant="brand">
           Sign up
         </Link>
       </p>

@@ -66,16 +66,15 @@ mutation CreateContractor($name: String!, $categories: [TradeCategory!]!, $zipCo
 ```typescript
 // apps/web/src/app/(dashboard)/contractors/page.tsx
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
 import Link from '@/components/ui/Link';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useQuery } from '@apollo/client/react';
 import { TradeCategory } from '@/graphql/types.generated';
 import { UserRole } from '@/types/api';
 import { ContractorsDocument } from './queries/__generated__/Contractors.generated';
-import { CreateContractorDocument } from './mutations/__generated__/CreateContractor.generated';
-import Modal from '@/components/ui/Modal';
+import ContractorFormModal from './ContractorFormModal';   // a section: owns its form and mutation (form.md)
 import EmptyState from '@/components/ui/EmptyState';
 import { getStoredUser } from '@/lib/auth';
 
@@ -83,9 +82,7 @@ export default function ContractorsPage() {
   const isAdmin = getStoredUser()?.role === UserRole.ADMIN;
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [showCreate, setShowCreate] = useState(false);
-  const [error, setError] = useState('');
-  const [form, setForm] = useState({ name: '', category: '', zipCodes: '' });
+  const [creating, setCreating] = useState(false);
 
   // Re-runs whenever the variables change.
   const { data, loading: fetching, refetch } = useQuery(ContractorsDocument, {
@@ -96,35 +93,16 @@ export default function ContractorsPage() {
   });
   const list = data?.contractors ?? [];
   const loading = fetching && !data;
-  const [createContractor] = useMutation(CreateContractorDocument);
-
-  async function handleCreate(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    try {
-      await createContractor({
-        variables: {
-          name: form.name,
-          categories: form.category ? [form.category as TradeCategory] : [],
-          zipCodes: form.zipCodes.split(',').map((z) => z.trim()).filter(Boolean),
-        },
-      });
-      setShowCreate(false);
-      await refetch();
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to save');
-    }
-  }
 
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
     <div className="p-8">
       <PageHeader
-        actions={isAdmin && <Button onClick={() => setShowCreate(true)}>+ Add Contractor</Button>}
+        actions={isAdmin && <Button onClick={() => setCreating(true)}>+ Add Contractor</Button>}
         title="Contractors"
       />
-      {/* filters, then the list; the create form is a <Modal> of <Field>s */}
+      {/* filters, then the list */}
       {list.length === 0 ? (
         <EmptyState title="No contractors found" />
       ) : (
@@ -132,6 +110,7 @@ export default function ContractorsPage() {
           <Link className="p-4" href={`/contractors/${c.id}`} key={c.id} variant="card">{c.name}</Link>
         ))
       )}
+      <ContractorFormModal contractor={creating ? 'new' : null} onClose={() => setCreating(false)} onSaved={refetch} />
     </div>
   );
 }

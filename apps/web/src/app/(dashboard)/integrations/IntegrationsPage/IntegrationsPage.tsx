@@ -1,5 +1,8 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { IntegrationsDocument } from './queries/__generated__/Integrations.generated';
 import { GoogleAuthUrlDocument } from './queries/__generated__/GoogleAuthUrl.generated';
@@ -8,8 +11,13 @@ import { CreateAiIntegrationDocument } from './mutations/__generated__/CreateAiI
 import { DeleteIntegrationDocument } from './mutations/__generated__/DeleteIntegration.generated';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Form from '@/components/ui/Form';
 import Input from '@/components/ui/Input';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { requiredText } from '@/lib/formFields';
 import PageHeader from '@/components/ui/PageHeader';
+
+const aiKeySchema = z.object({ apiKey: requiredText('Paste your OpenAI API key') });
 
 export default function IntegrationsPage() {
   const client = useApolloClient();
@@ -17,9 +25,8 @@ export default function IntegrationsPage() {
   const list = data?.integrations ?? [];
   const [createAiIntegration] = useMutation(CreateAiIntegrationDocument);
   const [deleteIntegration] = useMutation(DeleteIntegrationDocument);
-  const [aiKey, setAiKey] = useState('');
-  const [savingAI, setSavingAI] = useState(false);
-  const [aiMsg, setAiMsg] = useState('');
+  const aiKeyForm = useForm({ defaultValues: { apiKey: '' }, resolver: zodResolver(aiKeySchema) });
+  const [aiKeySaved, setAiKeySaved] = useState(false);
 
   async function handleConnectGoogle() {
     try {
@@ -47,19 +54,12 @@ export default function IntegrationsPage() {
     } catch {}
   }
 
-  async function handleSaveAI(e: FormEvent) {
-    e.preventDefault();
-    setSavingAI(true);
-    setAiMsg('');
-    try {
-      await createAiIntegration({ variables: { provider: 'openai', apiKey: aiKey } });
-      setAiMsg('API key saved successfully');
-      setAiKey('');
-      await refetch();
-    } catch (err: any) {
-      setAiMsg(err.message || 'Failed to save');
-    }
-    setSavingAI(false);
+  async function handleSaveAI({ apiKey }: z.output<typeof aiKeySchema>) {
+    setAiKeySaved(false);
+    await createAiIntegration({ variables: { apiKey, provider: 'openai' } });
+    aiKeyForm.reset({ apiKey: '' });
+    setAiKeySaved(true);
+    await refetch();
   }
 
   const emailIntegrations = list.filter((i) => i.type === 'EMAIL');
@@ -148,24 +148,18 @@ export default function IntegrationsPage() {
             )}
           </div>
 
-          <form onSubmit={handleSaveAI} className="flex gap-3">
-            <Input
-              type="password"
-              className="flex-1"
-              placeholder="sk-..."
-              value={aiKey}
-              onChange={(e) => setAiKey(e.target.value)}
-              required
-            />
-            <Button variant="primary" type="submit" disabled={savingAI} className="text-sm">
-              {savingAI ? 'Saving...' : openaiConnected ? 'Update Key' : 'Save Key'}
-            </Button>
-          </form>
-          {aiMsg && (
-            <p className={`text-sm mt-2 ${aiMsg.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
-              {aiMsg}
-            </p>
-          )}
+          <Form className="space-y-2" form={aiKeyForm} onSubmit={handleSaveAI}>
+            <div className="flex gap-3">
+              <Input className="flex-1" placeholder="sk-..." type="password" {...aiKeyForm.register('apiKey')} />
+              <SubmitButton className="text-sm" submittingText="Saving...">
+                {openaiConnected ? 'Update Key' : 'Save Key'}
+              </SubmitButton>
+            </div>
+            {aiKeyForm.formState.errors.apiKey && (
+              <p className="text-xs text-red-600">{aiKeyForm.formState.errors.apiKey.message}</p>
+            )}
+          </Form>
+          {aiKeySaved && <p className="text-sm mt-2 text-green-600">API key saved successfully</p>}
           <p className="text-xs text-gray-400 mt-2">
             Your API key is encrypted at rest. DALL-E 3 is used for image generation, GPT-4o-mini for email drafts.
           </p>

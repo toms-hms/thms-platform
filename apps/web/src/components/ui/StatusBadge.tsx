@@ -30,12 +30,12 @@ function formatLabel(status: string) {
   return status.replace(/_/g, ' ');
 }
 
-interface Props {
+interface StatusBadgeProps {
   status: string;
   type?: 'job' | 'contractor';
 }
 
-export default function StatusBadge({ status, type = 'job' }: Props) {
+export default function StatusBadge({ status, type = 'job' }: StatusBadgeProps) {
   const colorMap = type === 'contractor' ? CONTRACTOR_STATUS_COLORS : JOB_STATUS_COLORS;
   const color = colorMap[status] || 'bg-gray-100 text-gray-700';
   return (

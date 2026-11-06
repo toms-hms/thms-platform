@@ -57,4 +57,4 @@ Detailed how-to guides for common task types. Load only what the task requires.
 ## Memory
 Consult `.claude/memory/MEMORY.md` for the index of what has been built. Load individual files only when relevant.
 
-Memory files written before the Django conversion describe the Express + Drizzle API. The decisions they record (permission model, manager conventions, test layering) still hold; the code they quote does not.
+Memory files written before the Django conversion describe the Express + Drizzle API. Where a memory file disagrees with `.ai/rules/` or a recipe, the rule or recipe wins — see `django-conversion_2026-11.md`.

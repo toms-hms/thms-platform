@@ -20,10 +20,12 @@ class HomeService:
         self,
         *,
         home_manager: HomeManager | None = None,
+        permission_service: PermissionService | None = None,
         user_home_manager: UserHomeManager | None = None,
         user_home_service: UserHomeService | None = None,
     ) -> None:
         self._home_manager = home_manager or Home.objects
+        self._permission_service = permission_service or PermissionService()
         self._user_home_manager = user_home_manager or UserHome.objects
         self._user_home_service = user_home_service or UserHomeService()
 
@@ -89,4 +91,4 @@ class HomeService:
         member_ids = self._user_home_manager.member_ids(home_id=home_id)
         self._home_manager.delete(home)
         for member_id in member_ids:
-            PermissionService().invalidate(home_id=home_id, user_id=member_id)
+            self._permission_service.invalidate(home_id=home_id, user_id=member_id)

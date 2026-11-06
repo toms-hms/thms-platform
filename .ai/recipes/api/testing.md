@@ -56,7 +56,7 @@ class JobQueryTests(GraphQLTestCase):
         """Creates a job owned by one user."""
         super().setUp()
         self.user = UserFactory()
-        self.job = JobFactory(home=HomeFactory(owner=self.user), created_by=self.user)
+        self.job = JobFactory(created_by=self.user, home=HomeFactory(owner=self.user))
 
     def test_returns_the_job_to_a_member(self):
         """The owner can read their job."""

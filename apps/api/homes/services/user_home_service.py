@@ -17,8 +17,13 @@ class UserHomeService:
     """Adds members to homes, changes their role, and removes them."""
 
     def __init__(
-        self, *, user_home_manager: UserHomeManager | None = None, user_manager: UserManager | None = None
+        self,
+        *,
+        permission_service: PermissionService | None = None,
+        user_home_manager: UserHomeManager | None = None,
+        user_manager: UserManager | None = None,
     ) -> None:
+        self._permission_service = permission_service or PermissionService()
         self._user_home_manager = user_home_manager or UserHome.objects
         self._user_manager = user_manager or User.objects
 
@@ -38,10 +43,10 @@ class UserHomeService:
                 raise NotFoundError("User")
             user_id = user.pk
         membership = self._user_home_manager.upsert(home_id=home_id, user_id=user_id, role=role)
-        PermissionService().invalidate(home_id=home_id, user_id=user_id)
+        self._permission_service.invalidate(home_id=home_id, user_id=user_id)
         return membership
 
     def delete(self, *, home_id: str, user_id: str) -> None:
         """Removes the user's membership of the home."""
         self._user_home_manager.remove(home_id=home_id, user_id=user_id)
-        PermissionService().invalidate(home_id=home_id, user_id=user_id)
+        self._permission_service.invalidate(home_id=home_id, user_id=user_id)

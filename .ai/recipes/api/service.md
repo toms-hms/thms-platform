@@ -126,4 +126,6 @@ class ImageGenerationService:
 ## Permission cache
 
 Any write that creates, changes or removes a home membership calls
-`PermissionService().invalidate(user_id=..., home_id=...)` for each affected member.
+`self._permission_service.invalidate(home_id=..., user_id=...)` for each affected member.
+`PermissionService` is injected like any other collaborator
+(`self._permission_service = permission_service or PermissionService()`).

@@ -1,6 +1,6 @@
 ---
 name: web-component
-description: Guide for writing React components — shared vs page-local placement, props interface, and Tailwind utility classes.
+description: Guide for writing React components — where they live (components/ui, feature components, page sections), the UI components to build with, one folder per section with an index.ts, and <Component>Props interfaces.
 ---
 
 # Web Component
@@ -18,46 +18,38 @@ the page that uses it.
 
 ## Shared component example — StatusBadge
 
-`StatusBadge` maps model enum values to Tailwind color classes and renders a styled `<span>`. The color maps use `Record<string, string>` keyed by enum value strings.
+`StatusBadge` maps model enum values to Tailwind color classes and renders them through the
+`Badge` UI component. The color maps use `Record<string, string>` keyed by enum value strings.
 
 ```typescript
 // apps/web/src/components/ui/StatusBadge.tsx
+import Badge from './Badge';
+
 const JOB_STATUS_COLORS: Record<string, string> = {
-  DRAFT:             'bg-gray-100 text-gray-700',
-  PLANNING:          'bg-blue-100 text-blue-700',
-  REACHING_OUT:      'bg-yellow-100 text-yellow-700',
-  COMPARING_QUOTES:  'bg-purple-100 text-purple-700',
-  SCHEDULED:         'bg-indigo-100 text-indigo-700',
-  IN_PROGRESS:       'bg-orange-100 text-orange-700',
-  AWAITING_PAYMENT:  'bg-pink-100 text-pink-700',
-  COMPLETED:         'bg-green-100 text-green-700',
+  DRAFT: 'bg-gray-100 text-gray-700',
+  PLANNING: 'bg-blue-100 text-blue-700',
+  // ... one entry per job status
 };
 
 const CONTRACTOR_STATUS_COLORS: Record<string, string> = {
-  NOT_CONTACTED:   'bg-gray-100 text-gray-600',
-  CONTACTED:       'bg-blue-100 text-blue-700',
-  QUOTE_RECEIVED:  'bg-purple-100 text-purple-700',
-  ACCEPTED:        'bg-green-100 text-green-700',
-  DECLINED:        'bg-red-100 text-red-700',
-  PAID:            'bg-emerald-100 text-emerald-700',
-  // ... more statuses
+  NOT_CONTACTED: 'bg-gray-100 text-gray-600',
+  CONTACTED: 'bg-blue-100 text-blue-700',
+  // ... one entry per contractor status
 };
 
 function formatLabel(status: string) {
   return status.replace(/_/g, ' ');
 }
 
-interface Props {
+interface StatusBadgeProps {
   status: string;
   type?: 'job' | 'contractor';
 }
 
-export default function StatusBadge({ status, type = 'job' }: Props) {
+export default function StatusBadge({ status, type = 'job' }: StatusBadgeProps) {
   const colorMap = type === 'contractor' ? CONTRACTOR_STATUS_COLORS : JOB_STATUS_COLORS;
-  const color = colorMap[status] ?? 'bg-gray-100 text-gray-700';
-  return (
-    <span className={`badge ${color}`}>{formatLabel(status)}</span>
-  );
+  const color = colorMap[status] || 'bg-gray-100 text-gray-700';
+  return <Badge className={color}>{formatLabel(status)}</Badge>;
 }
 ```
 
@@ -69,15 +61,18 @@ Usage:
 
 ## Props interface naming
 
-Name the props interface `Props` inside the file (no need to export it) unless another file imports the type:
+Name the props interface after the component — `<Component>Props` — always, even when only this
+file uses it. Export it only when another file imports the type:
 
 ```typescript
-interface Props {
-  value: string;
+interface SelectorProps {
   onChange: (value: string) => void;
   options: SelectorOption[];
   placeholder?: string;
+  value: string;
 }
+
+export default function Selector({ onChange, options, placeholder, value }: SelectorProps) {
 ```
 
 ## Pages and sections: one folder per component

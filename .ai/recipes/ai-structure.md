@@ -21,7 +21,7 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
     recipe.md                 ← how to write a recipe (the meta-recipe).
     api/
       file-structure.md       ← where files go in the API (app layout, what each file holds).
-      model.md                ← Django models mapped onto the pre-existing schema.
+      model.md                ← Django models on BaseModel (fields, Meta and choices only).
       queryset.md             ← querysets (chainable filters, None vs [], visible_to / owned_by).
       manager.md              ← managers (filter compositions, writes, value lookups).
       service.md              ← service classes (business logic, UNSET updates, injected collaborators).
@@ -34,14 +34,15 @@ All AI-readable files live in `.ai/` (shared across Claude and Codex) or `.claud
       audit.md                ← django-auditlog registration, exclusions, reading the log.
       testing.md              ← test structure, GraphQLTestCase, what each layer covers.
       factory.md              ← factory_boy factories, one module per model (SubFactory, post_generation).
-      migrations.md           ← migration workflow, data migrations, the missing-migration check.
+      migrations.md           ← one 0001 per app until first deploy, data migrations, the missing-migration check.
       ai-service.md           ← OpenAI tool calling, JSON mode, multi-turn conversations.
     web/
-      page.md                 ← Next.js App Router dashboard pages (useEffect, queries/mutations).
-      component.md            ← React components (shared vs page-local, Tailwind classes).
-      hook.md                 ← custom React hooks (placement, useRequireAuth pattern).
-      form.md                 ← form handling (Modal + useState, FormEvent, error display).
-      api-client.md           ← GraphQL client, queries/mutations, filter contracts.
+      page.md                 ← App Router pages: page.tsx re-exports a <Name>Page folder; Apollo queries/mutations.
+      component.md            ← components/ui, section folders with index.ts, <Component>Props.
+      hook.md                 ← custom React hooks (placement, 'use client', useRequireAuth).
+      form.md                 ← react-hook-form + zod with Form / Field / SubmitButton.
+      api-client.md           ← one .graphql per operation, codegen into __generated__/, Apollo hooks.
+      testing.md              ← what earns a frontend test (black-box logic and behaviour).
 
 .claude/
   commands/

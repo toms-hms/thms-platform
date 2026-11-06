@@ -36,11 +36,11 @@ const schema = z.object({
 
 const EMPTY_QUOTE = { amount: '', contractorId: '', description: '', status: QuoteStatus.DRAFT };
 
-interface Props {
+interface QuotesTabProps {
   job: JobDetail;
 }
 
-export default function QuotesTab({ job }: Props) {
+export default function QuotesTab({ job }: QuotesTabProps) {
   const quotesList = job.quotes;
   const refetchQueries = [JobDetailDocument];
   const [createQuote] = useMutation(CreateQuoteDocument, { refetchQueries });

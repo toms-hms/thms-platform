@@ -46,7 +46,7 @@ class HomeFactory(DjangoModelFactory):
     def owner(self, create: bool, user, **kwargs):
         """Creates an OWNER membership for the given user when one is supplied."""
         if create and user:
-            UserHome.objects.create(user=user, home=self, role=HomeRole.OWNER)
+            UserHome.objects.create(home=self, user=user, role=HomeRole.OWNER)
 ```
 
 Called as `HomeFactory(owner=user)` and `ContractorFactory(zip_codes=["78701"])`.

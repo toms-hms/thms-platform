@@ -1,10 +1,10 @@
-interface Props {
+interface EmptyStateProps {
   title: string;
   description?: string;
   action?: React.ReactNode;
 }
 
-export default function EmptyState({ title, description, action }: Props) {
+export default function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <div className="text-center py-12">
       <h3 className="text-sm font-semibold text-gray-900">{title}</h3>

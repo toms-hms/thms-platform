@@ -1,6 +1,6 @@
 ---
 name: api-migrations
-description: Guide for schema changes — generating migrations with makemigrations, checking for missing migrations, and when hand-written data migrations are allowed.
+description: Guide for schema changes — one 0001_initial per app until the first deploy, generating migrations with makemigrations, checking for missing migrations, and when hand-written data migrations are allowed.
 ---
 
 # Migrations
@@ -13,6 +13,16 @@ make reset-db        # drop the local database volume; follow with make migrate 
 
 Django owns the schema. Every table, column, constraint and index comes from a
 model, and every migration comes from `makemigrations`.
+
+## One migration per app — until the first deploy
+
+Nothing is deployed yet, so each app keeps a single `0001_initial.py`. A schema change folds into
+it: delete the app's `0001_initial.py`, run `makemigrations <app>`, and commit the regenerated file.
+Locally, recreate the database afterwards (`make reset-db && make migrate && make seed` — it wipes
+local data, so ask first).
+
+**Once an environment has applied a migration, it is never rewritten.** After the first deploy,
+every schema change is a new migration generated beside the existing ones, as below.
 
 ## Changing the schema
 

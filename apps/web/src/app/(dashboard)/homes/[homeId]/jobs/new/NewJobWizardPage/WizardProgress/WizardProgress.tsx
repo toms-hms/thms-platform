@@ -1,10 +1,10 @@
-interface Props {
+interface WizardProgressProps {
   currentStep: number;
   totalSteps: number;
   labels: string[];
 }
 
-export default function WizardProgress({ currentStep, totalSteps, labels }: Props) {
+export default function WizardProgress({ currentStep, totalSteps, labels }: WizardProgressProps) {
   return (
     <div className="mb-10">
       <div className="flex items-center gap-0">

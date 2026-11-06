@@ -48,7 +48,7 @@ class CreateJob(graphene.Mutation):
 
     job = graphene.Field(JobType)
 
-    @authorize(Permission.JOBS_EDIT, resource=Home, arg="home_id")
+    @authorize(Permission.JOBS_EDIT, arg="home_id", resource=Home)
     def mutate(self, info, home_id: str, **data):
         """Creates the job on the home."""
         return CreateJob(job=JobService().create(home_id=home_id, user_id=current_user(info).pk, **data))
@@ -72,8 +72,8 @@ Every resolver carries exactly one access decorator from `core.graphql`:
 | --- | --- | --- |
 | `@login_required` | Any authenticated caller | `UNAUTHORIZED` |
 | `@admin_required` | Platform ADMIN only | `FORBIDDEN` |
-| `@authorize(permission, resource=, arg=)` | Caller holds the permission in the named row's home | `FORBIDDEN` |
-| `@owner_required(resource=, arg=)` | The named row belongs to the caller | `FORBIDDEN` |
+| `@authorize(permission, arg=, resource=)` | Caller holds the permission in the named row's home | `FORBIDDEN` |
+| `@owner_required(arg=, resource=)` | The named row belongs to the caller | `FORBIDDEN` |
 
 The decorator handles authentication too. Do not stack `@login_required` under the others.
 `current_user(info)` returns the authenticated user. See `permissioning.md` for choosing a

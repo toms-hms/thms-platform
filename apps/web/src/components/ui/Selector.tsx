@@ -8,7 +8,7 @@ export interface SelectorOption {
   label: string;
 }
 
-interface Props {
+interface SelectorProps {
   options: SelectorOption[];
   value: string;
   onChange: (value: string) => void;
@@ -17,7 +17,7 @@ interface Props {
   disabled?: boolean;
 }
 
-export default function Selector({ options, value, onChange, placeholder = 'Select...', searchPlaceholder = 'Search...', disabled }: Props) {
+export default function Selector({ options, value, onChange, placeholder = 'Select...', searchPlaceholder = 'Search...', disabled }: SelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [focused, setFocused] = useState(-1);

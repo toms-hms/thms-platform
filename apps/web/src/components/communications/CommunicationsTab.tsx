@@ -8,11 +8,11 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { cn } from '@/lib/cn';
 
-interface Props {
+interface CommunicationsTabProps {
   jobId: string;
 }
 
-export default function CommunicationsTab({ jobId }: Props) {
+export default function CommunicationsTab({ jobId }: CommunicationsTabProps) {
   const [filter, setFilter] = useState<'all' | 'needsReview'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const { data, loading: fetching } = useQuery(CommunicationsDocument, {

@@ -10,14 +10,14 @@ const INTENT_LABELS: Record<JobIntent, string> = {
   [JobIntent.RECURRING_WORK]: 'What needs regular maintenance?',
 };
 
-interface Props {
+interface Step2CategoryProps {
   intent: JobIntent;
   onSelect?: (category: TradeCategory) => void;
   onSelectMultiple?: (categories: TradeCategory[]) => void;
   onBack: () => void;
 }
 
-export default function Step2Category({ intent, onSelect, onSelectMultiple, onBack }: Props) {
+export default function Step2Category({ intent, onSelect, onSelectMultiple, onBack }: Step2CategoryProps) {
   const isMulti = intent === JobIntent.IMPROVEMENT;
   const [selected, setSelected] = useState<TradeCategory[]>([]);
   const tiles = CATEGORY_CONFIG[intent];

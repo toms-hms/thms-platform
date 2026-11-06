@@ -22,7 +22,7 @@ Access is declared on the resolver. Managers and querysets make no decisions.
 ## Gating a resolver on one row
 
 ```python
-@authorize(Permission.QUOTES_EDIT, resource=Quote, arg="quote_id")
+@authorize(Permission.QUOTES_EDIT, arg="quote_id", resource=Quote)
 def mutate(self, info, quote_id: str, **data):
     """Applies the update to the quote."""
     return UpdateQuote(quote=QuoteService().update(quote_id=quote_id, **data))
@@ -30,8 +30,8 @@ def mutate(self, info, quote_id: str, **data):
 
 - `resource` is the model whose row the argument names. `arg` is the argument's snake_case name.
   The decorator resolves the row's home through `home_id_path` and calls `can()`.
-- **Creating a child checks the parent:** `createQuote(jobId)` uses `resource=Job, arg="job_id"`,
-  and `createJob(homeId)` uses `resource=Home, arg="home_id"`.
+- **Creating a child checks the parent:** `createQuote(jobId)` uses `arg="job_id", resource=Job`,
+  and `createJob(homeId)` uses `arg="home_id", resource=Home`.
 - A missing row is `FORBIDDEN`, the same as a row the caller cannot see.
 - `@authorize` implies `@login_required`. Do not stack them.
 - **Choosing the permission:** reads use `*_VIEW` and writes use `*_EDIT`, for the area the data
@@ -46,9 +46,9 @@ def mutate(self, info, quote_id: str, **data):
 def resolve_jobs(self, info, home_ids=None, statuses=None):
     """Returns the jobs the caller can see, narrowed by homes and statuses."""
     return (
-        Job.objects.visible_to(current_user(info), Permission.JOBS_VIEW)
-        .filter_home_ids(home_ids)
+        Job.objects.filter_home_ids(home_ids)
         .filter_statuses(statuses)
+        .visible_to(current_user(info), Permission.JOBS_VIEW)
     )
 
 @login_required
@@ -69,7 +69,7 @@ def resolve_quotes(self, info, job_ids: list[str]):
 ## User-owned rows
 
 ```python
-@owner_required(resource=UserContractor, arg="user_contractor_id")
+@owner_required(arg="user_contractor_id", resource=UserContractor)
 ```
 
 The list resolver returns `Model.objects.owned_by(current_user(info))`.
@@ -86,8 +86,10 @@ something an owner would recognise as a page or an action.
 
 ## The cache
 
-`PermissionService.membership_role(user_id=..., home_id=...)` caches a member's **role** per (user, home)
+`PermissionService.membership_role(home_id=..., user_id=...)` caches a member's **role** per (user, home)
 for `PERMISSION_CACHE_TIMEOUT` seconds. Non-members are never cached. Any service
 that creates, changes or removes a membership calls
-`PermissionService().invalidate(user_id=..., home_id=...)` for each affected member. If the cache
+`self._permission_service.invalidate(home_id=..., user_id=...)` for each affected member.
+Services inject `PermissionService` like any collaborator; querysets (`visible_to`) and the
+access decorators construct `PermissionService()` directly. If the cache
 is unavailable, checks fall through to the database. A cache miss never means "denied".

@@ -25,11 +25,11 @@ const INTENTS = [
   },
 ];
 
-interface Props {
+interface Step1IntentProps {
   onSelect: (intent: JobIntent) => void;
 }
 
-export default function Step1Intent({ onSelect }: Props) {
+export default function Step1Intent({ onSelect }: Step1IntentProps) {
   return (
     <div>
       <h2 className="text-2xl font-bold text-ink mb-2">What do you need help with?</h2>

@@ -41,8 +41,8 @@ apps/api/<app>/
 
 `core/` follows the same shape for cross-app pieces: `core/services/`
 (`permission_service.py`, `storage_service.py`), `core/clients/` (`s3_client.py`),
-`core/utils/` (`crypto_utils.py`, `hashing_utils.py`, `jwt_utils.py`,
-`unset_utils.py`), plus framework plumbing (`querysets.py`, `managers.py`,
+`core/utils/` (`crypto_utils.py`, `email_utils.py`, `hashing_utils.py`, `jwt_utils.py`,
+`unset_utils.py`), plus framework plumbing (`models.py` — `BaseModel`, `querysets.py`, `managers.py`,
 `graphql.py`, `converters.py`, `middleware.py`, `errors.py`, `enums.py`, `testing.py`).
 
 ## Who may call what
@@ -51,19 +51,19 @@ apps/api/<app>/
 | --- | --- | --- |
 | `queries.py`, `types.py` fields | managers and querysets (reads), `current_user`, access decorators | clients |
 | `mutations.py`, `views.py` | services, `current_user`, access decorators | managers for writes, clients |
-| services | other services and clients (via `__init__`), managers and querysets of any app, utils | vendor SDKs directly, access checks |
+| services | injected managers (one named call per lookup or write), other services and clients — all via `__init__` — and utils | queryset chains, model-instance methods, vendor SDKs directly, access checks |
 | clients | their vendor's SDK / HTTP API | the database, services, business rules |
 | managers / querysets | their own queryset; other models inside methods | business rules, state transitions, orchestration across models |
 | utils | other utils, `settings` | the database, network, vendor SDKs |
 
 **Reads go through managers and querysets; writes go through services.** A query
-resolver chains `visible_to(...).filter_*()` itself. A mutation always calls a service.
+resolver chains `filter_*(...)…visible_to(...)` itself. A mutation always calls a service.
 
 ## What goes where
 
 | File | Contains | Never contains |
 | --- | --- | --- |
-| `models/<name>/model.py` | Fields, `Meta`, the model's `TextChoices`, cheap derived properties | Queries, business rules |
+| `models/<name>/model.py` | Fields, `Meta`, the model's `TextChoices` | Properties, methods, queries, business rules |
 | `models/<name>/queryset.py` | One-clause filters returning the queryset; `home_id_path` | Role or policy logic, writes |
 | `models/<name>/manager.py` | Chains of filters, generic writes (`upsert`, `apply_updates`), value lookups | Business rules, access decisions |
 | `services/<domain>_service.py` | Business rules, multi-step writes, cross-app coordination, cache invalidation | Vendor SDK imports, access checks, GraphQL shaping |

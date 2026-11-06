@@ -5,7 +5,7 @@ import { CATEGORY_CONFIG } from '../categoryConfig';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
-interface Props {
+interface Step5ContractorsProps {
   categories: TradeCategory[];
   zipCodes: string[];
   selectedIds: string[];
@@ -18,7 +18,7 @@ interface Props {
 
 export default function Step5Contractors({
   categories, zipCodes, selectedIds, onToggle, onSubmit, onBack, submitting, error,
-}: Props) {
+}: Step5ContractorsProps) {
   const categoryLabels = categories.map(cat =>
     CATEGORY_CONFIG[JobIntent.ISSUE].find(t => t.tradeCategory === cat)?.label ?? cat
   );

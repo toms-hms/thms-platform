@@ -38,12 +38,12 @@ function formFrom(job: JobDetail): z.input<typeof schema> {
   };
 }
 
-interface Props {
+interface JobOverviewProps {
   job: JobDetail;
 }
 
 /** The job's summary, with an inline form to edit its title, category, status, description and notes. */
-export default function JobOverview({ job }: Props) {
+export default function JobOverview({ job }: JobOverviewProps) {
   const [updateJob] = useMutation(UpdateJobDocument);
   const [editing, setEditing] = useState(false);
   const form = useForm({ defaultValues: formFrom(job), resolver: zodResolver(schema) });

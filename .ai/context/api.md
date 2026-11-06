@@ -19,7 +19,8 @@ apps/api/
   core/
     services/       permission_service.py (Permission, PermissionService), storage_service.py
     clients/        s3_client.py — the only boto3 importer
-    utils/          crypto_utils.py, hashing_utils.py, jwt_utils.py, unset_utils.py (UNSET)
+    utils/          crypto_utils.py, email_utils.py, hashing_utils.py, jwt_utils.py, unset_utils.py (UNSET)
+    models.py       BaseModel (UUID id, created_at, updated_at, __str__)
     querysets.py    BaseQuerySet, HomeScopedQuerySet, UserOwnedQuerySet
     managers.py     BaseManager (incl. apply_updates)
     graphql.py      current_user and the access decorators (@authorize, @owner_required, …)
@@ -30,7 +31,7 @@ apps/api/
     models/<model>/ model.py · queryset.py · manager.py   (models/__init__.py re-exports)
     services/       <domain>_service.py — classes holding business logic and writes
     clients/        <vendor>_client.py — classes wrapping one vendor SDK (ai, integrations)
-    utils/          <topic>_utils.py — pure functions (ai, integrations, jobs)
+    utils/          <topic>_utils.py — pure functions (ai, homes/address_utils, integrations, jobs)
     factories/      <model>_factory.py (factories/__init__.py re-exports)
     types.py        GraphQL object types
     queries.py      the app's Query class (reads via managers and querysets)
@@ -69,5 +70,6 @@ make migrate         # makemigrations + migrate, inside the container
 make reset-db        # drop the local database volume (then make migrate && make seed)
 make seed            # demo data
 make test-api        # the full test suite
-make graphql-schema  # write schema.graphql
+make graphql-schema  # write apps/api/schema.graphql and regenerate the web types
+                     # (a snapshot test fails while the checked-in schema is stale)
 ```

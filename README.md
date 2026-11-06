@@ -143,8 +143,10 @@ and `tests/test_schema.py`, covering:
 - The audit log: what is recorded, who it is attributed to, who may read it
 
 Frontend tests (`apps/web/src/__tests__/`) run in jsdom and cover:
-- `StatusBadge`, `Modal`, `EmptyState`, `Table`, `Dropdown`, `Selector` components
-- The GraphQL client: variables, auth header, error codes, session expiry
+- The Apollo client: auth header, error codes, session expiry
+- Form field rules (`lib/formFields`) and the `Form` component's validation and submit errors
+- Behaviour of `Table` (paging, row clicks), `Modal` (closing), `Selector` (search and select), `Button` and `Field`
+- Job list filtering (`matchesFilters`)
 
 ## API Overview
 

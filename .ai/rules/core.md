@@ -110,10 +110,10 @@ See `.ai/recipes/api/file-structure.md` for who may call what, plus `service.md`
 
 Declared on the resolver, decided in one place (`PermissionService.can` in `core/services/permission_service.py`):
 
-- `@authorize(Permission.X, resource=Model, arg="model_id")` for home-scoped rows
-- `@owner_required(resource=Model, arg="model_id")` for user-owned rows
+- `@authorize(Permission.X, arg="model_id", resource=Model)` for home-scoped rows
+- `@owner_required(arg="model_id", resource=Model)` for user-owned rows
 - `@login_required` / `@admin_required` for everything else
-- Collections are `@login_required` and start from `Model.objects.visible_to(user, Permission.X)` or `owned_by(user)`, never from `.all()` and never behind `@authorize`. An id the caller cannot see drops out of the result; it is not FORBIDDEN.
+- Collections are `@login_required` and end their chain with `visible_to(user, Permission.X)` or `owned_by(user)` on `Model.objects`, never from `.all()` and never behind `@authorize`. An id the caller cannot see drops out of the result; it is not FORBIDDEN.
 
 No role or membership checks in managers, querysets or services. See `.ai/recipes/api/permissioning.md`.
 

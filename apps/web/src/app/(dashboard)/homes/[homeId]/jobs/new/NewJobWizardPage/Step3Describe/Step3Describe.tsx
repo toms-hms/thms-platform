@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import Alert from '@/components/ui/Alert';
 
-interface Props {
+interface Step3DescribeProps {
   intent: JobIntent;
   category: TradeCategory;
   title: string;
@@ -23,7 +23,7 @@ interface Props {
 export default function Step3Describe({
   intent, category, title, description, photos,
   onUpdate, onNext, onBack, submitting, error,
-}: Props) {
+}: Step3DescribeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 

@@ -13,20 +13,25 @@ documents codegen generates from the `.graphql` files in their `queries/` and `m
 
 ```
 src/app/(dashboard)/{route}/
-  page.tsx                      — the page component ('use client')
-  queries/
-    {Operation}.graphql         — one query per file, owned by this page
-    __generated__/              — written by `npm run codegen`; never edited
-  mutations/
-    {Operation}.graphql         — one mutation per file
-    __generated__/
-  _components/                  — page-local components (not shared)
-    SomeSubForm.tsx
+  page.tsx                      — one line: export { default } from './{Name}Page';
+  {Name}Page/
+    index.ts                    — export { default } from './{Name}Page';
+    {Name}Page.tsx              — the page component ('use client')
+    queries/
+      {Operation}.graphql       — one query per file, owned by this page
+      __generated__/            — written by `npm run codegen`; never edited
+    mutations/
+      {Operation}.graphql       — one mutation per file
+      __generated__/
+    {Section}/                  — a section of the page, once it passes ~200 lines (see component.md)
+      index.ts
+      {Section}.tsx
+      mutations/ …
 ```
 
 ## Steps to add a new page
 
-1. Create `src/app/(dashboard)/{route}/page.tsx` with `'use client'` at the top.
+1. Create `src/app/(dashboard)/{route}/{Name}Page/{Name}Page.tsx` (with `'use client'`), its `index.ts`, and a one-line `page.tsx` beside the folder that re-exports it.
 2. Write one `.graphql` file per operation the page runs, in `queries/` or `mutations/`, selecting only the fields it renders.
 3. Run `npm run codegen` in `apps/web`.
 4. Load with `useQuery(XDocument, { variables })`; show a loading state while `loading && !data`.

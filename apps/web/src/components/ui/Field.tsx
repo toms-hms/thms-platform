@@ -1,5 +1,4 @@
 import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 
 export const LABEL_CLASSES = 'block text-sm font-medium text-gray-700 mb-1';
 

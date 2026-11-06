@@ -1,24 +1,43 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { cn } from '@/lib/cn';
 import Button from './Button';
 
 export interface Column<T> {
-  key: string;
+  /** Classes for this column's cells, e.g. `text-right` for an actions column. */
+  className?: string;
   header: string;
-  render?: (row: T) => React.ReactNode;
+  /** Classes for this column's header cell. */
+  headerClassName?: string;
+  key: string;
+  /** Renders the cell; without it the cell shows `row[key]`. */
+  render?: (row: T) => ReactNode;
 }
 
-interface Props<T> {
+interface TableProps<T> {
   columns: Column<T>[];
-  rows: T[];
-  getKey: (row: T) => string;
-  pageSize?: number;
   emptyMessage?: string;
+  getKey: (row: T) => string;
+  /** Makes each row clickable. Rows carry Tailwind's `group` class, so cells can reveal controls on hover. */
+  onRowClick?: (row: T) => void;
+  /** Rows per page; the pager appears only when there are more rows than this. */
+  pageSize?: number;
+  rows: T[];
 }
 
-export default function Table<T>({ columns, rows, getKey, pageSize = 10, emptyMessage = 'No data' }: Props<T>) {
-  const [page, setPage] = useState(0);
+/** A paged table. Columns declare their header and how to render a cell. */
+export default function Table<T>({
+  columns,
+  emptyMessage = 'No data',
+  getKey,
+  onRowClick,
+  pageSize = 10,
+  rows,
+}: TableProps<T>) {
+  const [requestedPage, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  // When a filter shrinks the rows, stay on the last page that still exists.
+  const page = Math.min(requestedPage, totalPages - 1);
   const slice = rows.slice(page * pageSize, (page + 1) * pageSize);
 
   return (
@@ -28,7 +47,10 @@ export default function Table<T>({ columns, rows, getKey, pageSize = 10, emptyMe
           <thead className="bg-gray-50">
             <tr>
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th
+                  className={cn('px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider', col.headerClassName)}
+                  key={col.key}
+                >
                   {col.header}
                 </th>
               ))}
@@ -37,16 +59,20 @@ export default function Table<T>({ columns, rows, getKey, pageSize = 10, emptyMe
           <tbody className="divide-y divide-gray-100">
             {slice.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-400">
+                <td className="px-4 py-8 text-center text-gray-400" colSpan={columns.length}>
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
               slice.map((row) => (
-                <tr key={getKey(row)} className="hover:bg-gray-50">
+                <tr
+                  className={cn('group hover:bg-gray-50', onRowClick && 'cursor-pointer')}
+                  key={getKey(row)}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-gray-700">
-                      {col.render ? col.render(row) : String((row as any)[col.key] ?? '')}
+                    <td className={cn('px-4 py-3 text-gray-700', col.className)} key={col.key}>
+                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')}
                     </td>
                   ))}
                 </tr>
@@ -63,7 +89,7 @@ export default function Table<T>({ columns, rows, getKey, pageSize = 10, emptyMe
             <Button
               className="disabled:opacity-40"
               disabled={page === 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              onClick={() => setPage(Math.max(0, page - 1))}
               size="sm"
               variant="secondary"
             >
@@ -73,7 +99,7 @@ export default function Table<T>({ columns, rows, getKey, pageSize = 10, emptyMe
             <Button
               className="disabled:opacity-40"
               disabled={page >= totalPages - 1}
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               size="sm"
               variant="secondary"
             >

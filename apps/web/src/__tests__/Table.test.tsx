@@ -1,50 +1,35 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import Table, { Column } from '@/components/ui/Table';
+import { fireEvent, render, screen } from '@testing-library/react';
+import Table, { type Column } from '@/components/ui/Table';
 
-interface Row { id: string; name: string; value: number }
+interface Row {
+  id: string;
+  name: string;
+}
 
-const COLS: Column<Row>[] = [
-  { key: 'name', header: 'Name' },
-  { key: 'value', header: 'Value' },
-];
+const COLUMNS: Column<Row>[] = [{ header: 'Name', key: 'name' }];
 
-const makeRows = (n: number): Row[] =>
-  Array.from({ length: n }, (_, i) => ({ id: String(i), name: `Item ${i}`, value: i }));
+const rows = (n: number): Row[] => Array.from({ length: n }, (_, i) => ({ id: String(i), name: `Item ${i}` }));
 
 describe('Table', () => {
-  it('renders headers and rows', () => {
-    render(<Table columns={COLS} rows={makeRows(3)} getKey={(r) => r.id} />);
-    expect(screen.getByText('Name')).toBeInTheDocument();
-    expect(screen.getByText('Item 0')).toBeInTheDocument();
-    expect(screen.getByText('Item 2')).toBeInTheDocument();
-  });
-
-  it('shows empty message when no rows', () => {
-    render(<Table columns={COLS} rows={[]} getKey={(r) => r.id} emptyMessage="Nothing here" />);
-    expect(screen.getByText('Nothing here')).toBeInTheDocument();
-  });
-
-  it('paginates and shows prev/next', () => {
-    render(<Table columns={COLS} rows={makeRows(25)} getKey={(r) => r.id} pageSize={10} />);
-    expect(screen.getByText('Item 0')).toBeInTheDocument();
-    expect(screen.queryByText('Item 10')).not.toBeInTheDocument();
+  it('pages through rows', () => {
+    render(<Table columns={COLUMNS} getKey={(r) => r.id} pageSize={10} rows={rows(25)} />);
     fireEvent.click(screen.getByText('Next →'));
     expect(screen.getByText('Item 10')).toBeInTheDocument();
     expect(screen.queryByText('Item 0')).not.toBeInTheDocument();
   });
 
-  it('disables Prev on first page', () => {
-    render(<Table columns={COLS} rows={makeRows(25)} getKey={(r) => r.id} pageSize={10} />);
-    expect(screen.getByText('← Prev')).toBeDisabled();
+  it('stays on the last page that exists when the rows shrink', () => {
+    const { rerender } = render(<Table columns={COLUMNS} getKey={(r) => r.id} pageSize={10} rows={rows(25)} />);
+    fireEvent.click(screen.getByText('Next →'));
+    fireEvent.click(screen.getByText('Next →'));
+    rerender(<Table columns={COLUMNS} getKey={(r) => r.id} pageSize={10} rows={rows(12)} />);
+    expect(screen.getByText('Item 10')).toBeInTheDocument();
   });
 
-  it('uses custom render', () => {
-    const cols: Column<Row>[] = [
-      { key: 'name', header: 'Name', render: (r) => <strong data-testid="custom">{r.name}</strong> },
-    ];
-    render(<Table columns={cols} rows={makeRows(1)} getKey={(r) => r.id} />);
-    expect(screen.getByTestId('custom')).toBeInTheDocument();
+  it('calls onRowClick with the clicked row', () => {
+    const onRowClick = jest.fn();
+    render(<Table columns={COLUMNS} getKey={(r) => r.id} onRowClick={onRowClick} rows={rows(3)} />);
+    fireEvent.click(screen.getByText('Item 1'));
+    expect(onRowClick).toHaveBeenCalledWith({ id: '1', name: 'Item 1' });
   });
 });

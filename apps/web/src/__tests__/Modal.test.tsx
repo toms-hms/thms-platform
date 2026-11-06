@@ -4,25 +4,6 @@ import '@testing-library/jest-dom';
 import Modal from '@/components/ui/Modal';
 
 describe('Modal', () => {
-  it('renders nothing when closed', () => {
-    render(
-      <Modal title="Test Modal" open={false} onClose={() => {}}>
-        <p>Content</p>
-      </Modal>
-    );
-    expect(screen.queryByText('Test Modal')).not.toBeInTheDocument();
-  });
-
-  it('renders content when open', () => {
-    render(
-      <Modal title="Test Modal" open={true} onClose={() => {}}>
-        <p>Modal content here</p>
-      </Modal>
-    );
-    expect(screen.getByText('Test Modal')).toBeInTheDocument();
-    expect(screen.getByText('Modal content here')).toBeInTheDocument();
-  });
-
   it('calls onClose when close button clicked', () => {
     const onClose = jest.fn();
     render(

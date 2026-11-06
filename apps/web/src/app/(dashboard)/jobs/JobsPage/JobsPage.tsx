@@ -8,16 +8,10 @@ import JobFilters from './JobFilters';
 import JobList from './JobList';
 import NewJobModal from './NewJobModal';
 import { JobsDocument } from './queries/__generated__/Jobs.generated';
-import type { JobFilterValues, JobRow } from './types';
+import { matchesFilters } from './matchesFilters';
+import type { JobFilterValues } from './types';
 
 const NO_FILTERS: JobFilterValues = { search: '', status: '' };
-
-function matches(job: JobRow, { search, status }: JobFilterValues): boolean {
-  if (status && job.status !== status) return false;
-  if (!search) return true;
-  const q = search.toLowerCase();
-  return [job.title, job.home.name, job.category].some((text) => text.toLowerCase().includes(q));
-}
 
 /** Every job across the caller's homes, newest first, with search and a status filter. */
 export default function JobsPage() {
@@ -26,7 +20,7 @@ export default function JobsPage() {
   const [creating, setCreating] = useState(false);
   const jobs = [...(data?.jobs ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .filter((job) => matches(job, filters));
+    .filter((job) => matchesFilters(job, filters));
   const filtering = Boolean(filters.search || filters.status);
 
   return (

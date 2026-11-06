@@ -8,7 +8,7 @@ description: Guide for writing React components — shared vs page-local placeme
 ## Where components live
 
 ```
-src/components/ui/                      — design-system pieces shared by every page (Button, Field, Modal, …)
+src/components/ui/                      — design-system pieces shared by every page (Button, Field, Modal, Table, …)
 src/components/<area>/<Component>/      — a feature component used by more than one page (JobContractorsTab)
 src/app/…/{route}/<Name>Page/<Section>/ — a section used only by one page, nested in the page's folder
 ```
@@ -138,7 +138,8 @@ copied Tailwind strings. ESLint enforces it (`.eslintrc.json`): a raw `<button>`
 | `Card` | a white bordered surface | add padding and layout with `className` |
 | `Badge` / `StatusBadge` | pills / job and contractor statuses | colour with `className` / `status`, `type` |
 | `PageHeader` | the top of a dashboard page | `title`, `subtitle`, `back={{ href, label }}`, `actions` |
-| `Modal`, `EmptyState`, `Table`, `Dropdown` | dialogs, empty lists, paged tables, menus | see each file |
+| `Modal`, `EmptyState` | dialogs, empty lists | see each file |
+| `Table` | any tabular list | `columns` (`header`, `render`, `className`), `rows`, `getKey`, `onRowClick`, `pageSize`; rows carry `group` for hover-reveal controls |
 
 - **`className` overrides, it doesn't fight.** Every component merges with `cn()` (`@/lib/cn`,
   `clsx` + `tailwind-merge`), so `<Button className="w-full">` or `<Input className="max-w-xs">`
